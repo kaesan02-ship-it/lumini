@@ -1,13 +1,29 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>lumini - 성향 기반 소셜 매칭</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumini - 성격 기반 인연 매칭</title>
+  <!-- Prevent FOUC (Flash of Unstyled Content) for dark mode -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+  <meta name="description"
+    content="MBTI, OCEAN, HEXACO 모델을 기반으로 한 정밀 성격 진단과 나에게 꼭 맞는 친구, 연인, 게임 파트너를 찾아보세요. 루미니에서 당신의 진정한 소울메이트를 발견하세요." />
+  <meta name="keywords" content="성격테스트, MBTI, 심리테스트, 친구찾기, 데이팅앱, 게임파트너, OCEAN, HEXACO, 루미니, Lumini" />
+  <meta property="og:title" content="Lumini - 성향 기반 소셜 매칭 플랫폼" />
+  <meta property="og:description" content="당신의 성격 데이터로 만나는 가장 완벽한 인연." />
+  <meta property="og:type" content="website" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

@@ -11,6 +11,26 @@
   --glass: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(139, 92, 246, 0.1);
   --shadow: 0 10px 30px -10px rgba(139, 92, 246, 0.15);
+  --primary-faint: #f5f3ff;
+  --secondary-faint: #fdf2f8;
+}
+
+/* Dark Mode */
+[data-theme="dark"] {
+  --primary: #a78bfa;
+  --primary-glow: rgba(167, 139, 250, 0.3);
+  --secondary: #f472b6;
+  --secondary-glow: rgba(244, 114, 182, 0.3);
+  --accent: #34d399;
+  --background: #0f172a;
+  --surface: #1e293b;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --glass: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(167, 139, 250, 0.2);
+  --shadow: 0 10px 30px -10px rgba(167, 139, 250, 0.3);
+  --primary-faint: rgba(167, 139, 250, 0.1);
+  --secondary-faint: rgba(244, 114, 182, 0.1);
 }
 
 @keyframes float {
@@ -109,7 +129,7 @@ button.primary:hover {
   left: 0;
   right: 0;
   height: 70px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--glass);
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--glass-border);
   display: flex;
