@@ -38,7 +38,6 @@ export const getMascotSketch = (size, personalityData) => {
     return (p) => {
         let particles = [];
         let numParticles = 35;
-        let angle = 0;
 
         const energyLevel = (personalityData?.E || 50) / 100;
         const opennessLevel = (personalityData?.O || 50) / 100;
