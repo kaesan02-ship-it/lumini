@@ -6,7 +6,7 @@ import useFavorites from '../hooks/useFavorites';
 import { analyzeCompatibility } from '../utils/compatibilityAnalysis';
 import {
     X, MessageCircle, Heart, Award, User as UserIcon,
-    Edit3, Save, TrendingUp, Sparkles, Tag
+    TrendingUp, Sparkles
 } from 'lucide-react';
 import { toggleConnection } from '../supabase/queries';
 import useAuthStore from '../store/authStore';

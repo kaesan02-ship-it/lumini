@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import RadarChart from '../components/RadarChart';
-import MapContainer from '../components/MapContainer';
 import { Users, Heart, Gamepad2, Filter, Sparkles, MapPin, ChevronRight } from 'lucide-react';
 import { sortUsersByMatchingScore } from '../utils/matchingAlgorithm';
 import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
