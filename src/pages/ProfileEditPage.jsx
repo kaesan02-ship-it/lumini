@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Shield, Save, Tag } from 'lucide-react';
 import InterestTagsSelector from '../components/InterestTagsSelector';
 
-const ProfileEditPage = ({ userData, userName, mbtiType, selectedInterests: initialInterests, onBack, onSave }) => {
+const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave }) => {
     const [name, setName] = useState(userName);
-    const [bio, setBio] = useState('안녕하세요! Lumini를 통해 진정한 인연을 찾고 있습니다. 🌟');
-    const [selectedTags, setSelectedTags] = useState(initialInterests || []);
-    const [privacy, setPrivacy] = useState('public'); // public, friends, private
+    const [bio, setBio] = useState(profile?.bio || '안녕하세요! Lumini를 통해 진정한 인연을 찾고 있습니다. 🌟');
+    const [selectedTags, setSelectedTags] = useState(profile?.interests || []);
+    const [privacy, setPrivacy] = useState(profile?.privacy_level || 'public'); // public, friends, private
     const [activeTab, setActiveTab] = useState('basic'); // basic, interests, privacy
 
     const handleSave = () => {

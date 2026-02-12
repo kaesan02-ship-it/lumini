@@ -194,9 +194,20 @@ const ResultReport = ({ data, mbtiType, onExplore }) => {
                     }}>
                         <div style={{
                             background: 'white', padding: '30px', borderRadius: '40px',
-                            boxShadow: '0 20px 40px rgba(0,0,0,0.05)', position: 'relative'
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.05)', position: 'relative',
+                            width: '440px', height: '440px', display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                            <RadarChart data={data} size={380} />
+                            <RadarChart
+                                data={[
+                                    { subject: '개방성', A: data.O || 0, fullMark: 100 },
+                                    { subject: '성실성', A: data.C || 0, fullMark: 100 },
+                                    { subject: '외향성', A: data.E || 0, fullMark: 100 },
+                                    { subject: '우호성', A: data.A || 0, fullMark: 100 },
+                                    { subject: '신경증', A: data.N || 0, fullMark: 100 },
+                                    { subject: '정직성', A: data.H || 50, fullMark: 100 },
+                                ]}
+                                size={380}
+                            />
                             <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
                                 <Award size={32} color="var(--primary)" style={{ opacity: 0.4 }} />
                             </div>

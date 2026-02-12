@@ -91,7 +91,7 @@ export const analyzeCompatibility = (userA, userB) => {
 /**
  * 차원별 인사이트 생성
  */
-const generateInsight = (dimension, similarity, scoreA, scoreB) => {
+const generateInsight = (dimension, similarity) => {
     const insights = {
         '개방성': {
             high: '새로운 경험과 창의적 활동을 함께 즐길 수 있어요',

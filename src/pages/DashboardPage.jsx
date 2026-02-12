@@ -4,8 +4,9 @@ import RadarChart from '../components/RadarChart';
 import MapContainer from '../components/MapContainer';
 import { Users, Heart, Gamepad2, Filter, Sparkles, MapPin, ChevronRight } from 'lucide-react';
 import { sortUsersByMatchingScore } from '../utils/matchingAlgorithm';
+import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
 
-const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onJoinHive, isJoiningHive }) => {
+const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
     const [activeTab, setActiveTab] = useState('all');
 
     // 새로운 매칭 알고리즘 적용
@@ -41,12 +42,26 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onJoinHi
                             padding: '6px 16px', borderRadius: '30px', fontWeight: 800,
                             boxShadow: '0 2px 4px var(--primary-glow)'
                         }}>
-                            {mbtiType}
+                            {mbtiType || '알 수 없음'}
                         </div>
                     </div>
-                    <div style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <RadarChart data={userData} size={300} />
-                    </div>
+                    {userData ? (
+                        <div style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <RadarChart
+                                data={[
+                                    { subject: '개방성', A: userData.O || 0, fullMark: 100 },
+                                    { subject: '성실성', A: userData.C || 0, fullMark: 100 },
+                                    { subject: '외향성', A: userData.E || 0, fullMark: 100 },
+                                    { subject: '우호성', A: userData.A || 0, fullMark: 100 },
+                                    { subject: '신경증', A: userData.N || 0, fullMark: 100 },
+                                    { subject: '정직성', A: userData.H || 50, fullMark: 100 },
+                                ]}
+                                size={300}
+                            />
+                        </div>
+                    ) : (
+                        <ChartSkeleton />
+                    )}
                 </div>
 
                 {/* Recommendation Section with Filters */}
@@ -77,7 +92,7 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onJoinHi
                 </div>
                 {/* User Cards */}
                 <div style={{ display: 'grid', gap: '20px' }}>
-                    {sortedUsers.slice(0, 3).map((user, index) => (
+                    {sortedUsers.length > 0 ? sortedUsers.slice(0, 3).map((user, index) => (
                         <motion.div
                             key={user.id}
                             whileHover={{ scale: 1.02 }}
@@ -120,7 +135,13 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onJoinHi
                                 분석 프로필 <ChevronRight size={16} />
                             </button>
                         </motion.div>
-                    ))}
+                    )) : (
+                        <>
+                            <CardSkeleton />
+                            <CardSkeleton />
+                            <CardSkeleton />
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -136,7 +157,10 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onJoinHi
                         boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
                         border: '8px solid var(--surface)'
                     }}>
-                        <MapContainer />
+                        {/* <MapContainer /> */}
+                        <div style={{ height: '450px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '30px' }}>
+                            지도 기능을 준비 중입니다...
+                        </div>
                     </div>
                 </div>
             </div>

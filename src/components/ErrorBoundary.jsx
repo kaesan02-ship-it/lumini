@@ -33,34 +33,50 @@ class ErrorBoundary extends React.Component {
                         maxWidth: '500px',
                         padding: '40px',
                         background: 'var(--surface)',
-                        borderRadius: '24px',
-                        boxShadow: 'var(--shadow)'
+                        borderRadius: '32px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
+                        border: '1px solid var(--glass-border)',
+                        backdropFilter: 'blur(20px)'
                     }}>
-                        <h1 style={{ fontSize: '2rem', marginBottom: '20px', color: 'var(--primary)' }}>
-                            😔 앗! 문제가 발생했습니다
+                        <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🧩</div>
+                        <h1 style={{ fontSize: '1.8rem', marginBottom: '16px', fontWeight: 800, color: 'var(--text)' }}>
+                            잠시 휴식이 필요해요
                         </h1>
-                        <p style={{ marginBottom: '30px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                            예상치 못한 오류가 발생했습니다.<br />
-                            페이지를 새로고침하거나 잠시 후 다시 시도해주세요.
+                        <p style={{ marginBottom: '32px', color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '1rem' }}>
+                            일시적인 오류가 발생했습니다.<br />
+                            루미니가 금방 다시 일어날 수 있도록 도와주세요.
                         </p>
-                        <button
-                            onClick={() => window.location.reload()}
-                            style={{
-                                padding: '14px 32px',
-                                fontSize: '1rem',
-                                fontWeight: 600,
-                                background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '12px',
-                                cursor: 'pointer',
-                                transition: 'transform 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
-                            onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
-                        >
-                            페이지 새로고침
-                        </button>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => this.setState({ hasError: false, error: null })}
+                                style={{
+                                    padding: '12px 24px',
+                                    fontWeight: 700,
+                                    background: 'var(--surface)',
+                                    color: 'var(--text)',
+                                    border: '1px solid var(--glass-border)',
+                                    borderRadius: '14px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                다시 시도
+                            </button>
+                            <button
+                                onClick={() => window.location.reload()}
+                                style={{
+                                    padding: '12px 24px',
+                                    fontWeight: 800,
+                                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '14px',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 8px 16px var(--primary-glow)'
+                                }}
+                            >
+                                새로고침
+                            </button>
+                        </div>
                         {process.env.NODE_ENV === 'development' && this.state.error && (
                             <details style={{ marginTop: '30px', textAlign: 'left' }}>
                                 <summary style={{ cursor: 'pointer', color: 'var(--text-muted)' }}>

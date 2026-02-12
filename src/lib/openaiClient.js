@@ -18,24 +18,30 @@ export const getAIAdvice = async (mbti, traits) => {
     try {
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
+            response_format: { type: "json_object" },
             messages: [
                 {
                     role: "system",
-                    content: "당신은 심리학 및 성격 분석 전문가입니다. 사용자의 MBTI와 성격 특성(개방성, 성실성, 외향성, 친화성, 신경증)을 바탕으로 유용한 조언을 제공합니다."
+                    content: "당신은 심리학 및 성격 분석 전문가입니다. 사용자의 MBTI와 성격 특성을 바탕으로 분석 리포트를 JSON 형식으로 제공합니다. 반드시 다음과 같은 키를 포함해야 합니다: 'analysis' (3-4문장 조언), 'strengths' (강점 3가지 리스트), 'cautions' (유의점 2가지 리스트)."
                 },
                 {
                     role: "user",
-                    content: `내 MBTI는 ${mbti}이고, 주요 성격 지표는 다음과 같습니다: ${JSON.stringify(traits)}. 내 성격의 장점을 살려 대인관계를 잘 할 수 있는 성찰 조언을 3~4문장으로 짧고 명확하게 한국어로 제공해줘.`
+                    content: `내 MBTI는 ${mbti}이고, 주요 성격 지표는 다음과 같습니다: ${JSON.stringify(traits)}. 내 성격의 장점을 살려 대인관계를 잘 할 수 있는 성찰 조언과 분석 리포트를 JSON으로 작성해줘.`
                 }
             ],
             temperature: 0.7,
-            max_tokens: 500,
+            max_tokens: 1000,
         });
 
-        return response.choices[0].message.content;
+        const rawContent = response.choices[0].message.content;
+        return JSON.parse(rawContent);
     } catch (error) {
         console.error('OpenAI Error:', error);
-        return "AI 조언을 가져오는 중 오류가 발생했습니다.";
+        return {
+            analysis: "AI 조언을 가져오는 중 오류가 발생했습니다.",
+            strengths: ["회복 탄력성", "공감 능력", "적응력"],
+            cautions: ["과도한 생각", "감정 억제"]
+        };
     }
 };
 

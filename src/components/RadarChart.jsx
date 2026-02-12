@@ -9,14 +9,15 @@ import {
 } from 'recharts';
 
 const RadarChart = ({ data, comparisonData, size = 300 }) => {
-  // 비교 데이터가 있으면 두 데이터를 병합
+  // 데이터가 없거나 로딩 중일 때를 대비한 안전 가드
   const chartData = React.useMemo(() => {
+    const baseData = data || [];
     if (!comparisonData) {
-      return data;
+      return baseData;
     }
 
     // data와 comparisonData를 병합
-    return data.map((item, index) => ({
+    return baseData.map((item, index) => ({
       subject: item.subject,
       A: item.A, // 첫 번째 데이터 (친구 또는 나)
       B: comparisonData[index]?.A || 0, // 두 번째 데이터 (비교 대상)

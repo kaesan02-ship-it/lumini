@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/', // 로컬 개발 시 접속 편의를 위해 '/'로 변경 (배포 시 '/lumini/'로 복구 필요)
+  base: './', // 상대 경로를 사용하여 배포 유연성 확보
+  build: {
+    minify: false, // 빌드 시 크래시 방지를 위해 압축 비활성화
+    emptyOutDir: true,
+  }
 })

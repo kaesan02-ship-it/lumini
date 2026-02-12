@@ -1,5 +1,16 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 import useAuthStore from '../store/authStore';
+
+const CONVERSATION_PROMPTS = [
+    { icon: '☕', text: '커피 한잔하며 대화나눌까요?' },
+    { icon: '📚', text: '최근에 읽은 책 중에 어떤 게 좋으셨나요?' },
+    { icon: '🎧', text: '요즘 자주 듣는 음악 추천해주세요!' },
+    { icon: '🎬', text: '최근에 본 영화나 드라마 추천해주실 수 있나요?' },
+    { icon: '✈️', text: '가장 기억에 남는 여행지는 어디인가요?' }
+];
 
 const ChatPage = ({ chatUser, onBack, userName }) => {
     const { user } = useAuthStore();
@@ -163,11 +174,11 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                 gap: '15px'
             }}>
                 <AnimatePresence>
-                    {messages.map((message, index) => (
+                    {chatMessages.map((message, index) => (
                         <MessageBubble
                             key={message.id}
                             message={message}
-                            isOwn={message.sender === userName}
+                            isOwn={message.sender_id === user?.id}
                             delay={index * 0.05}
                         />
                     ))}
@@ -345,7 +356,7 @@ const MessageBubble = ({ message, isOwn, delay }) => {
             )}
             <div style={{
                 background: isOwn
-                    ? 'linear-gradient(135deg, #667eea, #764ba2)'
+                    ? 'var(--primary)'
                     : 'white',
                 color: isOwn ? 'white' : '#2d3748',
                 padding: '12px 18px',
@@ -353,10 +364,11 @@ const MessageBubble = ({ message, isOwn, delay }) => {
                     ? '20px 20px 5px 20px'
                     : '20px 20px 20px 5px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                wordBreak: 'break-word'
+                wordBreak: 'break-word',
+                border: isOwn ? 'none' : '1px solid #e2e8f0'
             }}>
                 <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.5' }}>
-                    {message.text}
+                    {message.content}
                 </p>
             </div>
             <span style={{
@@ -366,7 +378,7 @@ const MessageBubble = ({ message, isOwn, delay }) => {
                 marginLeft: isOwn ? '0' : '12px',
                 marginRight: isOwn ? '12px' : '0'
             }}>
-                {new Date(message.timestamp).toLocaleTimeString('ko-KR', {
+                {new Date(message.created_at).toLocaleTimeString('ko-KR', {
                     hour: '2-digit',
                     minute: '2-digit'
                 })}

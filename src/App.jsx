@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Settings, Home, ClipboardList, Map as MapIcon, User, Users, Heart, Brain } from 'lucide-react';
 
 // Pages
@@ -7,12 +7,9 @@ import LandingPage from './pages/LandingPage';
 import PersonalityTest from './pages/PersonalityTest';
 import ResultReport from './pages/ResultReport';
 import DashboardPage from './pages/DashboardPage';
-import HivePage from './pages/HivePage';
 import FavoritesPage from './pages/FavoritesPage';
-import CommunityListPage from './pages/CommunityListPage';
 import ChatPage from './pages/ChatPage';
 import ProfileEditPage from './pages/ProfileEditPage';
-import CreateHivePage from './pages/CreateHivePage';
 import EventsPage from './pages/EventsPage';
 import CreateEventPage from './pages/CreateEventPage';
 import EventDetailPage from './pages/EventDetailPage';
@@ -25,98 +22,87 @@ import GrowthTrackingPage from './pages/GrowthTrackingPage';
 import StatsPage from './pages/StatsPage';
 
 // Supabase
+import { supabase } from './supabase/client';
 import { upsertProfile } from './supabase/queries';
 
 // Stores
 import useAuthStore from './store/authStore';
 import useThemeStore from './store/themeStore';
+import useUserStore from './store/userStore';
 
 // Components
 import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
 
+// Supabase Queries
+import { getNearbyProfiles } from './supabase/queries';
+
 // Hooks
 import useFavorites from './hooks/useFavorites';
 
 function App() {
-  // --- [State Management & Data Persistence] ---
-  const [userData, setUserData] = useState(() => {
-    try {
-      const saved = localStorage.getItem('lumini_user_data');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) { return null; }
-  });
+  const { user, session, setSession, loading: authLoading } = useAuthStore();
+  const { userData, mbtiType, userName, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
 
-  const [mbtiType, setMbtiType] = useState(() => {
-    return localStorage.getItem('lumini_mbti_type') || 'Unknown';
-  });
-
-  const [userName, setUserName] = useState(() => {
-    return localStorage.getItem('lumini_user_name') || '사용자';
-  });
-
-  const [step, setStep] = useState(() => {
-    const savedData = localStorage.getItem('lumini_user_data');
-    return savedData ? 'dashboard' : 'welcome';
-  });
-
+  const [step, setStep] = useState('welcome');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showMyProfile, setShowMyProfile] = useState(false);
-  const [isJoiningHive, setIsJoiningHive] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeChatUser, setActiveChatUser] = useState(null);
-  const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    { sender: '시스템', text: '새로운 멤버 \'사용자\'님이 입장했습니다.', isSystem: true },
-    { sender: '지후', text: '안녕하세요! 다들 책 읽는 거 좋아하시나요?' },
-    { sender: '서연', text: '네, 저는 요즘 인문학 서적에 빠져있어요.' },
-  ]);
-  const [activeHive, setActiveHive] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [nearbyUsers, setNearbyUsers] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]); // For mock 1:1 chat if needed
+  const [chatInput, setChatInput] = useState('');
 
   // Favorites Hook
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  // --- [Effects] ---
-  const { user, session, setSession, loading: authLoading } = useAuthStore();
-
   useEffect(() => {
-    // Initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    const initializeApp = async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setSession(currentSession);
 
-    // Listen for auth changes
+      if (currentSession?.user) {
+        await fetchProfile(currentSession.user.id);
+
+        // Fetch nearby users from DB
+        try {
+          const profiles = await getNearbyProfiles(20);
+          // Transform to match front-end expectations (similarity score etc)
+          const mapped = profiles
+            .filter(p => p.id !== currentSession.user.id)
+            .map(p => ({
+              id: p.id,
+              name: p.username || '익명',
+              mbti: p.mbti_type || 'Unknown',
+              similarity: 80 + Math.floor(Math.random() * 15), // Mock similarity for now
+              data: p.personality_data || []
+            }));
+          setNearbyUsers(mapped);
+        } catch (err) {
+          console.error('Failed to load nearby users:', err);
+        }
+      }
+    };
+
+    initializeApp();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [setSession]);
+  }, [setSession, fetchProfile]);
 
+  // Handle step based on data
   useEffect(() => {
-    localStorage.setItem('lumini_user_name', userName);
-  }, [userName]);
-
-  // Sync profile to Supabase
-  useEffect(() => {
-    if (user && userData) {
-      const syncProfile = async () => {
-        try {
-          await upsertProfile({
-            id: user.id,
-            username: userName,
-            mbti_type: mbtiType,
-            personality_data: userData,
-            updated_at: new Date().toISOString()
-          });
-        } catch (err) {
-          console.error('Profile sync error:', err);
-        }
-      };
-      syncProfile();
+    if (userData && step === 'welcome') {
+      setStep('dashboard');
     }
-  }, [user, userData, userName, mbtiType]);
+  }, [userData]);
 
   useEffect(() => {
     const handleStepChange = (e) => setStep(e.detail);
@@ -126,18 +112,19 @@ function App() {
 
   // --- [Handlers] ---
   const handleTestComplete = (data, type) => {
-    const chartData = [
-      { subject: '개방성', A: data.O, fullMark: 100 },
-      { subject: '성실성', A: data.C, fullMark: 100 },
-      { subject: '외향성', A: data.E, fullMark: 100 },
-      { subject: '우호성', A: data.A, fullMark: 100 },
-      { subject: '신경증', A: data.N, fullMark: 100 },
-      { subject: '정직성', A: data.H || 50, fullMark: 100 },
-    ];
-
-    setUserData(chartData);
+    // Save raw personality object { O, C, E, A, N, H }
+    setUserData(data);
     setMbtiType(type);
-    localStorage.setItem('lumini_user_data', JSON.stringify(chartData));
+
+    // Also update Supabase if logged in
+    if (user) {
+      updateProfile(user.id, {
+        personality_data: data,
+        mbti_type: type
+      });
+    }
+
+    localStorage.setItem('lumini_user_data', JSON.stringify(data));
     localStorage.setItem('lumini_mbti_type', type);
     setStep('result');
   };
@@ -162,34 +149,7 @@ function App() {
     }, 1500);
   };
 
-  // --- [Mock Data] ---
-  const nearbyUsers = [
-    {
-      id: 1, name: '지후', mbti: 'ENFP', similarity: 92, data: [
-        { subject: '개방성', A: 80 }, { subject: '성실성', A: 70 }, { subject: '외향성', A: 90 }, { subject: '우호성', A: 85 }, { subject: '신경증', A: 30 }, { subject: '정직성', A: 75 }
-      ]
-    },
-    {
-      id: 2, name: '서연', mbti: 'INTJ', similarity: 88, data: [
-        { subject: '개방성', A: 60 }, { subject: '성실성', A: 90 }, { subject: '외향성', A: 40 }, { subject: '우호성', A: 75 }, { subject: '신경증', A: 20 }, { subject: '정직성', A: 95 }
-      ]
-    },
-    {
-      id: 3, name: '민우', mbti: 'ENTP', similarity: 82, data: [
-        { subject: '개방성', A: 95 }, { subject: '성실성', A: 50 }, { subject: '외향성', A: 85 }, { subject: '우호성', A: 60 }, { subject: '신경증', A: 40 }, { subject: '정직성', A: 65 }
-      ]
-    },
-    {
-      id: 4, name: '하은', mbti: 'ISFP', similarity: 79, data: [
-        { subject: '개방성', A: 70 }, { subject: '성실성', A: 65 }, { subject: '외향성', A: 55 }, { subject: '우호성', A: 90 }, { subject: '신경증', A: 25 }, { subject: '정직성', A: 80 }
-      ]
-    },
-    {
-      id: 5, name: '도현', mbti: 'ISTJ', similarity: 75, data: [
-        { subject: '개방성', A: 45 }, { subject: '성실성', A: 95 }, { subject: '외향성', A: 30 }, { subject: '우호성', A: 80 }, { subject: '신경증', A: 15 }, { subject: '정직성', A: 90 }
-      ]
-    }
-  ];
+  // Nearby users are now fetched in the initializeApp effect above
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', paddingBottom: step === 'welcome' ? '0' : '90px' }}>
@@ -235,23 +195,9 @@ function App() {
               mbtiType={mbtiType}
               nearbyUsers={nearbyUsers}
               onSelectUser={setSelectedUser}
-              onJoinHive={() => {
-                setStep('communities');
-              }}
-              isJoiningHive={isJoiningHive}
             />
           )}
 
-          {step === 'hive' && activeHive && (
-            <HivePage
-              hive={activeHive}
-              userName={userName}
-              onBack={() => {
-                setStep('communities');
-                setActiveHive(null);
-              }}
-            />
-          )}
 
           {step === 'favorites' && (
             <FavoritesPage
@@ -264,23 +210,6 @@ function App() {
             />
           )}
 
-          {step === 'communities' && (
-            <CommunityListPage
-              onBack={() => setStep('dashboard')}
-              onSelectCommunity={(community) => {
-                setActiveHive(community);
-                setStep('hive');
-              }}
-              onCreateHive={() => setStep('create-hive')}
-              userData={userData}
-            />
-          )}
-          {step === 'create-hive' && (
-            <CreateHivePage
-              onBack={() => setStep('communities')}
-              onSuccess={() => setStep('communities')}
-            />
-          )}
           {step === 'events' && (
             <EventsPage
               onBack={() => setStep('dashboard')}
@@ -332,11 +261,25 @@ function App() {
               userData={userData}
               userName={userName}
               mbtiType={mbtiType}
+              profile={profile}
               onBack={() => setStep('dashboard')}
-              onSave={(data) => {
-                setUserName(data.name);
-                // Future: Save bio, interests, privacy to storage/backend
-                setStep('dashboard');
+              onSave={async (data) => {
+                if (user) {
+                  try {
+                    await updateProfile(user.id, {
+                      username: data.name,
+                      bio: data.bio,
+                      interests: data.interests,
+                      privacy_level: data.privacy
+                    });
+                    setStep('dashboard');
+                  } catch (err) {
+                    alert('프로필 저장 중 오류가 발생했습니다.');
+                  }
+                } else {
+                  setUserName(data.name);
+                  setStep('dashboard');
+                }
               }}
             />
           )}
@@ -368,7 +311,6 @@ function App() {
           <NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} />
           <NavItem active={step.includes('insight') || step === 'growth' || step === 'stats'} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} />
           <NavItem active={step === 'events'} icon={<MapIcon size={22} />} label="모임" onClick={() => setStep('events')} />
-          <NavItem active={step === 'communities' || step === 'hive'} icon={<Users size={22} />} label="커뮤니티" onClick={() => setStep('communities')} />
         </nav>
       )}
 
