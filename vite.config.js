@@ -6,7 +6,9 @@ export default defineConfig({
   plugins: [react()],
   base: './', // 상대 경로를 사용하여 배포 유연성 확보
   build: {
-    minify: false, // 빌드 시 크래시 방지를 위해 압축 비활성화
+    outDir: 'dist',
     emptyOutDir: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000
   }
 })
