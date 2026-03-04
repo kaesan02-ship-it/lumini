@@ -175,3 +175,110 @@ button.primary:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }
+
+/* ===== Dark Mode Global Overrides ===== */
+[data-theme="dark"] .glass-card:hover {
+  box-shadow: 0 15px 40px -10px rgba(167, 139, 250, 0.25);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+[data-theme="dark"] button.primary:hover {
+  background: #8b5cf6;
+}
+
+/* Answer buttons, inputs, selects in dark mode */
+[data-theme="dark"] .answer-button:hover {
+  background: var(--surface) !important;
+  border-color: var(--primary) !important;
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: var(--background) !important;
+  color: var(--text) !important;
+  border-color: var(--glass-border) !important;
+}
+
+/* Fix nav bg in dark mode */
+[data-theme="dark"] nav {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-color: var(--glass-border) !important;
+}
+
+/* Fix inline hardcoded white/light backgrounds */
+[data-theme="dark"] [style*="background: #f8fafc"],
+[data-theme="dark"] [style*="background: '#f8fafc'"],
+[data-theme="dark"] [style*="background: rgb(248, 250, 252)"] {
+  background: var(--surface) !important;
+}
+
+/* ===== Spin Animation (AI Insights loader) ===== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ===== Mobile Responsive ===== */
+@media (max-width: 768px) {
+  .section-padding {
+    padding: 40px 4%;
+  }
+
+  .glass-card {
+    border-radius: 18px;
+  }
+
+  .bottom-nav {
+    height: 65px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .nav-item span {
+    font-size: 0.65rem;
+  }
+
+  button.primary {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2 {
+    font-size: 1.3rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .glass-card {
+    border-radius: 14px;
+  }
+
+  .bottom-nav {
+    height: 60px;
+  }
+
+  button.primary {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+}

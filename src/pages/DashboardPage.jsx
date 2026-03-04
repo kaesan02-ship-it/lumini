@@ -1,12 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import RadarChart from '../components/RadarChart';
-import { Users, Heart, Gamepad2, Filter, Sparkles, MapPin, ChevronRight } from 'lucide-react';
+import { Users, Heart, Gamepad2, Filter, Sparkles, MapPin, ChevronRight, Gem, Target, Flame } from 'lucide-react';
 import { sortUsersByMatchingScore } from '../utils/matchingAlgorithm';
 import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
+import { getSoulType } from '../data/soulTypes';
+import useCrystalStore from '../store/crystalStore';
 
-const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
+const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNavigate }) => {
     const [activeTab, setActiveTab] = useState('all');
+    const { crystals, isPremium } = useCrystalStore();
+    const streak = parseInt(localStorage.getItem('lumini_streak') || '0');
+    const hasDeepSoul = !!localStorage.getItem('lumini_deep_soul');
+    // 내 지역 (localStorage 우선 → mock default)
+    const myDistrict = localStorage.getItem('lumini_user_district') || '서울 마포구';
+    const completedChallenges = (() => {
+        const saved = localStorage.getItem('lumini_challenges_done');
+        const today = new Date().toDateString();
+        if (saved) { const p = JSON.parse(saved); return p.date === today ? p.ids.length : 0; }
+        return 0;
+    })();
 
     // 새로운 매칭 알고리즘 적용
     const sortedUsers = useMemo(() => {
@@ -14,12 +27,25 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
         return sortUsersByMatchingScore(nearbyUsers, userData);
     }, [userData, nearbyUsers]);
 
+    // 동네 친구 필터 — 같은 구(district)인 유저
+    const neighborUsers = useMemo(() => {
+        if (!myDistrict) return sortedUsers;
+        return sortedUsers.filter(u => u.district && u.district === myDistrict);
+    }, [sortedUsers, myDistrict]);
+
+    // 탭 기준 유저 목록
+    const displayedUsers = useMemo(() => {
+        if (activeTab === 'friend') return neighborUsers;
+        return sortedUsers;
+    }, [activeTab, sortedUsers, neighborUsers]);
+
     const categories = [
         { id: 'all', name: '전체', icon: <Filter size={16} /> },
-        { id: 'friend', name: '동네 친구', icon: <Users size={16} /> },
+        { id: 'friend', name: `동네 친구 (${neighborUsers.length})`, icon: <MapPin size={16} /> },
         { id: 'date', name: '운명의 연인', icon: <Heart size={16} /> },
         { id: 'game', name: '게임 듀오', icon: <Gamepad2 size={16} /> },
     ];
+
 
     return (
         <motion.div
@@ -30,6 +56,38 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
             style={{ display: 'grid', gridTemplateColumns: 'minmax(420px, 1fr) 1.5fr', gap: '40px', padding: '10px 0' }}
         >
             <div className="left-panel">
+                {/* 💎 Crystal & Challenge Widget */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => onNavigate && onNavigate('shop')}
+                        style={{
+                            background: 'linear-gradient(135deg, #9333EA, #7C3AED)',
+                            borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
+                        }}
+                    >
+                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>보유 크리스탈</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Gem size={20} /> {crystals}
+                        </div>
+                        {isPremium && <div style={{ marginTop: '6px', fontSize: '0.72rem', background: 'rgba(255,255,255,0.2)', borderRadius: '100px', padding: '2px 10px', display: 'inline-block' }}>👑 프리미엄</div>}
+                    </motion.div>
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => onNavigate && onNavigate('daily-challenges')}
+                        style={{
+                            background: 'linear-gradient(135deg, #F59E0B, #EF4444)',
+                            borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
+                        }}
+                    >
+                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>오늘의 챌린지</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Target size={20} /> {completedChallenges}/3
+                        </div>
+                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>🔥 {streak}일 연속</div>
+                    </motion.div>
+                </div>
+
                 {/* My Stats Card */}
                 <div className="glass-card" style={{ padding: '35px', marginBottom: '40px', background: 'var(--surface)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
@@ -48,12 +106,15 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
                         <div style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <RadarChart
                                 data={[
-                                    { subject: '개방성', A: userData.O || 0, fullMark: 100 },
-                                    { subject: '성실성', A: userData.C || 0, fullMark: 100 },
-                                    { subject: '외향성', A: userData.E || 0, fullMark: 100 },
-                                    { subject: '우호성', A: userData.A || 0, fullMark: 100 },
-                                    { subject: '신경증', A: userData.N || 0, fullMark: 100 },
-                                    { subject: '정직성', A: userData.H || 50, fullMark: 100 },
+                                    { subject: '사교성', A: userData.E || 0, fullMark: 100 },
+                                    { subject: '창의성', A: Math.round((userData.O || 0) * 0.6 + (userData.E || 0) * 0.4), fullMark: 100 },
+                                    { subject: '공감력', A: Math.round((userData.A || 0) * 0.6 + (100 - (userData.N || 0)) * 0.4), fullMark: 100 },
+                                    { subject: '계획성', A: userData.C || 0, fullMark: 100 },
+                                    { subject: '자기주도', A: Math.round((userData.C || 0) * 0.55 + (userData.H || 50) * 0.45), fullMark: 100 },
+                                    { subject: '유연성', A: userData.O || 0, fullMark: 100 },
+                                    { subject: '따뜻함', A: userData.A || 0, fullMark: 100 },
+                                    { subject: '회복탄력', A: Math.round(100 - (userData.N || 0)), fullMark: 100 },
+                                    { subject: '신뢰도', A: userData.H || 50, fullMark: 100 },
                                 ]}
                                 size={300}
                             />
@@ -61,12 +122,68 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
                     ) : (
                         <ChartSkeleton />
                     )}
+
                 </div>
 
+                {/* 💎 딥 소울 배너 */}
+                <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => onNavigate && onNavigate(hasDeepSoul ? 'deep-soul-result' : 'deep-soul-test')}
+                    style={{
+                        marginBottom: '30px', padding: '20px 24px', borderRadius: '20px',
+                        background: hasDeepSoul
+                            ? 'linear-gradient(135deg, #4F46E5, #7C3AED)'
+                            : 'linear-gradient(135deg, #1E1B4B, #312E81)',
+                        color: 'white', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '16px',
+                        boxShadow: '0 8px 30px rgba(79,70,229,0.35)',
+                        position: 'relative', overflow: 'hidden'
+                    }}
+                >
+                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+                    <div style={{ fontSize: '2.2rem', flexShrink: 0 }}>{hasDeepSoul ? '💎' : '✨'}</div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>
+                            {hasDeepSoul ? '딥 소울 매칭 활성화됨' : '더 깊은 인연 찾기'}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', opacity: 0.85, lineHeight: 1.5 }}>
+                            {hasDeepSoul
+                                ? '가족관·연애관·가치관 기반 정밀 매칭 중 💜'
+                                : '가족관·연애 스타일·가치관까지 맞는 사람을 찾아드릴게요'}
+                        </div>
+                    </div>
+                    <ChevronRight size={20} style={{ opacity: 0.7, flexShrink: 0 }} />
+                </motion.div>
+
                 {/* Recommendation Section with Filters */}
-                <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h3 style={{ fontWeight: 800, fontSize: '1.3rem' }}>오늘의 추천 인연 ✨</h3>
+                    {myDistrict && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                            <MapPin size={12} color="var(--primary)" /> {myDistrict}
+                        </span>
+                    )}
                 </div>
+
+                {/* 동네 탭 선택 시 안내 배너 */}
+                {activeTab === 'friend' && (
+                    <div style={{
+                        marginBottom: '16px', padding: '12px 16px', borderRadius: '14px',
+                        background: neighborUsers.length > 0 ? 'linear-gradient(135deg, #EDE9FE, #F5F3FF)' : '#FEF9C3',
+                        border: `1.5px solid ${neighborUsers.length > 0 ? '#8B5CF620' : '#FCD34D50'}`,
+                        display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', fontWeight: 600
+                    }}>
+                        <span style={{ fontSize: '1.1rem' }}>{neighborUsers.length > 0 ? '📍' : '⚠️'}</span>
+                        {neighborUsers.length > 0
+                            ? <span style={{ color: '#6D28D9' }}><strong>{myDistrict}</strong> 근처 {neighborUsers.length}명이 있어요!</span>
+                            : <span style={{ color: '#92400E' }}>
+                                <strong>{myDistrict}</strong>에 아직 이웃이 없어요.{' '}
+                                <button onClick={() => onNavigate?.('profile-edit')} style={{ background: 'none', border: 'none', color: '#7C3AED', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>동네 변경하기</button>
+                            </span>
+                        }
+                    </div>
+                )}
+
 
                 {/* Category Tabs */}
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', overflowX: 'auto', paddingBottom: '5px' }}>
@@ -91,50 +208,66 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
                 </div>
                 {/* User Cards */}
                 <div style={{ display: 'grid', gap: '20px' }}>
-                    {sortedUsers.length > 0 ? sortedUsers.slice(0, 3).map((user, index) => (
-                        <motion.div
-                            key={user.id}
-                            whileHover={{ scale: 1.02 }}
-                            className="glass-card"
-                            style={{
-                                padding: '24px', display: 'flex', alignItems: 'center',
-                                justifyContent: 'space-between', background: 'var(--surface)',
-                                border: '1px solid var(--glass-border)'
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-                                <div style={{
-                                    width: '64px', height: '64px', borderRadius: '22px',
-                                    background: 'linear-gradient(135deg, #a78bfa, #f472b6)',
-                                    border: '4px solid white', boxShadow: '0 8px 16px rgba(139, 92, 246, 0.15)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800
-                                }}>
-                                    {user.name.charAt(0)}
-                                </div>
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                        <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--text)' }}>{user.name}</div>
-                                        <span style={{ fontSize: '0.75rem', background: '#f8fafc', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '6px' }}>{user.mbti}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        <Sparkles size={14} color="#8b5cf6" />
-                                        <div style={{ fontSize: '0.95rem', color: '#8b5cf6', fontWeight: 700 }}>매칭률 {user.similarity}%</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => onSelectUser(user)}
+                    {displayedUsers.length > 0 ? displayedUsers.slice(0, 5).map((user, index) => {
+                        const userSoul = getSoulType(user.mbti);
+                        return (
+                            <motion.div
+                                key={user.id}
+                                whileHover={{ scale: 1.02 }}
+                                className="glass-card"
                                 style={{
-                                    background: '#f5f3ff', color: 'var(--primary)',
-                                    border: 'none', padding: '12px 24px', borderRadius: '14px',
-                                    fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                    padding: 'clamp(16px, 3vw, 24px)', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'space-between', background: 'var(--surface)',
+                                    border: '1px solid var(--glass-border)',
+                                    flexWrap: 'wrap', gap: '12px'
                                 }}
                             >
-                                분석 프로필 <ChevronRight size={16} />
-                            </button>
-                        </motion.div>
-                    )) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '200px' }}>
+                                    <div style={{
+                                        width: '60px', height: '60px', borderRadius: '20px',
+                                        background: `linear-gradient(135deg, ${userSoul.gradient[0]}, ${userSoul.gradient[1]})`,
+                                        border: '1px solid var(--glass-border)', boxShadow: '0 8px 16px rgba(0,0,0,0.05)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '1.8rem', flexShrink: 0
+                                    }}>
+                                        {userSoul.emoji}
+                                    </div>
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                            <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text)' }}>{user.name}</div>
+                                            <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '3px 10px', borderRadius: '100px', fontWeight: 800 }}>{userSoul.soulName}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <Sparkles size={14} color="var(--primary)" />
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700 }}>매칭률 {user.similarity}%</div>
+                                        </div>
+                                        {/* Bio 미리보기 */}
+                                        {user.bio ? (
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }}>
+                                                {user.deep_soul ? '💎' : user.emoji || '🌟'} {user.bio}
+                                            </div>
+                                        ) : (
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.6 }}>
+                                                자기소개가 없어요 ✏️
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => onSelectUser(user)}
+                                    style={{
+                                        background: 'white', color: 'var(--text)',
+                                        border: '1px solid var(--glass-border)', padding: '12px 24px', borderRadius: '16px',
+                                        fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                    }}
+                                >
+                                    프로필 보기
+                                </button>
+                            </motion.div>
+                        );
+                    }) : (
                         <>
                             <CardSkeleton />
                             <CardSkeleton />
@@ -145,24 +278,99 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser }) => {
             </div>
 
             <div className="right-panel">
-                <div style={{ marginBottom: '40px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                        <h3 style={{ fontWeight: 800, fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <MapPin size={24} color="var(--primary)" /> 실시간 인연 지도
+                {/* 무절 루미 소울 쉽 위젯 + 딕소울 요약 */}
+                <div style={{ marginBottom: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {/* SoulPet 수달루미 위젯 */}
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => onNavigate?.('soul-pet')}
+                        style={{ padding: '18px', borderRadius: '18px', background: 'linear-gradient(135deg, #F0ABFC20, #E879F920)', border: '1.5px solid #C026D340', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
+                    >
+                        {(() => {
+                            const pet = (() => { try { return JSON.parse(localStorage.getItem('lumini_soul_pet') || '{}'); } catch { return {}; } })();
+                            return (
+                                <>
+                                    <div style={{ fontSize: '2rem' }}>🦦</div>
+                                    <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#A21CAF' }}>{pet.name || '루미'} <span style={{ fontSize: '0.72rem', background: '#C026D318', borderRadius: '100px', padding: '1px 7px' }}>Lv.{pet.level || 1}</span></div>
+                                    <div style={{ fontSize: '0.72rem', color: '#86198F', fontWeight: 600 }}>소울 돌보바이 →</div>
+                                </>
+                            );
+                        })()}
+                    </motion.div>
+                    {/* 딕소울 요약 */}
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => onNavigate?.(hasDeepSoul ? 'deep-soul-result' : 'deep-soul-test')}
+                        style={{ padding: '18px', borderRadius: '18px', background: hasDeepSoul ? 'linear-gradient(135deg, #4F46E510, #7C3AED08)' : 'var(--surface)', border: `1.5px solid ${hasDeepSoul ? '#7C3AED30' : 'var(--glass-border)'}`, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
+                    >
+                        <div style={{ fontSize: '2rem' }}>{hasDeepSoul ? '💎' : '✨'}</div>
+                        <div style={{ fontWeight: 900, fontSize: '0.88rem', color: hasDeepSoul ? '#6366F1' : 'var(--text)' }}>딥 소울</div>
+                        <div style={{ fontSize: '0.72rem', color: hasDeepSoul ? '#8B5CF6' : 'var(--text-muted)', fontWeight: 600 }}>{hasDeepSoul ? '결과 보기 →' : '검사 시작 →'}</div>
+                    </motion.div>
+                </div>
+
+                {/* 딥 소울 매칭 예시 카드 */}
+                <div style={{ marginBottom: '32px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+                        <h3 style={{ fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            💸 딥 소울 매칭 예시
                         </h3>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>딥 소울 완료 멤버</span>
                     </div>
-                    <div style={{
-                        borderRadius: '30px', overflow: 'hidden',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
-                        border: '8px solid var(--surface)'
-                    }}>
-                        {/* <MapContainer /> */}
-                        <div style={{ height: '450px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '30px' }}>
-                            지도 기능을 준비 중입니다...
-                        </div>
+                    <div style={{ display: 'grid', gap: '14px' }}>
+                        {[
+                            { name: '김민수', mbti: 'INTJ', soulScore: 83, cats: [{ label: '💑 연애', score: 88 }, { label: '🌿 라이프', score: 79 }, { label: '🏠 가족관', score: 91 }, { label: '🌍 가치관', score: 75 }], district: '서울 마포구', emoji: '♟️', userId: 'u2' },
+                            { name: '박서연', mbti: 'ENTP', soulScore: 71, cats: [{ label: '💑 연애', score: 60 }, { label: '🌿 라이프', score: 73 }, { label: '🏠 가족관', score: 58 }, { label: '🌍 가치관', score: 82 }], district: '서울 강남구', emoji: '🎨', userId: 'u4' },
+                            { name: '최도현', mbti: 'INFP', soulScore: 78, cats: [{ label: '💑 연애', score: 82 }, { label: '🌿 라이프', score: 71 }, { label: '🏠 가족관', score: 88 }, { label: '🌍 가치관', score: 70 }], district: '서울 마포구', emoji: '🌙', userId: 'u5' },
+                        ].map((u) => {
+                            const matchUser = nearbyUsers?.find(nu => nu.id === u.userId) || { id: u.userId, name: u.name, mbti: u.mbti, similarity: u.soulScore };
+                            return (
+                                <motion.div
+                                    key={u.name}
+                                    className="glass-card"
+                                    whileHover={{ scale: 1.01 }}
+                                    onClick={() => onSelectUser && onSelectUser(matchUser)}
+                                    style={{ padding: '18px 20px', background: 'var(--surface)', border: '1px solid var(--glass-border)', cursor: 'pointer' }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                                                {u.emoji}
+                                            </div>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '2px' }}>
+                                                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>{u.name}</span>
+                                                    <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '100px', fontWeight: 800 }}>{u.mbti}</span>
+                                                    <span style={{ fontSize: '0.68rem', background: '#4F46E510', color: '#6366F1', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>💸 딕 완료</span>
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📍 {u.district}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#6366F1' }}>{u.soulScore}%</div>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>가치관 호환도</div>
+                                        </div>
+                                    </div>
+                                    {hasDeepSoul && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                            {u.cats.map(c => (
+                                                <div key={c.label} style={{ textAlign: 'center', padding: '6px 4px', borderRadius: '10px', background: 'var(--background)', border: '1px solid var(--glass-border)' }}>
+                                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px', wordBreak: 'keep-all' }}>{c.label}</div>
+                                                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: c.score >= 80 ? '#6366F1' : c.score >= 65 ? '#10B981' : '#94A3B8' }}>{c.score}%</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div style={{ marginTop: '10px', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, textAlign: 'right' }}>
+                                        프로필 보기 →
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
+
         </motion.div>
     );
 };

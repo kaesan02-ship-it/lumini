@@ -77,7 +77,7 @@ class ErrorBoundary extends React.Component {
                                 새로고침
                             </button>
                         </div>
-                        {process.env.NODE_ENV === 'development' && this.state.error && (
+                        {import.meta.env.DEV && this.state.error && (
                             <details style={{ marginTop: '30px', textAlign: 'left' }}>
                                 <summary style={{ cursor: 'pointer', color: 'var(--text-muted)' }}>
                                     개발자 정보

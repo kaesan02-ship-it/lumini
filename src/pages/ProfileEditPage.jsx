@@ -3,19 +3,26 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Shield, Save, Tag } from 'lucide-react';
 import InterestTagsSelector from '../components/InterestTagsSelector';
 
+// 서울 주요 구청 목록
+const SEOUL_GU = ['강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', '서초구', '성동구', '성북구', '송파구', '양천구', '영등포구', '용산구', '은평구', '종로구', '중구', '중랑구'];
+const OTHER_DISTRICTS = ['부산 해운대구', '부산 수영구', '인천 연수구', '대구 수성구', '대전 유성구', '광주 남구', '수원시', '성남시 분당구', '용인시', '고양시', '화성시'];
+const ALL_DISTRICTS = [...SEOUL_GU.map(g => `서울 ${g}`), ...OTHER_DISTRICTS];
+
 const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave }) => {
     const [name, setName] = useState(userName);
     const [bio, setBio] = useState(profile?.bio || '안녕하세요! Lumini를 통해 진정한 인연을 찾고 있습니다. 🌟');
     const [selectedTags, setSelectedTags] = useState(profile?.interests || []);
-    const [privacy, setPrivacy] = useState(profile?.privacy_level || 'public'); // public, friends, private
-    const [activeTab, setActiveTab] = useState('basic'); // basic, interests, privacy
+    const [privacy, setPrivacy] = useState(profile?.privacy_level || 'public');
+    const [district, setDistrict] = useState(profile?.district || '');
+    const [activeTab, setActiveTab] = useState('basic');
 
     const handleSave = () => {
         onSave({
             name,
             bio,
             interests: selectedTags,
-            privacy
+            privacy,
+            district
         });
         onBack();
     };
@@ -93,6 +100,37 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
                                 <p style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '5px' }}>{bio.length}/200</p>
                             </div>
 
+                            {/* 지역 설정 */}
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    📍 내 동네 설정 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>(구 단위까지 설정하면 동네 친구를 만날 수 있어요)</span>
+                                </label>
+                                <select
+                                    value={district}
+                                    onChange={(e) => setDistrict(e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '14px 16px', borderRadius: '15px',
+                                        background: 'var(--background)', border: '1px solid var(--glass-border)',
+                                        color: district ? 'var(--text)' : 'var(--text-muted)',
+                                        fontSize: '1rem', fontWeight: 600, cursor: 'pointer',
+                                        appearance: 'none', outline: 'none'
+                                    }}
+                                >
+                                    <option value="">지역을 선택하세요</option>
+                                    <optgroup label="서울">
+                                        {SEOUL_GU.map(g => <option key={g} value={`서울 ${g}`}>서울 {g}</option>)}
+                                    </optgroup>
+                                    <optgroup label="기타 지역">
+                                        {OTHER_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </optgroup>
+                                </select>
+                                {district && (
+                                    <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontSize: '0.88rem', fontWeight: 700 }}>
+                                        📍 {district} 동네 친구들과 매칭됩니다
+                                    </div>
+                                )}
+                            </div>
+
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', background: 'var(--primary-faint)', padding: '20px', borderRadius: '15px' }}>
                                 <div style={{ fontSize: '1.5rem' }}>✨</div>
                                 <div>
@@ -129,8 +167,8 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
                             <PrivacyOption
                                 active={privacy === 'friends'}
                                 onClick={() => setPrivacy('friends')}
-                                title="친구에게만 공개"
-                                desc="친구 맺은 사용자에게만 상세 분석 데이터가 공개됩니다"
+                                title="관심 등록한 유저에게만 공개"
+                                desc="내가 관심 등록(♥ 좋아요)한 사용자에게만 상세 분석 데이터가 공개됩니다"
                             />
                             <PrivacyOption
                                 active={privacy === 'private'}

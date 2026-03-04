@@ -13,6 +13,26 @@ const PersonalityExplanation = ({ data }) => {
         }));
     };
 
+    const factorList = React.useMemo(() => {
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'object' && data !== null) {
+            // Convert {O, C, E, A, N, H} object to array for mapping
+            const nameMap = {
+                O: '개방성',
+                C: '성실성',
+                E: '외향성',
+                A: '우호성',
+                N: '신경증',
+                H: '정직성'
+            };
+            return Object.entries(data).map(([key, value]) => ({
+                subject: nameMap[key] || key,
+                A: value
+            })).filter(item => BIG5_DESCRIPTIONS[item.subject]);
+        }
+        return [];
+    }, [data]);
+
     return (
         <div style={{
             marginTop: '60px',
@@ -43,7 +63,7 @@ const PersonalityExplanation = ({ data }) => {
                 display: 'grid',
                 gap: '20px'
             }}>
-                {data.map((factor, index) => {
+                {factorList.map((factor, index) => {
                     const factorName = factor.subject;
                     const score = factor.A;
                     const level = getLevel(score);

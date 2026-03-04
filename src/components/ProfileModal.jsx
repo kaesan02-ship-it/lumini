@@ -12,6 +12,8 @@ import { toggleConnection } from '../supabase/queries';
 import useAuthStore from '../store/authStore';
 import LumiMascot from './LumiMascot';
 import { getAIAdvice } from '../lib/openaiClient';
+import { getDeepSoulType, buildCatScores } from '../data/deepSoulTypes';
+import { DEEP_QUESTIONS } from '../data/deepQuestions';
 
 const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat }) => {
     const { toggleFavorite, isFavorite } = useFavorites();
@@ -24,25 +26,46 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
 
     const isUserFavorited = !isMyProfile && user?.id ? isFavorite(user.id) : false;
 
+    // 항상 raw {O,C,E,A,N,H} 에서 9지표 배열로 변환 (Array로 들어와도 재계산)
     const formatPersonalityData = (raw) => {
         if (!raw) return [];
-        if (Array.isArray(raw)) return raw;
+        // raw가 {O,C,E,A,N,H} object인 경우
+        const src = Array.isArray(raw) ? null : raw;
+        // Array인 경우 묵시적으로 이미 9지표 형식이면 그대로, 아니면 null
+        if (Array.isArray(raw) && raw.length === 9 && raw[0]?.subject === '사교성') return raw;
+        if (!src) return raw; // 9지표 배열이면 그대로
+        const O = src.O || 0, C = src.C || 0, E = src.E || 0;
+        const A = src.A || 0, N = src.N || 0, H = src.H || 50;
         return [
-            { subject: '개방성', A: raw.O || 0, fullMark: 100 },
-            { subject: '성실성', A: raw.C || 0, fullMark: 100 },
-            { subject: '외향성', A: raw.E || 0, fullMark: 100 },
-            { subject: '우호성', A: raw.A || 0, fullMark: 100 },
-            { subject: '신경증', A: raw.N || 0, fullMark: 100 },
-            { subject: '정직성', A: raw.H || 50, fullMark: 100 },
+            { subject: '사교성', A: Math.round(E), fullMark: 100 },
+            { subject: '창의성', A: Math.round(O * 0.6 + E * 0.4), fullMark: 100 },
+            { subject: '공감력', A: Math.round(A * 0.6 + (100 - N) * 0.4), fullMark: 100 },
+            { subject: '계획성', A: Math.round(C), fullMark: 100 },
+            { subject: '자기주도', A: Math.round(C * 0.55 + H * 0.45), fullMark: 100 },
+            { subject: '유연성', A: Math.round(O), fullMark: 100 },
+            { subject: '따뜻함', A: Math.round(A), fullMark: 100 },
+            { subject: '회복탄력', A: Math.round(100 - N), fullMark: 100 },
+            { subject: '신뢰도', A: Math.round(H), fullMark: 100 },
         ];
     };
 
+    // personality_data에서도 변환 가능하도록
+    const formatFromPersonalityData = (pd) => {
+        if (!pd) return [];
+        if (Array.isArray(pd)) return formatPersonalityData(pd);
+        return formatPersonalityData(pd);
+    };
+
     const displayData = useMemo(() => {
-        const raw = isMyProfile ? userData : user?.data;
+        // 내 프로필인 경우 userData (raw {O,C,E,A,N,H} 또는 9지표 배열)
+        if (isMyProfile) return formatPersonalityData(userData);
+        // 상대 프로필: user.personality_data (raw obj) > user.data (배열) 우선순위
+        const raw = user?.personality_data || user?.data;
         return formatPersonalityData(raw);
-    }, [isMyProfile, userData, user?.data]);
+    }, [isMyProfile, userData, user?.personality_data, user?.data]);
 
     const myStandardizedData = useMemo(() => formatPersonalityData(userData), [userData]);
+
 
     const compatibilityAnalysis = useMemo(() => {
         if (isMyProfile || !myStandardizedData || !displayData) return null;
@@ -85,7 +108,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
             'ESTP': { name: '모험을 즐기는 사업가', emoji: '🚀' },
             'INFJ': { name: '선의의 옹호자', emoji: '🌙' },
             'INFP': { name: '열정적인 중재자', emoji: '🦋' },
-            'INTJ': { name: '용의주도한 전략가', emoji: '🧠' },
+            'INTJ': { name: '용의주도한 전략가', emoji: '♟️' },
             'INTP': { name: '논리적인 사색가', emoji: '🔬' },
             'ISFJ': { name: '용감한 수호자', emoji: '🛡️' },
             'ISFP': { name: '호기심 많은 예술가', emoji: '🎨' },
@@ -149,25 +172,63 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                                     </div>
                                 )}
                             </div>
+                            {/* 딥 소울 배지 + 매칭 */}
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
+                                {(isMyProfile ? !!localStorage.getItem('lumini_deep_soul') : !!user?.deep_soul) && (
+                                    <div style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        💎 딥 소울 완료
+                                    </div>
+                                )}
+                                {!isMyProfile && user?.deep_soul && !!localStorage.getItem('lumini_deep_soul') && (
+                                    <div style={{ background: '#8B5CF620', color: '#8B5CF6', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800 }}>
+                                        💜 가치관 호환도 확인 가능
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Bio / 자기소개 */}
+                            {(isMyProfile ? null : user?.bio) ? (
+                                <div style={{ marginTop: '14px', padding: '14px 18px', background: 'var(--background)', borderRadius: '14px', border: '1px solid var(--glass-border)', fontSize: '0.95rem', lineHeight: 1.7, color: 'var(--text)', maxWidth: '420px' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>💬 자기소개</span>
+                                    {user?.bio}
+                                </div>
+                            ) : !isMyProfile && (
+                                <div style={{ marginTop: '14px', padding: '12px 16px', background: 'var(--background)', borderRadius: '14px', border: '1px dashed var(--glass-border)', fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                    아직 자기소개를 작성하지 않았어요 ✏️
+                                </div>
+                            )}
+                            {isMyProfile && (
+                                <div style={{ marginTop: '14px', padding: '14px 18px', background: 'var(--background)', borderRadius: '14px', border: '1px solid var(--glass-border)', fontSize: '0.95rem', lineHeight: 1.7, color: 'var(--text)', maxWidth: '420px', cursor: 'pointer' }}
+                                    onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('changeStep', { detail: 'profile-edit' })); }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>💬 자기소개</span>
+                                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>자기소개를 채워 더 많은 친구를 만나보세요 →</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {/* Navigation Tabs */}
-                    <div style={{ display: 'flex', gap: '30px', borderBottom: '1px solid var(--glass-border)' }}>
-                        {['profile', 'analysis', 'interests'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                style={{
-                                    padding: '15px 0', background: 'none', border: 'none',
-                                    borderBottom: activeTab === tab ? '3px solid var(--primary)' : '3px solid transparent',
-                                    color: activeTab === tab ? 'var(--primary)' : 'var(--text-muted)',
-                                    fontWeight: 800, cursor: 'pointer', fontSize: '1.05rem', transition: 'all 0.2s'
-                                }}
-                            >
-                                {tab === 'profile' ? '성향 분석' : tab === 'analysis' ? 'AI 심층 리포트' : '관심사'}
-                            </button>
-                        ))}
+                    <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--glass-border)', overflowX: 'auto' }}>
+                        {['profile', 'analysis', 'interests', 'deep'].map(tab => {
+                            const LABELS = { profile: '성향 분석', analysis: 'AI 리포트', interests: '관심사', deep: '💎 딥 소울' };
+                            const hasDeepData = isMyProfile ? !!localStorage.getItem('lumini_deep_soul') : !!user?.deep_soul;
+                            const isDeepTab = tab === 'deep';
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    style={{
+                                        padding: '14px 0', background: 'none', border: 'none',
+                                        borderBottom: activeTab === tab ? '3px solid var(--primary)' : '3px solid transparent',
+                                        color: activeTab === tab ? 'var(--primary)' : isDeepTab && !hasDeepData ? '#94A3B8' : 'var(--text-muted)',
+                                        fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', transition: 'all 0.2s',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    {LABELS[tab]}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -176,40 +237,32 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                     <AnimatePresence mode="wait">
                         {activeTab === 'profile' && (
                             <motion.div key="profile" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '40px' }}>
-                                    <div className="glass-card" style={{ padding: '30px', background: 'var(--background)' }}>
+                                {/* 레이더 차트를 2열로 — 오른쪽에는 호환도 */}
+                                <div style={{ display: 'grid', gridTemplateColumns: !isMyProfile ? '1.2fr 1fr' : '1fr', gap: '30px', alignItems: 'stretch' }}>
+                                    <div className="glass-card" style={{ padding: '24px', background: 'var(--background)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                         <RadarChart
                                             data={displayData}
                                             comparisonData={!isMyProfile && myStandardizedData ? myStandardizedData : null}
-                                            size={320}
+                                            nameA={!isMyProfile ? (user?.username || '상대방') : '나'}
+                                            nameB={!isMyProfile ? '나' : undefined}
+                                            size={280}
                                         />
-                                        {!isMyProfile && (
-                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '20px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ width: '12px', height: '12px', background: '#ec4899', borderRadius: '50%' }}></div>
-                                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{displayName}</span>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ width: '12px', height: '12px', background: '#8b5cf6', borderRadius: '50%' }}></div>
-                                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>나</span>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
-                                    <div>
-                                        {!isMyProfile && compatibilityAnalysis && (
+                                    {!isMyProfile && compatibilityAnalysis && (
+                                        <div style={{ overflowY: 'auto', maxHeight: '320px' }}>
                                             <CompatibilityBreakdown analysis={compatibilityAnalysis} />
-                                        )}
-                                        {isMyProfile && (
-                                            <div className="glass-card" style={{ padding: '25px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                                <h4 style={{ marginBottom: '15px', fontWeight: 800 }}>내 성향 요약</h4>
-                                                <p style={{ lineHeight: 1.6, color: 'var(--text-muted)' }}>
-                                                    {mbtiType} 타입인 당신은 <span style={{ color: 'var(--primary)', fontWeight: 700 }}>주요 강점</span>들을 바탕으로 루미니에서 멋진 인연들을 만날 준비가 되어 있습니다.
-                                                    상대방과의 성향 차트를 비교해보며 서로의 보완적인 매력을 확인해보세요!
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
+                                    {isMyProfile && (
+                                        <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                            {(displayData || []).map((d, i) => (
+                                                <div key={i} style={{ padding: '14px', borderRadius: '14px', background: 'var(--background)', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '4px' }}>{Math.round(d.A)}</div>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{d.subject}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}
@@ -218,7 +271,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                             <motion.div key="analysis" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                                 {!aiReport && !isGenerating ? (
                                     <div style={{ textAlign: 'center', padding: '60px' }} className="glass-card">
-                                        <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🧠</div>
+                                        <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🔮</div>
                                         <h3 style={{ marginBottom: '12px', fontWeight: 800 }}>지능형 매칭 분석</h3>
                                         <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>OpenAI GPT-4o가 성격 데이터를 정밀 분석하여<br />관계 조언과 성찰 포인트를 제공합니다.</p>
                                         <button onClick={handleGenerateAIReport} className="primary" style={{ padding: '16px 40px', fontSize: '1.1rem' }}>분석 리포트 생성 (AI)</button>
@@ -280,6 +333,15 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                                 </div>
                             </motion.div>
                         )}
+
+                        {activeTab === 'deep' && (
+                            <DeepSoulTab
+                                isMyProfile={isMyProfile}
+                                myDeepData={JSON.parse(localStorage.getItem('lumini_deep_soul') || 'null')}
+                                otherDeepData={user?.deep_soul || null}
+                                otherName={user?.username || displayName}
+                            />
+                        )}
                     </AnimatePresence>
                 </div>
 
@@ -300,3 +362,133 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
 };
 
 export default ProfileModal;
+
+// ============================================================
+// 딥 소울 탭 서브컴포넌트
+// ============================================================
+const DEEP_CAT_META = [
+    { prefix: 'r', catId: 'relationship', label: '💑 연애 & 관계 스타일', color: '#EC4899', desc: '연락 빈도, 갈등 해결 방식, 관계의 깊이' },
+    { prefix: 'l', catId: 'lifestyle', label: '🌿 라이프스타일', color: '#10B981', desc: '음주·흡연·운동·종교·아침형/저녁형' },
+    { prefix: 'f', catId: 'family', label: '🏠 가족관 & 미래 계획', color: '#F59E0B', desc: '결혼관, 자녀, 경제 기반, 거주 지역' },
+    { prefix: 'v', catId: 'values', label: '🌍 가치관 & 세계관', color: '#6366F1', desc: '성평등, 환경, 정치 성향, 다양성' },
+];
+
+const calcCatScore = (myData, otherData, prefix) => {
+    if (!myData || !otherData) return null;
+    const myKeys = Object.keys(myData).filter(k => k.startsWith(prefix));
+    if (myKeys.length === 0) return null;
+    const totalDiff = myKeys.reduce((acc, k) => acc + Math.abs((myData[k] || 2) - (otherData[k] || 2)), 0);
+    return Math.round(100 - (totalDiff / (myKeys.length * 4)) * 100);
+};
+
+const DeepSoulTab = ({ isMyProfile, myDeepData, otherDeepData, otherName }) => {
+    const bothHaveData = !!myDeepData && !!otherDeepData;
+    const targetData = isMyProfile ? myDeepData : otherDeepData;
+
+    // 유형 계산
+    const myCatScores = useMemo(() => myDeepData ? buildCatScores(myDeepData, DEEP_QUESTIONS) : {}, [myDeepData]);
+    const otherCatScores = useMemo(() => otherDeepData ? buildCatScores(otherDeepData, DEEP_QUESTIONS) : {}, [otherDeepData]);
+
+    if (!myDeepData && isMyProfile) {
+        return (
+            <motion.div key="deep" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="glass-card" style={{ padding: '48px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💎</div>
+                    <h4 style={{ fontWeight: 900, marginBottom: '10px' }}>딥 소울 검사를 해보세요</h4>
+                    <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>가족관, 연애관, 가치관까지 맞는 인연을 찾을 수 있어요.</p>
+                </div>
+            </motion.div>
+        );
+    }
+
+    if (!isMyProfile && !otherDeepData) {
+        return (
+            <motion.div key="deep" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="glass-card" style={{ padding: '48px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
+                    <h4 style={{ fontWeight: 900, marginBottom: '10px' }}>{otherName}님은 아직 딥 소울 검사를 완료하지 않았어요</h4>
+                    <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>상대방이 검사를 완료하면 가치관 유형 비교를 확인할 수 있어요.</p>
+                </div>
+            </motion.div>
+        );
+    }
+
+    const overallScore = bothHaveData && !isMyProfile
+        ? Math.round(DEEP_CAT_META.reduce((acc, cat) => acc + (calcCatScore(myDeepData, otherDeepData, cat.prefix) || 70), 0) / DEEP_CAT_META.length)
+        : null;
+
+    const displayScores = isMyProfile ? myCatScores : otherCatScores;
+
+    return (
+        <motion.div key="deep" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'grid', gap: '14px', paddingTop: '4px' }}>
+            {overallScore !== null && (
+                <div style={{ padding: '20px 24px', borderRadius: '20px', background: 'linear-gradient(135deg, #4F46E512, #7C3AED10)', border: '1.5px solid #7C3AED20', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#7C3AED', fontWeight: 800, letterSpacing: '0.08em', marginBottom: '4px' }}>종합 가치관 호환도</div>
+                    <div style={{ fontSize: '2.8rem', fontWeight: 900, color: '#6366F1' }}>{overallScore}%</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>가치관이 일치하는 정도</div>
+                </div>
+            )}
+
+            {DEEP_CAT_META.map(cat => {
+                const compatPct = bothHaveData && !isMyProfile ? calcCatScore(myDeepData, otherDeepData, cat.prefix) : null;
+                const score = displayScores[cat.catId] ?? 50;
+                const myType = myCatScores[cat.catId] !== undefined ? getDeepSoulType(cat.catId, myCatScores[cat.catId]) : null;
+                const otherType = otherCatScores[cat.catId] !== undefined ? getDeepSoulType(cat.catId, otherCatScores[cat.catId]) : null;
+                const showType = isMyProfile ? myType : otherType;
+
+                return (
+                    <div key={cat.prefix} style={{ padding: '16px 20px', borderRadius: '16px', background: `${cat.color}08`, border: `1.5px solid ${cat.color}25` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                            <div>
+                                <div style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text)', marginBottom: '2px' }}>{cat.label}</div>
+                                <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>{cat.desc}</div>
+                            </div>
+                            {/* 유형 뱃지 */}
+                            {showType && (
+                                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '10px' }}>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: cat.color, background: `${cat.color}18`, padding: '4px 10px', borderRadius: '20px' }}>
+                                        {showType.emoji} {showType.label}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 상대방 유형 vs 내 유형 비교 (both) */}
+                        {bothHaveData && !isMyProfile && myType && otherType && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                                <div style={{ padding: '8px 10px', borderRadius: '12px', background: 'var(--background)', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '3px' }}>나</div>
+                                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: cat.color }}>{myType.emoji} {myType.label}</div>
+                                </div>
+                                <div style={{ padding: '8px 10px', borderRadius: '12px', background: 'var(--background)', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '3px' }}>{otherName}</div>
+                                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: cat.color }}>{otherType.emoji} {otherType.label}</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 호환도 바 or 성향 바 */}
+                        {compatPct !== null ? (
+                            <>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>호환도</span>
+                                    <span style={{ fontSize: '0.92rem', fontWeight: 900, color: cat.color }}>{compatPct}%</span>
+                                </div>
+                                <div style={{ height: '5px', background: 'var(--glass-border)', borderRadius: '100px', overflow: 'hidden' }}>
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${compatPct}%` }}
+                                        transition={{ duration: 0.7 }}
+                                        style={{ height: '100%', background: cat.color, borderRadius: '100px' }}
+                                    />
+                                </div>
+                            </>
+                        ) : showType && (
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>{showType.desc}</p>
+                        )}
+                    </div>
+                );
+            })}
+        </motion.div>
+    );
+};

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { Settings, Home, ClipboardList, Map as MapIcon, User, Users, Heart, Brain } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Settings, Home, ClipboardList, Users, Heart, Brain, ShoppingBag, Target, Gem, BookOpen } from 'lucide-react';
+import ShopPage from './pages/ShopPage';
+import DailyChallengesPage from './pages/DailyChallengesPage';
+import useCrystalStore from './store/crystalStore';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -18,8 +21,17 @@ import CreatePostPage from './pages/CreatePostPage';
 import AuthPage from './pages/AuthPage';
 import InsightsHubPage from './pages/InsightsHubPage';
 import AIInsightsPage from './pages/AIInsightsPage';
-import GrowthTrackingPage from './pages/GrowthTrackingPage';
+import SoulGrowthPage from './pages/SoulGrowthPage';
 import StatsPage from './pages/StatsPage';
+import SoulMagazinePage from './pages/SoulMagazinePage';
+import CommunityRankingPage from './pages/CommunityRankingPage';
+import CompatibilityGamePage from './pages/CompatibilityGamePage';
+import GroupsPage from './pages/GroupsPage';
+import GroupChatPage from './pages/GroupChatPage';
+import WeeklyReportPage from './pages/WeeklyReportPage';
+import DeepSoulTestPage from './pages/DeepSoulTestPage';
+import DeepSoulResultPage from './pages/DeepSoulResultPage';
+import SoulPetPage from './pages/SoulPetPage';
 
 // Supabase
 import { supabase } from './supabase/client';
@@ -42,7 +54,8 @@ import useFavorites from './hooks/useFavorites';
 
 function App() {
   const { user, session, setSession, loading: authLoading } = useAuthStore();
-  const { userData, mbtiType, userName, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
+  const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
+  const { crystals, dailyCheckinBonus } = useCrystalStore();
 
   const [step, setStep] = useState('welcome');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -50,6 +63,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [activeChatUser, setActiveChatUser] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [nearbyUsers, setNearbyUsers] = useState([]);
   const [chatMessages, setChatMessages] = useState([]); // For mock 1:1 chat if needed
   const [chatInput, setChatInput] = useState('');
@@ -59,29 +73,50 @@ function App() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user.id);
+        }
+      } catch (err) {
+        console.log('Session init skipped (mock mode):', err.message);
+      }
 
-      if (currentSession?.user) {
-        await fetchProfile(currentSession.user.id);
-
-        // Fetch nearby users from DB
-        try {
-          const profiles = await getNearbyProfiles(20);
-          // Transform to match front-end expectations (similarity score etc)
-          const mapped = profiles
-            .filter(p => p.id !== currentSession.user.id)
-            .map(p => ({
+      // Always load nearby users (works in mock mode too)
+      try {
+        const profiles = await getNearbyProfiles(20);
+        const currentUserId = user?.id || 'mock-user-001';
+        const mapped = profiles
+          .filter(p => p.id !== currentUserId)
+          .map(p => {
+            const pd = p.personality_data || {};
+            const O = pd.O || 0, C = pd.C || 0, E = pd.E || 0;
+            const A = pd.A || 0, N = pd.N || 0, H = pd.H || 50;
+            return {
               id: p.id,
               name: p.username || '익명',
               mbti: p.mbti_type || 'Unknown',
-              similarity: 80 + Math.floor(Math.random() * 15), // Mock similarity for now
-              data: p.personality_data || []
-            }));
-          setNearbyUsers(mapped);
-        } catch (err) {
-          console.error('Failed to load nearby users:', err);
-        }
+              bio: p.bio || '',
+              similarity: 80 + Math.floor(Math.random() * 15),
+              deep_soul: p.deep_soul || null,
+              data: [
+                { subject: '사교성', A: Math.round(E), fullMark: 100 },
+                { subject: '창의성', A: Math.round(O * 0.6 + E * 0.4), fullMark: 100 },
+                { subject: '공감력', A: Math.round(A * 0.6 + (100 - N) * 0.4), fullMark: 100 },
+                { subject: '계획성', A: Math.round(C), fullMark: 100 },
+                { subject: '자기주도', A: Math.round(C * 0.55 + H * 0.45), fullMark: 100 },
+                { subject: '유연성', A: Math.round(O), fullMark: 100 },
+                { subject: '따뜻함', A: Math.round(A), fullMark: 100 },
+                { subject: '회복탄력', A: Math.round(100 - N), fullMark: 100 },
+                { subject: '신뢰도', A: Math.round(H), fullMark: 100 },
+              ]
+            };
+          });
+
+        setNearbyUsers(mapped);
+      } catch (err) {
+        console.error('Failed to load nearby users:', err);
       }
     };
 
@@ -97,9 +132,9 @@ function App() {
     return () => subscription.unsubscribe();
   }, [setSession, fetchProfile]);
 
-  // Handle step based on data
+  // Handle step based on data — 새로고침 시 검사 결과가 있으면 대시보드로 이동
   useEffect(() => {
-    if (userData && step === 'welcome') {
+    if (userData && (step === 'welcome' || step === 'test')) {
       setStep('dashboard');
     }
   }, [userData]);
@@ -118,10 +153,14 @@ function App() {
 
     // Also update Supabase if logged in
     if (user) {
-      updateProfile(user.id, {
-        personality_data: data,
-        mbti_type: type
-      });
+      try {
+        updateProfile(user.id, {
+          personality_data: data,
+          mbti_type: type
+        });
+      } catch (err) {
+        console.error("Profile update failed (silently ignored in mock mode):", err);
+      }
     }
 
     localStorage.setItem('lumini_user_data', JSON.stringify(data));
@@ -161,7 +200,18 @@ function App() {
         backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100
       }}>
         <h1 className="title-gradient" style={{ fontSize: '1.6rem', cursor: 'pointer', fontWeight: 800 }} onClick={() => setStep('dashboard')}>lumini</h1>
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {/* Crystal HUD */}
+          {step !== 'welcome' && step !== 'test' && step !== 'result' && (
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setStep('shop')}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #F3E8FF, #E9D5FF)', padding: '7px 14px', borderRadius: '100px', border: '1px solid #9333EA20' }}
+            >
+              <Gem size={14} color="#9333EA" />
+              <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#9333EA' }}>{crystals}</span>
+            </motion.div>
+          )}
           <motion.div whileHover={{ scale: 1.1 }} onClick={() => setShowSettings(true)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '50%', background: '#f8fafc' }}>
             <Settings size={22} color="var(--text-muted)" />
           </motion.div>
@@ -179,13 +229,13 @@ function App() {
 
           {step === 'test' && (
             <motion.div key="test" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ padding: '40px 0' }}>
-              <PersonalityTest onComplete={handleTestComplete} />
+              <PersonalityTest onComplete={handleTestComplete} onBack={() => setStep(userData ? 'dashboard' : 'welcome')} />
             </motion.div>
           )}
 
           {step === 'result' && (
             <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ padding: '40px 0' }}>
-              <ResultReport data={userData} mbtiType={mbtiType} onExplore={() => setStep('dashboard')} />
+              <ResultReport data={userData} mbtiType={mbtiType} onExplore={() => setStep('dashboard')} onNavigate={setStep} />
             </motion.div>
           )}
 
@@ -195,6 +245,7 @@ function App() {
               mbtiType={mbtiType}
               nearbyUsers={nearbyUsers}
               onSelectUser={setSelectedUser}
+              onNavigate={setStep}
             />
           )}
 
@@ -270,7 +321,8 @@ function App() {
                       username: data.name,
                       bio: data.bio,
                       interests: data.interests,
-                      privacy_level: data.privacy
+                      privacy_level: data.privacy,
+                      district: data.district
                     });
                     setStep('dashboard');
                   } catch (err) {
@@ -278,6 +330,9 @@ function App() {
                   }
                 } else {
                   setUserName(data.name);
+                  if (data.district) {
+                    localStorage.setItem('lumini_user_district', data.district);
+                  }
                   setStep('dashboard');
                 }
               }}
@@ -290,16 +345,66 @@ function App() {
             <InsightsHubPage onSelectCategory={(cat) => setStep(cat)} />
           )}
           {step === 'ai-insights' && (
-            <AIInsightsPage userData={userData} mbtiType={mbtiType} />
+            <AIInsightsPage userData={userData} mbtiType={mbtiType} onNavigate={setStep} />
           )}
           {step === 'growth' && (
-            <GrowthTrackingPage
+            <SoulGrowthPage
               onBack={() => setStep('insights')}
-              onRetest={() => setStep('test')}
+              mbtiType={mbtiType}
             />
           )}
           {step === 'stats' && (
             <StatsPage />
+          )}
+          {step === 'shop' && (
+            <ShopPage onBack={() => setStep('dashboard')} />
+          )}
+          {step === 'soul-pet' && (
+            <SoulPetPage onBack={() => setStep('dashboard')} />
+          )}
+          {step === 'daily-challenges' && (
+            <DailyChallengesPage
+              onBack={() => setStep('dashboard')}
+              mbtiType={mbtiType}
+              onNavigate={setStep}
+            />
+          )}
+          {step === 'magazine' && (
+            <SoulMagazinePage mbtiType={mbtiType} onBack={() => setStep('community')} />
+          )}
+          {step === 'ranking' && (
+            <CommunityRankingPage onBack={() => setStep('community')} mbtiType={mbtiType} />
+          )}
+          {step === 'compatibility-game' && (
+            <CompatibilityGamePage onBack={() => setStep('community')} myMbtiType={mbtiType} onNavigate={setStep} />
+          )}
+          {step === 'groups' && (
+            <GroupsPage onSelectGroup={(g) => { setSelectedGroup(g); setStep('group-chat'); }} />
+          )}
+          {step === 'group-chat' && selectedGroup && (
+            <GroupChatPage group={selectedGroup} onBack={() => setStep('groups')} />
+          )}
+          {step === 'community' && (
+            <CommunityHubPage onNavigate={setStep} />
+          )}
+          {step === 'weekly-report' && (
+            <WeeklyReportPage onBack={() => setStep('community')} onNavigate={setStep} />
+          )}
+          {step === 'deep-soul-test' && (
+            <DeepSoulTestPage
+              onBack={() => setStep('dashboard')}
+              onComplete={(answers) => {
+                localStorage.setItem('lumini_deep_soul', JSON.stringify(answers));
+                setStep('dashboard');
+              }}
+            />
+          )}
+          {step === 'deep-soul-result' && (
+            <DeepSoulResultPage
+              onBack={() => setStep('dashboard')}
+              onRetake={() => setStep('deep-soul-test')}
+              onNavigate={setStep}
+            />
           )}
         </AnimatePresence>
       </main>
@@ -309,8 +414,10 @@ function App() {
         <nav className="bottom-nav">
           <NavItem active={step === 'dashboard'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} />
           <NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} />
+          <NavItem active={step === 'daily-challenges'} icon={<Target size={22} />} label="챌린지" onClick={() => setStep('daily-challenges')} />
+          <NavItem active={['community', 'magazine', 'ranking', 'compatibility-game', 'groups', 'group-chat', 'weekly-report'].includes(step)} icon={<Users size={22} />} label="커뮤니티" onClick={() => setStep('community')} />
           <NavItem active={step.includes('insight') || step === 'growth' || step === 'stats'} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} />
-          <NavItem active={step === 'events'} icon={<MapIcon size={22} />} label="모임" onClick={() => setStep('events')} />
+          <NavItem active={step === 'shop'} icon={<ShoppingBag size={22} />} label="상점" onClick={() => setStep('shop')} />
         </nav>
       )}
 
@@ -325,8 +432,8 @@ function App() {
           userName={userName}
           mbtiType={mbtiType}
           userData={userData}
-          onStartChat={(user) => {
-            setActiveChatUser(user);
+          onStartChat={(u) => {
+            setActiveChatUser(u);
             setSelectedUser(null);
             setShowMyProfile(false);
             setStep('chat');
@@ -339,6 +446,9 @@ function App() {
         userName={userName}
         setUserName={setUserName}
         onReset={resetData}
+        mbtiType={mbtiType}
+        userData={userData}
+        onNavigate={(target) => { setShowSettings(false); setStep(target); }}
       />
     </div>
   );
@@ -350,5 +460,42 @@ const NavItem = ({ icon, label, active, onClick }) => (
     <span style={{ fontSize: '0.75rem', marginTop: '4px', fontWeight: active ? 700 : 500 }}>{label}</span>
   </div>
 );
+
+const CommunityHubPage = ({ onNavigate }) => {
+  const cards = [
+    { step: 'magazine', emoji: '📖', title: '소울 매거진', desc: '성향별 큐레이션 아티클 · 북마크 저장', gradient: ['#F3E8FF', '#E9D5FF'], accent: '#9333EA' },
+    { step: 'compatibility-game', emoji: '💕', title: '소울 궁합 게임', desc: '6문제로 알아보는 나의 이상형 궁합 · +15💎', gradient: ['#FDF4FF', '#FAE8FF'], accent: '#D946EF' },
+    { step: 'ranking', emoji: '🏆', title: '소울 랭킹', desc: '주간/월간 활동 리더보드 · +30💎 보상', gradient: ['#FFF7ED', '#FED7AA'], accent: '#F59E0B' },
+    { step: 'groups', emoji: '💬', title: '소울 그룹', desc: '성향별 그룹 채팅 · 관심사 모임 참여', gradient: ['#EFF6FF', '#DBEAFE'], accent: '#3B82F6' },
+    { step: 'weekly-report', emoji: '📊', title: '주간 성장 리포트', desc: '나의 한 주 활동 · XP · 레벨 확인', gradient: ['#F0FDF4', '#DCFCE7'], accent: '#10B981', badge: 'NEW' },
+    { step: 'growth', emoji: '🌱', title: '소울 성장 일지', desc: '감정 체크인 · 소셜 미션 · AI 상담사', gradient: ['#FFF1F5', '#FCE7F3'], accent: '#EC4899' },
+    { step: 'daily-challenges', emoji: '⚡', title: '데일리 챌린지', desc: '매일 새로운 소통 챌린지 · +10💎', gradient: ['#FFFBEB', '#FEF3C7'], accent: '#F59E0B', badge: 'HOT' },
+  ];
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--background)', paddingBottom: '120px' }}>
+      <div style={{ padding: '30px 5% 20px', background: 'linear-gradient(135deg, #6366F1, #EC4899)', color: 'white' }}>
+        <h1 style={{ margin: 0, fontWeight: 900, fontSize: '1.6rem' }}>🌟 커뮤니티</h1>
+        <p style={{ margin: '6px 0 0', opacity: 0.85, fontSize: '0.88rem' }}>함께하면 더 즐거운 소울 공간</p>
+      </div>
+      <div style={{ padding: '24px 5%', display: 'grid', gap: '14px' }}>
+        {cards.map(card => (
+          <motion.div key={card.step} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+            onClick={() => onNavigate(card.step)}
+            style={{ background: `linear-gradient(135deg, ${card.gradient[0]}, ${card.gradient[1]})`, borderRadius: '22px', padding: '22px', cursor: 'pointer', border: `1px solid ${card.accent}20`, display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden' }}>
+            {card.badge && (
+              <div style={{ position: 'absolute', top: '12px', right: '12px', background: card.badge === 'NEW' ? '#10B981' : '#EF4444', color: 'white', fontSize: '0.65rem', fontWeight: 900, padding: '3px 8px', borderRadius: '100px' }}>{card.badge}</div>
+            )}
+            <div style={{ fontSize: '2.2rem', flexShrink: 0 }}>{card.emoji}</div>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '3px', color: '#1E293B' }}>{card.title}</div>
+              <div style={{ fontSize: '0.82rem', color: '#475569' }}>{card.desc}</div>
+            </div>
+            <div style={{ marginLeft: 'auto', color: card.accent, flexShrink: 0, fontSize: '1.2rem' }}>›</div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default App;

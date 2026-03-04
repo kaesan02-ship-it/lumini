@@ -13,10 +13,10 @@ const InsightsHubPage = ({ onSelectCategory }) => {
         },
         {
             id: 'growth',
-            title: '개인 성장 트래킹',
-            desc: '시간에 따른 내 성격 지표 변화와 성장 일지',
-            icon: <TrendingUp size={24} color="#82ca9d" />,
-            color: 'rgba(130, 202, 157, 0.1)'
+            title: '🌱 소울 성장 일지',
+            desc: '매일 감정 체크인 · 소셜 미션 · 관계 일지 · AI 상담사',
+            icon: <TrendingUp size={24} color="#10B981" />,
+            color: 'rgba(16, 185, 129, 0.1)'
         },
         {
             id: 'stats',

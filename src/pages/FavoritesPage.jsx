@@ -1,54 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Heart, MessageCircle, User, TrendingUp, Sparkles, HeartOff, Loader } from 'lucide-react';
-import useAuthStore from '../store/authStore';
-import { getConnections, toggleConnection } from '../supabase/queries';
+import { ArrowLeft, Heart, MessageCircle, User, Sparkles, HeartOff } from 'lucide-react';
+import useFavoriteStore from '../store/favoriteStore';
 
-const FavoritesPage = ({ onBack, nearbyUsers, onSelectUser, onStartChat }) => {
-    const { user } = useAuthStore();
-    const [favoriteUsers, setFavoriteUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
+const FavoritesPage = ({ onBack, nearbyUsers = [], onSelectUser, onStartChat }) => {
+    const { favorites, toggleFavorite } = useFavoriteStore();
 
-    const fetchFavorites = useCallback(async () => {
-        if (!user) return;
-        try {
-            setLoading(true);
-            const connections = await getConnections(user.id);
-            // connections format: [{ ..., profiles: { ... } }]
-            // We need to map this to the format expected by the UI
-            const mappedUsers = connections
-                .filter(conn => conn.status === 'accepted')
-                .map(conn => ({
-                    ...conn.profiles,
-                    name: conn.profiles.username,
-                    similarity: conn.similarity || 0,
-                    id: conn.profiles.id,
-                    mbti: conn.profiles.mbti_type
-                }));
-            setFavoriteUsers(mappedUsers);
-        } catch (err) {
-            console.error('Failed to fetch favorites:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [user]);
+    // favoriteStore의 ID 목록과 nearbyUsers를 교차 참조해서 유저 데이터 가져오기
+    const favoriteUsers = useMemo(() => {
+        return favorites
+            .map(id => nearbyUsers.find(u => u.id === id))
+            .filter(Boolean); // nearbyUsers에 없는 항목 제거
+    }, [favorites, nearbyUsers]);
 
-    useEffect(() => {
-        fetchFavorites();
-    }, [fetchFavorites]);
-
-    const handleRemoveFavorite = async (friendId) => {
-        if (!user) return;
-        try {
-            await toggleConnection(user.id, friendId);
-            setFavoriteUsers(prev => prev.filter(u => u.id !== friendId));
-        } catch (err) {
-            console.error('Failed to remove favorite:', err);
-        }
+    const handleRemove = (userId) => {
+        toggleFavorite(userId);
     };
 
     // 매칭률 순 정렬
-    const sortedFavorites = [...favoriteUsers].sort((a, b) => b.similarity - a.similarity);
+    const sortedFavorites = useMemo(
+        () => [...favoriteUsers].sort((a, b) => (b.similarity || 0) - (a.similarity || 0)),
+        [favoriteUsers]
+    );
 
     return (
         <div style={{
@@ -110,11 +83,7 @@ const FavoritesPage = ({ onBack, nearbyUsers, onSelectUser, onStartChat }) => {
 
             {/* Content */}
             <div style={{ padding: '30px 5%' }}>
-                {loading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
-                        <Loader className="spin" size={40} color="var(--primary)" />
-                    </div>
-                ) : sortedFavorites.length === 0 ? (
+                {sortedFavorites.length === 0 ? (
                     // Empty State
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -175,7 +144,7 @@ const FavoritesPage = ({ onBack, nearbyUsers, onSelectUser, onStartChat }) => {
                                     index={index}
                                     onSelectUser={onSelectUser}
                                     onStartChat={onStartChat}
-                                    onRemove={() => handleRemoveFavorite(user.id)}
+                                    onRemove={() => handleRemove(user.id)}
                                 />
                             ))}
                         </AnimatePresence>

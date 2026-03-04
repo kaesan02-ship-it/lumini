@@ -185,7 +185,7 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                 </AnimatePresence>
 
                 {/* Conversation Prompts */}
-                {showPrompts && messages.length === 1 && (
+                {showPrompts && chatMessages.length === 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}

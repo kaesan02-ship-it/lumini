@@ -1,421 +1,359 @@
 import { supabase } from './client';
+import { USE_MOCK_DATA } from '../config';
+
+// =============================================
+// 인메모리 모크 스토어 (CRUD가 즉시 반영됨)
+// =============================================
+
+const MOCK_USER_ME = {
+    id: 'mock-user-001', username: '루미니 탐험가', avatar_url: '',
+    mbti_type: 'ENFP', personality_data: { O: 85, C: 45, E: 90, A: 75, N: 30, H: 95 },
+    bio: '반가워요! 루미니에서 함께 성장해요 ✨',
+    district: '서울 마포구'
+};
+
+const MOCK_USERS = [
+    MOCK_USER_ME,
+    {
+        id: 'u2', username: '김민수', avatar_url: '', mbti_type: 'INTJ', personality_data: { O: 90, C: 85, E: 30, A: 40, N: 20, H: 80 }, bio: '조용히 세상을 설계합니다', district: '서울 마포구',
+        deep_soul: { r1: 3, r2: 1, r3: 2, r4: 3, r5: 1, r6: 2, r7: 3, r8: 1, l1: 2, l2: 1, l3: 3, l4: 2, l5: 1, l6: 2, l7: 3, l8: 1, f1: 3, f2: 2, f3: 1, f4: 3, f5: 2, f6: 1, f7: 3, f8: 2, v1: 3, v2: 2, v3: 1, v4: 3, v5: 2, v6: 1, v7: 3 }
+    },
+    { id: 'u3', username: '이지우', avatar_url: '', mbti_type: 'ISFJ', personality_data: { O: 40, C: 70, E: 50, A: 85, N: 40, H: 90 }, bio: '따뜻한 커피 한 잔의 위로', district: '서울 서대문구' },
+    {
+        id: 'u4', username: '박서연', avatar_url: '', mbti_type: 'ENTP', personality_data: { O: 95, C: 35, E: 88, A: 50, N: 55, H: 70 }, bio: '아이디어가 넘쳐나는 사람', district: '서울 강남구',
+        deep_soul: { r1: 4, r2: 3, r3: 4, r4: 3, r5: 4, r6: 3, r7: 4, r8: 3, l1: 4, l2: 3, l3: 4, l4: 3, l5: 4, l6: 3, l7: 4, l8: 3, f1: 2, f2: 1, f3: 2, f4: 1, f5: 2, f6: 1, f7: 2, f8: 1, v1: 4, v2: 3, v3: 4, v4: 3, v5: 4, v6: 3, v7: 4 }
+    },
+    {
+        id: 'u5', username: '최도현', avatar_url: '', mbti_type: 'INFP', personality_data: { O: 80, C: 55, E: 35, A: 90, N: 65, H: 85 }, bio: '그림 그리고 글 쓰는 몽상가', district: '서울 마포구',
+        deep_soul: { r1: 2, r2: 3, r3: 1, r4: 2, r5: 3, r6: 1, r7: 2, r8: 3, l1: 3, l2: 2, l3: 1, l4: 3, l5: 2, l6: 1, l7: 3, l8: 2, f1: 4, f2: 3, f3: 4, f4: 3, f5: 4, f6: 3, f7: 4, f8: 3, v1: 2, v2: 3, v3: 2, v4: 3, v5: 2, v6: 3, v7: 2 }
+    },
+    { id: 'u6', username: '정하은', avatar_url: '', mbti_type: 'ESTJ', personality_data: { O: 50, C: 95, E: 75, A: 60, N: 15, H: 88 }, bio: '계획대로 살기 프로', district: '서울 용산구' },
+];
+
+
+// 인메모리 게시물
+let mockPosts = [
+    { id: 'post-1', content: 'MBTI 검사 후 친구들과 대화하니까 서로를 더 잘 이해하게 된 기분이에요! 역시 성격은 과학적으로 파악해야 하나봐요 😊', category: 'experience', author_id: 'u3', author: MOCK_USERS[2], created_at: '2026-02-12T10:30:00Z', likes_count: 12 },
+    { id: 'post-2', content: '루미니에서 추천받은 사람이랑 실제로 만났는데, 대화가 진짜 잘 통해요! 성향 매칭의 힘을 실감합니다 💜', category: 'experience', author_id: 'u4', author: MOCK_USERS[3], created_at: '2026-02-12T09:15:00Z', likes_count: 25 },
+    { id: 'post-3', content: '💡 꿀팁: 성격 진단은 3개월마다 다시 하면 좋아요. 사람은 변하니까요! 한 달 전과 비교해보면 성장한 나를 발견할 수 있어요.', category: 'tip', author_id: 'u2', author: MOCK_USERS[1], created_at: '2026-02-11T22:00:00Z', likes_count: 34 },
+    { id: 'post-4', content: 'INTJ와 ENFP가 같은 팀이 되면 어떨까요? 반대 성향끼리 오히려 시너지가 나는 이유가 궁금합니다!', category: 'question', author_id: 'u5', author: MOCK_USERS[4], created_at: '2026-02-11T18:45:00Z', likes_count: 8 },
+    { id: 'post-5', content: '오늘 루미니에서 만난 모임 정말 좋았어요! 같은 취향을 공유하는 사람들이 모이니까 에너지가 넘쳤습니다 ⚡', category: 'experience', author_id: 'u6', author: MOCK_USERS[5], created_at: '2026-02-11T15:20:00Z', likes_count: 19 },
+];
+
+// 인메모리 이벤트
+let mockEvents = [
+    { id: 'evt-1', title: '강남구 인디밴드 공연 관람', description: '같은 음악 취향을 가진 루미니 멤버들과 함께 공연을 즐겨요! 공연 후 카페에서 감상 이야기도 나눠봐요.', location: '강남구 역삼동 뮤직 라운지', event_date: '2026-02-15T19:00:00Z', max_participants: 12, participant_count: 7, hive_id: 'hive-1', hives: { name: '예술/문화' }, created_by: 'u4', creator: MOCK_USERS[3] },
+    { id: 'evt-2', title: 'AI 스터디 모임 (초보 환영)', description: '인공지능에 관심 있는 분들, 함께 기초부터 배워봐요! 노트북만 갖고 오시면 됩니다.', location: '판교 스타트업 카페', event_date: '2026-02-18T14:00:00Z', max_participants: 8, participant_count: 3, hive_id: 'hive-2', hives: { name: '기술/IT' }, created_by: 'u2', creator: MOCK_USERS[1] },
+    { id: 'evt-3', title: '한강 러닝 크루 🏃', description: '주말 아침 한강에서 함께 뛰어요! 페이스 상관없이 누구나 환영합니다. 러닝 후 브런치까지!', location: '여의도 한강공원 물빛광장', event_date: '2026-02-20T07:30:00Z', max_participants: 20, participant_count: 11, hive_id: null, hives: null, created_by: 'u6', creator: MOCK_USERS[5] },
+];
+
+// 인메모리 댓글
+let mockComments = {
+    'post-1': [
+        { id: 'c1', post_id: 'post-1', content: '완전 공감해요! 저도 루미니 덕분에 친구와 더 많은 대화를 나누게 됐어요.', author_id: 'u2', author: MOCK_USERS[1], created_at: '2026-02-12T11:00:00Z' },
+        { id: 'c2', post_id: 'post-1', content: '과학적 접근이라니 멋져요 👍', author_id: 'u5', author: MOCK_USERS[4], created_at: '2026-02-12T11:30:00Z' },
+    ],
+    'post-2': [
+        { id: 'c3', post_id: 'post-2', content: '부러워요! 저도 매칭 추천 받은 분한테 메시지 보내볼까 고민 중이에요 ㅎㅎ', author_id: 'u3', author: MOCK_USERS[2], created_at: '2026-02-12T10:00:00Z' },
+    ],
+    'post-4': [
+        { id: 'c4', post_id: 'post-4', content: 'INTJ인데 ENFP 친구랑 프로젝트 했을 때 진짜 시너지 대박이었어요! 서로 부족한 부분을 채워주는 느낌이랄까?', author_id: 'u2', author: MOCK_USERS[1], created_at: '2026-02-11T19:00:00Z' },
+        { id: 'c5', post_id: 'post-4', content: '반대 성향이 오히려 새로운 시각을 줄 수 있다고 생각해요!', author_id: 'u6', author: MOCK_USERS[5], created_at: '2026-02-11T19:30:00Z' },
+    ],
+};
+
+// 인메모리 좋아요 상태
+const mockLikes = {};
+
+// 인메모리 성장 기록
+let mockGrowthLogs = [
+    { id: 'gl-1', user_id: 'mock-user-001', content: '오늘은 모르는 사람 3명과 대화를 나눴다. 외향성 점수가 높다고 나왔는데, 실제로 노력하니까 정말 즐거운 대화가 가능했다!', created_at: '2026-02-10T20:00:00Z' },
+    { id: 'gl-2', user_id: 'mock-user-001', content: '계획대로 일정을 진행하는 것이 어렵지만, 작은 목표부터 세워보기로 했다. 성실성을 키워보자!', created_at: '2026-02-08T18:30:00Z' },
+];
+
+let mockPersonalityHistory = [
+    { id: 'ph-1', user_id: 'mock-user-001', created_at: '2025-11-01T00:00:00Z', openness: 75, conscientiousness: 40, extraversion: 82, agreeableness: 68, neuroticism: 35, mbti_type: 'ENFP' },
+    { id: 'ph-2', user_id: 'mock-user-001', created_at: '2026-01-15T00:00:00Z', openness: 80, conscientiousness: 42, extraversion: 87, agreeableness: 72, neuroticism: 32, mbti_type: 'ENFP' },
+    { id: 'ph-3', user_id: 'mock-user-001', created_at: '2026-02-12T00:00:00Z', openness: 85, conscientiousness: 45, extraversion: 90, agreeableness: 75, neuroticism: 30, mbti_type: 'ENFP' },
+];
+
+let idCounter = 100;
+const nextId = () => `mock-${++idCounter}`;
+
+// =============================================
+// API 함수 (원본 Supabase 로직 유지 + 모크 모드)
+// =============================================
 
 // --- [Profiles] ---
-
-/**
- * 사용자 프로필 가져오기
- */
 export const getProfile = async (userId) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
+    if (USE_MOCK_DATA) return MOCK_USER_ME;
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (error) throw error;
     return data;
 };
 
-/**
- * 프로필 생성 또는 업데이트
- */
 export const upsertProfile = async (profileData) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .upsert(profileData, { onConflict: 'id' })
-        .select()
-        .single();
-
+    if (USE_MOCK_DATA) return { ...MOCK_USER_ME, ...profileData };
+    const { data, error } = await supabase.from('profiles').upsert(profileData, { onConflict: 'id' }).select().single();
     if (error) throw error;
     return data;
 };
 
 // --- [Social / Connections] ---
-
-/**
- * 주변 사용자 목록 가져오기 (성향 일치도 포함 가능)
- */
 export const getNearbyProfiles = async (limit = 10) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .limit(limit);
-
+    if (USE_MOCK_DATA) return MOCK_USERS.slice(0, limit);
+    const { data, error } = await supabase.from('profiles').select('*').limit(limit);
     if (error) throw error;
     return data;
 };
 
-/**
- * 관심 등록 (Like)
- */
-export const toggleConnection = async (requesterId, targetId, similarity) => {
-    // 기존 연결 확인
-    const { data: existing } = await supabase
-        .from('connections')
-        .select('*')
-        .eq('requester_id', requesterId)
-        .eq('target_id', targetId)
-        .single();
-
+export const toggleConnection = async (reqId, targetId, sim) => {
+    if (USE_MOCK_DATA) return { status: 'created', data: { id: nextId() } };
+    const { data: existing } = await supabase.from('connections').select('*').eq('requester_id', reqId).eq('target_id', targetId).single();
     if (existing) {
-        const { error } = await supabase
-            .from('connections')
-            .delete()
-            .eq('id', existing.id);
+        const { error } = await supabase.from('connections').delete().eq('id', existing.id);
         if (error) throw error;
         return { status: 'deleted' };
     } else {
-        const { data, error } = await supabase
-            .from('connections')
-            .insert({
-                requester_id: requesterId,
-                target_id: targetId,
-                similarity_score: similarity,
-                status: 'pending'
-            })
-            .select()
-            .single();
+        const { data, error } = await supabase.from('connections').insert({ requester_id: reqId, target_id: targetId, similarity_score: sim, status: 'pending' }).select().single();
         if (error) throw error;
         return { status: 'created', data };
     }
 };
 
+export const getConnections = async (userId) => {
+    if (USE_MOCK_DATA) return MOCK_USERS.filter(u => u.id !== 'mock-user-001').map(p => ({ profiles: p }));
+    const { data, error } = await supabase.from('connections').select('*, profiles!connections_target_id_fkey(*)').eq('requester_id', userId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+};
+
 // --- [Communities / Hives] ---
-
-/**
- * 커뮤니티 목록 가져오기
- */
-export const getCommunities = async () => {
-    const { data, error } = await supabase
-        .from('communities')
-        .select('*');
-
+export const getHives = async () => {
+    if (USE_MOCK_DATA) return [
+        { id: 'hive-1', name: '예술/문화', description: '음악, 미술, 공연 등 예술을 사랑하는 사람들', member_count: 156 },
+        { id: 'hive-2', name: '기술/IT', description: 'AI, 개발, 데이터 사이언스 모임', member_count: 203 },
+        { id: 'hive-3', name: '운동/건강', description: '러닝, 헬스, 요가 등 건강한 라이프', member_count: 89 },
+        { id: 'hive-4', name: '맛집/요리', description: '맛집 탐방과 홈쿡을 즐기는 미식가', member_count: 134 },
+    ];
+    const { data, error } = await supabase.from('communities').select('*');
     if (error) throw error;
     return data;
 };
 
-/**
- * 커뮤니티 가입
- */
+export const getCommunities = getHives;
+
 export const joinCommunity = async (communityId, profileId) => {
-    const { data, error } = await supabase
-        .from('community_members')
-        .insert({ community_id: communityId, profile_id: profileId })
-        .select()
-        .single();
-
+    if (USE_MOCK_DATA) return { status: 'joined', community_id: communityId };
+    const { data, error } = await supabase.from('community_members').insert({ community_id: communityId, profile_id: profileId }).select().single();
     if (error) throw error;
     return data;
 };
 
-// --- [Messaging] ---
-
-/**
- * 대화 메시지 가져오기 (다이렉트 또는 커뮤니티)
- */
-export const getMessages = async (options) => {
-    let query = supabase.from('messages').select('*, sender:profiles(username, avatar_url)');
-
-    if (options.communityId) {
-        query = query.eq('community_id', options.communityId);
-    } else if (options.receiverId) {
-        // 1:1 대화 (A -> B OR B -> A)
-        query = query.or(`and(sender_id.eq.${options.senderId},receiver_id.eq.${options.receiverId}),and(sender_id.eq.${options.receiverId},receiver_id.eq.${options.senderId})`);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: true });
-    if (error) throw error;
-    return data;
-};
-
-/**
- * 메시지 전송
- */
-export const sendMessage = async (messageData) => {
-    const { data, error } = await supabase
-        .from('messages')
-        .insert(messageData)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return data;
-};
-// --- Event (Gathering) Management ---
-
-/**
- * 이벤트 목록 가져오기
- */
-export const getEvents = async (hiveId = null) => {
-    let query = supabase
-        .from('events')
-        .select(`
-            *,
-            hives (name),
-            creator:profiles!events_created_by_fkey (username, avatar_url)
-        `)
-        .order('event_date', { ascending: true });
-
-    if (hiveId) {
-        query = query.eq('hive_id', hiveId);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
-};
-
-/**
- * 이벤트 상세 정보 가져오기
- */
-export const getEventDetail = async (eventId) => {
-    const { data, error } = await supabase
-        .from('events')
-        .select(`
-            *,
-            hives (name),
-            creator:profiles!events_created_by_fkey (username, avatar_url)
-        `)
-        .eq('id', eventId)
-        .single();
-    if (error) throw error;
-    return data;
-};
-
-/**
- * 이벤트 생성
- */
-export const createEvent = async (eventData) => {
-    const { data, error } = await supabase
-        .from('events')
-        .insert(eventData)
-        .select()
-        .single();
-    if (error) throw error;
-    return data;
-};
-
-/**
- * 이벤트 참가 신청/취소
- */
-export const toggleEventParticipation = async (eventId, userId) => {
-    const { data: existing } = await supabase
-        .from('event_participants')
-        .select('*')
-        .eq('event_id', eventId)
-        .eq('user_id', userId)
-        .single();
-
-    if (existing) {
-        const { error } = await supabase
-            .from('event_participants')
-            .delete()
-            .eq('id', existing.id);
-        if (error) throw error;
-        return { status: 'cancelled' };
-    } else {
-        const { data, error } = await supabase
-            .from('event_participants')
-            .insert({
-                event_id: eventId,
-                user_id: userId,
-                status: 'attending'
-            })
-            .select()
-            .single();
-        if (error) throw error;
-        return { status: 'attending', data };
-    }
-};
-
-/**
- * 이벤트 참가자 목록 가져오기
- */
-export const getEventParticipants = async (eventId) => {
-    const { data, error } = await supabase
-        .from('event_participants')
-        .select(`
-            *,
-            profiles (
-                id,
-                username,
-                avatar_url,
-                mbti_type
-            )
-        `)
-    if (error) throw error;
-    return data;
-};
-
-// --- Post (Feed) Management ---
-
-/**
- * 게시물 목록 가져오기
- */
+// --- [Posts / Feed] ---  **인메모리 CRUD**
 export const getPosts = async (category = null) => {
-    let query = supabase
-        .from('posts')
-        .select(`
-            *,
-            author:profiles!posts_author_id_fkey (id, username, avatar_url, mbti_type)
-        `)
-        .order('created_at', { ascending: false });
-
-    if (category) {
-        query = query.eq('category', category);
+    if (USE_MOCK_DATA) {
+        let filtered = [...mockPosts];
+        if (category) filtered = filtered.filter(p => p.category === category);
+        return filtered;
     }
-
+    let query = supabase.from('posts').select('*, author:profiles!posts_author_id_fkey(*)').order('created_at', { ascending: false });
+    if (category) query = query.eq('category', category);
     const { data, error } = await query;
     if (error) throw error;
     return data;
 };
 
-/**
- * 게시물 생성
- */
 export const createPost = async (postData) => {
-    const { data, error } = await supabase
-        .from('posts')
-        .insert(postData)
-        .select()
-        .single();
+    if (USE_MOCK_DATA) {
+        const newPost = {
+            id: nextId(),
+            ...postData,
+            author: MOCK_USER_ME,
+            created_at: new Date().toISOString(),
+            likes_count: 0
+        };
+        mockPosts = [newPost, ...mockPosts];
+        return newPost;
+    }
+    const { data, error } = await supabase.from('posts').insert(postData).select().single();
     if (error) throw error;
     return data;
 };
 
-/**
- * 좋아요 토글
- */
 export const toggleLike = async (postId, userId) => {
-    const { data: existing } = await supabase
-        .from('post_likes')
-        .select('*')
-        .eq('post_id', postId)
-        .eq('user_id', userId)
-        .single();
-
+    if (USE_MOCK_DATA) {
+        const key = `${postId}_${userId}`;
+        if (mockLikes[key]) {
+            delete mockLikes[key];
+            return { status: 'unliked' };
+        }
+        mockLikes[key] = true;
+        return { status: 'liked' };
+    }
+    const { data: existing } = await supabase.from('post_likes').select('*').eq('post_id', postId).eq('user_id', userId).single();
     if (existing) {
-        const { error } = await supabase
-            .from('post_likes')
-            .delete()
-            .eq('id', existing.id);
+        const { error } = await supabase.from('post_likes').delete().eq('id', existing.id);
         if (error) throw error;
         return { status: 'unliked' };
     } else {
-        const { data, error } = await supabase
-            .from('post_likes')
-            .insert({ post_id: postId, user_id: userId })
-            .select()
-            .single();
+        const { data, error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: userId }).select().single();
         if (error) throw error;
         return { status: 'liked', data };
     }
 };
 
-/**
- * 댓글 가져오기
- */
+// --- [Comments] ---  **인메모리 CRUD**
 export const getComments = async (postId) => {
-    const { data, error } = await supabase
-        .from('comments')
-        .select(`
-            *,
-            author:profiles!comments_author_id_fkey (username, avatar_url)
-        `)
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true });
+    if (USE_MOCK_DATA) return mockComments[postId] || [];
+    const { data, error } = await supabase.from('comments').select('*, author:profiles!comments_author_id_fkey(*)').eq('post_id', postId).order('created_at', { ascending: true });
     if (error) throw error;
     return data;
 };
 
-/**
- * 댓글 작성
- */
 export const createComment = async (commentData) => {
-    const { data, error } = await supabase
-        .from('comments')
-        .insert(commentData)
-        .select()
-        .single();
+    if (USE_MOCK_DATA) {
+        const newComment = {
+            id: nextId(),
+            ...commentData,
+            author: MOCK_USER_ME,
+            created_at: new Date().toISOString()
+        };
+        if (!mockComments[commentData.post_id]) mockComments[commentData.post_id] = [];
+        mockComments[commentData.post_id].push(newComment);
+        return newComment;
+    }
+    const { data, error } = await supabase.from('comments').insert(commentData).select().single();
     if (error) throw error;
     return data;
 };
 
-// --- Growth & Insights (Phase 4) ---
+// --- [Events] ---  **인메모리 CRUD**
+export const getEvents = async (hiveId = null) => {
+    if (USE_MOCK_DATA) {
+        if (hiveId) return mockEvents.filter(e => e.hive_id === hiveId);
+        return [...mockEvents];
+    }
+    let query = supabase.from('events').select('*, hives(name), creator:profiles!events_created_by_fkey(*)').order('event_date', { ascending: true });
+    if (hiveId) query = query.eq('hive_id', hiveId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+};
 
-/**
- * 성격 진단 기록 가져오기
- */
+export const getEventDetail = async (eventId) => {
+    if (USE_MOCK_DATA) return mockEvents.find(e => e.id === eventId) || mockEvents[0];
+    const { data, error } = await supabase.from('events').select('*, hives(name), creator:profiles!events_created_by_fkey(*)').eq('id', eventId).single();
+    if (error) throw error;
+    return data;
+};
+
+export const createEvent = async (eventData) => {
+    if (USE_MOCK_DATA) {
+        const newEvent = {
+            id: nextId(),
+            ...eventData,
+            participant_count: 0,
+            hives: eventData.hive_id ? { name: '일반' } : null,
+            creator: MOCK_USER_ME,
+            created_at: new Date().toISOString()
+        };
+        mockEvents = [newEvent, ...mockEvents];
+        return newEvent;
+    }
+    const { data, error } = await supabase.from('events').insert(eventData).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const toggleEventParticipation = async (eventId, userId) => {
+    if (USE_MOCK_DATA) return { status: 'attending' };
+    const { data: existing } = await supabase.from('event_participants').select('*').eq('event_id', eventId).eq('user_id', userId).single();
+    if (existing) {
+        const { error } = await supabase.from('event_participants').delete().eq('id', existing.id);
+        if (error) throw error;
+        return { status: 'cancelled' };
+    } else {
+        const { data, error } = await supabase.from('event_participants').insert({ event_id: eventId, user_id: userId, status: 'attending' }).select().single();
+        if (error) throw error;
+        return { status: 'attending', data };
+    }
+};
+
+export const getEventParticipants = async (eventId) => {
+    if (USE_MOCK_DATA) return MOCK_USERS.slice(0, 4).map(u => ({ profiles: u }));
+    const { data, error } = await supabase.from('event_participants').select('*, profiles(*)');
+    if (error) throw error;
+    return data;
+};
+
+// --- [Growth & Insights] ---  **인메모리 CRUD**
 export const getPersonalityHistory = async (userId) => {
-    const { data, error } = await supabase
-        .from('personality_results')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
+    if (USE_MOCK_DATA) return mockPersonalityHistory;
+    const { data, error } = await supabase.from('personality_results').select('*').eq('user_id', userId).order('created_at', { ascending: true });
     if (error) throw error;
     return data;
 };
 
-/**
- * 성장 일지 가져오기
- */
 export const getGrowthLogs = async (userId) => {
-    const { data, error } = await supabase
-        .from('growth_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+    if (USE_MOCK_DATA) return [...mockGrowthLogs];
+    const { data, error } = await supabase.from('growth_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (error) throw error;
     return data;
 };
 
-/**
- * 성장 일지 작성
- */
 export const createGrowthLog = async (logData) => {
-    const { data, error } = await supabase
-        .from('growth_logs')
-        .insert(logData)
-        .select()
-        .single();
+    if (USE_MOCK_DATA) {
+        const newLog = {
+            id: nextId(),
+            ...logData,
+            created_at: new Date().toISOString()
+        };
+        mockGrowthLogs = [newLog, ...mockGrowthLogs];
+        return newLog;
+    }
+    const { data, error } = await supabase.from('growth_logs').insert(logData).select().single();
     if (error) throw error;
     return data;
 };
 
-/**
- * 전체 사용자 MBTI 분포 통계 (자체 집계)
- */
 export const getMBTIDistribution = async () => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('mbti_type');
-
+    if (USE_MOCK_DATA) return [
+        { type: 'ENFP', count: 28 }, { type: 'INTJ', count: 19 },
+        { type: 'ISFJ', count: 22 }, { type: 'ENTP', count: 15 },
+        { type: 'INFP', count: 24 }, { type: 'ESTJ', count: 12 },
+        { type: 'ISFP', count: 10 }, { type: 'ENTJ', count: 8 },
+    ];
+    const { data, error } = await supabase.from('profiles').select('mbti_type');
     if (error) throw error;
-
-    const stats = data.reduce((acc, curr) => {
-        if (!curr.mbti_type) return acc;
-        acc[curr.mbti_type] = (acc[curr.mbti_type] || 0) + 1;
-        return acc;
-    }, {});
-
+    const stats = data.reduce((acc, curr) => { if (!curr.mbti_type) return acc; acc[curr.mbti_type] = (acc[curr.mbti_type] || 0) + 1; return acc; }, {});
     return Object.entries(stats).map(([type, count]) => ({ type, count }));
 };
 
-/**
- * 내 활동 통계 가져오기
- */
 export const getMyActivityStats = async (userId) => {
+    if (USE_MOCK_DATA) return { hiveCount: 2, eventCount: 3, postCount: mockPosts.filter(p => p.author_id === userId || p.author_id === 'mock-user-001').length };
     const [hives, events, posts] = await Promise.all([
         supabase.from('hive_members').select('id', { count: 'exact' }).eq('user_id', userId),
         supabase.from('event_participants').select('id', { count: 'exact' }).eq('user_id', userId),
         supabase.from('posts').select('id', { count: 'exact' }).eq('author_id', userId)
     ]);
-
-    return {
-        hiveCount: hives.count || 0,
-        eventCount: events.count || 0,
-        postCount: posts.count || 0
-    };
+    return { hiveCount: hives.count || 0, eventCount: events.count || 0, postCount: posts.count || 0 };
 };
 
+// --- [Messaging] ---
+export const getMessages = async (options) => {
+    if (USE_MOCK_DATA) return [];
+    let query = supabase.from('messages').select('*, sender:profiles(username, avatar_url)');
+    if (options.communityId) query = query.eq('community_id', options.communityId);
+    else if (options.receiverId) query = query.or(`and(sender_id.eq.${options.senderId},receiver_id.eq.${options.receiverId}),and(sender_id.eq.${options.receiverId},receiver_id.eq.${options.senderId})`);
+    const { data, error } = await query.order('created_at', { ascending: true });
+    if (error) throw error;
+    return data;
+};
 
+export const sendMessage = async (msg) => {
+    if (USE_MOCK_DATA) return { id: nextId(), ...msg, created_at: new Date().toISOString() };
+    const { data, error } = await supabase.from('messages').insert(msg).select().single();
+    if (error) throw error;
+    return data;
+};

@@ -1,0 +1,87 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+/**
+ * 루미 크리스탈 (Lumi Crystal) 가상 재화 시스템
+ * 💎 획득: 출석, 챌린지, 대화, 광고 시청
+ * 💎 사용: AI 인사이트 잠금 해제, 슈퍼 좋아요, 프리미엄 스킨
+ */
+const useCrystalStore = create(
+    persist(
+        (set, get) => ({
+            crystals: 150, // 신규 유저 환영 보너스
+            isPremium: false,
+            premiumExpiresAt: null,
+            dailyCheckin: null, // 마지막 출석 체크 날짜
+            totalEarned: 150,
+            totalSpent: 0,
+
+            // 크리스탈 획득
+            earnCrystals: (amount, reason = '') => {
+                set(state => ({
+                    crystals: state.crystals + amount,
+                    totalEarned: state.totalEarned + amount,
+                }));
+                return amount;
+            },
+
+            // 크리스탈 소비 (잔액 부족 시 false 반환)
+            spendCrystals: (amount) => {
+                const { crystals } = get();
+                if (crystals < amount) return false;
+                set(state => ({
+                    crystals: state.crystals - amount,
+                    totalSpent: state.totalSpent + amount,
+                }));
+                return true;
+            },
+
+            // 충전 (결제 시뮬레이션)
+            chargeCrystals: (amount) => {
+                set(state => ({
+                    crystals: state.crystals + amount,
+                    totalEarned: state.totalEarned + amount,
+                }));
+            },
+
+            // 일일 출석 체크 (하루 한 번, +30💎)
+            dailyCheckinBonus: () => {
+                const today = new Date().toDateString();
+                const { dailyCheckin } = get();
+                if (dailyCheckin === today) return 0; // 이미 받음
+
+                const bonus = 30;
+                set(state => ({
+                    crystals: state.crystals + bonus,
+                    totalEarned: state.totalEarned + bonus,
+                    dailyCheckin: today,
+                }));
+                return bonus;
+            },
+
+            // 프리미엄 활성화
+            activatePremium: (days = 30) => {
+                const expires = new Date();
+                expires.setDate(expires.getDate() + days);
+                set({ isPremium: true, premiumExpiresAt: expires.toISOString() });
+            },
+
+            // 프리미엄 상태 확인 (만료 자동 처리)
+            checkPremium: () => {
+                const { isPremium, premiumExpiresAt } = get();
+                if (isPremium && premiumExpiresAt) {
+                    if (new Date() > new Date(premiumExpiresAt)) {
+                        set({ isPremium: false, premiumExpiresAt: null });
+                        return false;
+                    }
+                }
+                return isPremium;
+            },
+        }),
+        {
+            name: 'lumini-crystal-storage',
+        }
+    )
+);
+
+export default useCrystalStore;

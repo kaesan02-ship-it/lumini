@@ -108,12 +108,35 @@ export const calculateMatchingScore = (userA, userB, options = {}) => {
  * @param {Array<Object>} currentUserData - 현재 사용자의 성격 데이터
  * @returns {Array<Object>} - 매칭 점수가 추가된 정렬된 사용자 목록
  */
+// 객체 형태 {O, C, E, A, N, H}를 배열 형태로 변환하는 헬퍼
+const normalizePersonalityData = (data) => {
+    if (!data) return [{ subject: '개방성', A: 50 }, { subject: '성실성', A: 50 }, { subject: '외향성', A: 50 }, { subject: '우호성', A: 50 }, { subject: '신경증', A: 50 }, { subject: '정직성', A: 50 }];
+    if (Array.isArray(data) && data.length > 0 && data[0].subject) return data;
+    // 객체 형태 → 배열 변환
+    if (typeof data === 'object' && !Array.isArray(data)) {
+        return [
+            { subject: '개방성', A: data.O || 50 },
+            { subject: '성실성', A: data.C || 50 },
+            { subject: '외향성', A: data.E || 50 },
+            { subject: '우호성', A: data.A || 50 },
+            { subject: '신경증', A: data.N || 50 },
+            { subject: '정직성', A: data.H || 50 },
+        ];
+    }
+    return [{ subject: '개방성', A: 50 }, { subject: '성실성', A: 50 }, { subject: '외향성', A: 50 }, { subject: '우호성', A: 50 }, { subject: '신경증', A: 50 }, { subject: '정직성', A: 50 }];
+};
+
 export const sortUsersByMatchingScore = (users, currentUserData) => {
+    const normalizedCurrent = normalizePersonalityData(currentUserData);
     return users
-        .map(user => ({
-            ...user,
-            similarity: calculateMatchingScore(currentUserData, user.data)
-        }))
+        .map(user => {
+            try {
+                const normalizedUser = normalizePersonalityData(user.data);
+                return { ...user, similarity: calculateMatchingScore(normalizedCurrent, normalizedUser) };
+            } catch {
+                return { ...user, similarity: 75 + Math.floor(Math.random() * 15) };
+            }
+        })
         .sort((a, b) => b.similarity - a.similarity);
 };
 

@@ -1,17 +1,37 @@
 import { create } from 'zustand';
 import { getProfile, upsertProfile } from '../supabase/queries';
 
+// localStorage에서 저장된 데이터 복원
+const savedUserData = (() => {
+    try {
+        const raw = localStorage.getItem('lumini_user_data');
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+})();
+
+const savedMbtiType = localStorage.getItem('lumini_mbti_type') || 'Unknown';
+const savedUserName = localStorage.getItem('lumini_user_name') || '사용자';
+
 const useUserStore = create((set, get) => ({
-    userData: null,
-    mbtiType: 'Unknown',
-    userName: '사용자',
+    userData: savedUserData,
+    mbtiType: savedMbtiType,
+    userName: savedUserName,
     profile: null,
     loading: false,
     error: null,
 
-    setUserData: (data) => set({ userData: data }),
-    setMbtiType: (type) => set({ mbtiType: type }),
-    setUserName: (name) => set({ userName: name }),
+    setUserData: (data) => {
+        localStorage.setItem('lumini_user_data', JSON.stringify(data));
+        set({ userData: data });
+    },
+    setMbtiType: (type) => {
+        localStorage.setItem('lumini_mbti_type', type);
+        set({ mbtiType: type });
+    },
+    setUserName: (name) => {
+        localStorage.setItem('lumini_user_name', name);
+        set({ userName: name });
+    },
 
     fetchProfile: async (userId) => {
         if (!userId) return;

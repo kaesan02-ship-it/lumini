@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "@vitejs/plugin-react": "^5.1.4",
     "framer-motion": "^12.31.0",
+    "html2canvas": "^1.4.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.563.0",
     "openai": "^6.21.0",
