@@ -57,8 +57,14 @@ export const analyzeCompatibility = (userA, userB) => {
         };
     }).filter(Boolean);
 
+    // 비어있으면 null 반환 (NaN 방지)
+    if (dimensionAnalysis.length === 0) return null;
+
     const totalWeight = dimensionAnalysis.reduce((sum, d) => sum + d.weight, 0);
-    const weightedScore = dimensionAnalysis.reduce((sum, d) => sum + (d.similarity * d.weight), 0) / totalWeight;
+    const rawScore = totalWeight > 0
+        ? dimensionAnalysis.reduce((sum, d) => sum + (d.similarity * d.weight), 0) / totalWeight
+        : 0;
+    const weightedScore = isNaN(rawScore) ? 0 : rawScore;
 
     const strengths = dimensionAnalysis.filter(d => d.level === 'high' || d.level === 'medium');
     const complementary = dimensionAnalysis.filter(d => d.level === 'complementary' || d.level === 'different');

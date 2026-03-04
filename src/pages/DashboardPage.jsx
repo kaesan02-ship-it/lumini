@@ -278,7 +278,7 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
             </div>
 
             <div className="right-panel">
-                {/* 무절 루미 소울 쉽 위젯 + 딕소울 요약 */}
+                {/* 소울펫 루미 위젯 + 딥소울 요약 */}
                 <div style={{ marginBottom: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     {/* SoulPet 수달루미 위젯 */}
                     <motion.div
@@ -292,12 +292,12 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                                 <>
                                     <div style={{ fontSize: '2rem' }}>🦦</div>
                                     <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#A21CAF' }}>{pet.name || '루미'} <span style={{ fontSize: '0.72rem', background: '#C026D318', borderRadius: '100px', padding: '1px 7px' }}>Lv.{pet.level || 1}</span></div>
-                                    <div style={{ fontSize: '0.72rem', color: '#86198F', fontWeight: 600 }}>소울 돌보바이 →</div>
+                                    <div style={{ fontSize: '0.72rem', color: '#86198F', fontWeight: 600 }}>소울펫 돌보기 →</div>
                                 </>
                             );
                         })()}
                     </motion.div>
-                    {/* 딕소울 요약 */}
+                    {/* 딥소울 요약 */}
                     <motion.div
                         whileHover={{ scale: 1.02 }}
                         onClick={() => onNavigate?.(hasDeepSoul ? 'deep-soul-result' : 'deep-soul-test')}
@@ -341,7 +341,7 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '2px' }}>
                                                     <span style={{ fontWeight: 800, fontSize: '1rem' }}>{u.name}</span>
                                                     <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '100px', fontWeight: 800 }}>{u.mbti}</span>
-                                                    <span style={{ fontSize: '0.68rem', background: '#4F46E510', color: '#6366F1', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>💸 딕 완료</span>
+                                                    <span style={{ fontSize: '0.68rem', background: '#4F46E510', color: '#6366F1', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>💸 딥 완료</span>
                                                 </div>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📍 {u.district}</div>
                                             </div>

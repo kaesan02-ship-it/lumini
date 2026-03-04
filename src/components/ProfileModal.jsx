@@ -56,19 +56,50 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
         return formatPersonalityData(pd);
     };
 
+    // MBTI 기반 기본 성향 데이터 생성 (데이터 없을 때 fallback)
+    const getMBTIDefaultData = (mbti) => {
+        const type = (mbti || 'ISFJ').toUpperCase();
+        const E = type[0] === 'E' ? 75 : 35;
+        const N = type[1] === 'N' ? 72 : 45;
+        const F = type[2] === 'F' ? 78 : 40;
+        const J = type[3] === 'J' ? 72 : 55;
+        return [
+            { subject: '사교성', A: E, fullMark: 100 },
+            { subject: '창의성', A: Math.round(N * 0.6 + E * 0.4), fullMark: 100 },
+            { subject: '공감력', A: Math.round(F * 0.65 + 35 * 0.35), fullMark: 100 },
+            { subject: '계획성', A: J, fullMark: 100 },
+            { subject: '자기주도', A: Math.round(J * 0.55 + 50 * 0.45), fullMark: 100 },
+            { subject: '유연성', A: Math.round(N * 0.7 + (100 - J) * 0.3), fullMark: 100 },
+            { subject: '따뜻함', A: Math.round(F), fullMark: 100 },
+            { subject: '회복탄력', A: 65, fullMark: 100 },
+            { subject: '신뢰도', A: Math.round(J * 0.6 + 40 * 0.4), fullMark: 100 },
+        ];
+    };
+
     const displayData = useMemo(() => {
         // 내 프로필인 경우 userData (raw {O,C,E,A,N,H} 또는 9지표 배열)
         if (isMyProfile) return formatPersonalityData(userData);
         // 상대 프로필: user.personality_data (raw obj) > user.data (배열) 우선순위
         const raw = user?.personality_data || user?.data;
-        return formatPersonalityData(raw);
-    }, [isMyProfile, userData, user?.personality_data, user?.data]);
+        const formatted = formatPersonalityData(raw);
+        // 데이터가 없거나 비어있으면 MBTI 기반 기본값 생성
+        if (!formatted || formatted.length === 0) {
+            return getMBTIDefaultData(user?.mbti || user?.mbtiType);
+        }
+        return formatted;
+    }, [isMyProfile, userData, user?.personality_data, user?.data, user?.mbti, user?.mbtiType]);
 
-    const myStandardizedData = useMemo(() => formatPersonalityData(userData), [userData]);
+    const myStandardizedData = useMemo(() => {
+        const formatted = formatPersonalityData(userData);
+        // 내 데이터도 없으면 기본값
+        if (!formatted || formatted.length === 0) return getMBTIDefaultData(mbtiType);
+        return formatted;
+    }, [userData, mbtiType]);
 
 
     const compatibilityAnalysis = useMemo(() => {
         if (isMyProfile || !myStandardizedData || !displayData) return null;
+        if (myStandardizedData.length === 0 || displayData.length === 0) return null;
         return analyzeCompatibility(myStandardizedData, displayData);
     }, [isMyProfile, myStandardizedData, displayData]);
 
