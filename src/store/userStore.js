@@ -11,12 +11,18 @@ const savedUserData = (() => {
 
 const savedMbtiType = localStorage.getItem('lumini_mbti_type') || 'Unknown';
 const savedUserName = localStorage.getItem('lumini_user_name') || '사용자';
+const savedProfile = (() => {
+    try {
+        const raw = localStorage.getItem('lumini_profile');
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+})();
 
 const useUserStore = create((set, get) => ({
     userData: savedUserData,
     mbtiType: savedMbtiType,
     userName: savedUserName,
-    profile: null,
+    profile: savedProfile,
     loading: false,
     error: null,
 
@@ -31,6 +37,10 @@ const useUserStore = create((set, get) => ({
     setUserName: (name) => {
         localStorage.setItem('lumini_user_name', name);
         set({ userName: name });
+    },
+    setProfile: (profileData) => {
+        localStorage.setItem('lumini_profile', JSON.stringify(profileData));
+        set({ profile: profileData });
     },
 
     fetchProfile: async (userId) => {

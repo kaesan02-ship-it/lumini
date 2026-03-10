@@ -16,18 +16,19 @@ const MOCK_USERS = [
     MOCK_USER_ME,
     {
         id: 'u2', username: '김민수', avatar_url: '', mbti_type: 'INTJ', personality_data: { O: 90, C: 85, E: 30, A: 40, N: 20, H: 80 }, bio: '조용히 세상을 설계합니다', district: '서울 마포구',
+        game: 'League of Legends', tier: 'Challenger',
         deep_soul: { r1: 3, r2: 1, r3: 2, r4: 3, r5: 1, r6: 2, r7: 3, r8: 1, l1: 2, l2: 1, l3: 3, l4: 2, l5: 1, l6: 2, l7: 3, l8: 1, f1: 3, f2: 2, f3: 1, f4: 3, f5: 2, f6: 1, f7: 3, f8: 2, v1: 3, v2: 2, v3: 1, v4: 3, v5: 2, v6: 1, v7: 3 }
     },
-    { id: 'u3', username: '이지우', avatar_url: '', mbti_type: 'ISFJ', personality_data: { O: 40, C: 70, E: 50, A: 85, N: 40, H: 90 }, bio: '따뜻한 커피 한 잔의 위로', district: '서울 서대문구' },
+    { id: 'u3', username: '이지우', avatar_url: '', mbti_type: 'ISFJ', personality_data: { O: 40, C: 70, E: 50, A: 85, N: 40, H: 90 }, bio: '따뜻한 커피 한 잔의 위로', district: '서울 서대문구', game: 'Genshin Impact', tier: 'Lv.60' },
     {
-        id: 'u4', username: '박서연', avatar_url: '', mbti_type: 'ENTP', personality_data: { O: 95, C: 35, E: 88, A: 50, N: 55, H: 70 }, bio: '아이디어가 넘쳐나는 사람', district: '서울 강남구',
+        id: 'u4', username: '박서연', avatar_url: '', mbti_type: 'ENTP', personality_data: { O: 95, C: 35, E: 88, A: 50, N: 55, H: 70 }, bio: '아이디어가 넘쳐나는 사람', district: '서울 강남구', game: 'Valorant', tier: 'Immortal',
         deep_soul: { r1: 4, r2: 3, r3: 4, r4: 3, r5: 4, r6: 3, r7: 4, r8: 3, l1: 4, l2: 3, l3: 4, l4: 3, l5: 4, l6: 3, l7: 4, l8: 3, f1: 2, f2: 1, f3: 2, f4: 1, f5: 2, f6: 1, f7: 2, f8: 1, v1: 4, v2: 3, v3: 4, v4: 3, v5: 4, v6: 3, v7: 4 }
     },
     {
-        id: 'u5', username: '최도현', avatar_url: '', mbti_type: 'INFP', personality_data: { O: 80, C: 55, E: 35, A: 90, N: 65, H: 85 }, bio: '그림 그리고 글 쓰는 몽상가', district: '서울 마포구',
+        id: 'u5', username: '최도현', avatar_url: '', mbti_type: 'INFP', personality_data: { O: 80, C: 55, E: 35, A: 90, N: 65, H: 85 }, bio: '그림 그리고 글 쓰는 몽상가', district: '서울 마포구', game: 'Lost Ark', tier: '아이템 1620레벨',
         deep_soul: { r1: 2, r2: 3, r3: 1, r4: 2, r5: 3, r6: 1, r7: 2, r8: 3, l1: 3, l2: 2, l3: 1, l4: 3, l5: 2, l6: 1, l7: 3, l8: 2, f1: 4, f2: 3, f3: 4, f4: 3, f5: 4, f6: 3, f7: 4, f8: 3, v1: 2, v2: 3, v3: 2, v4: 3, v5: 2, v6: 3, v7: 2 }
     },
-    { id: 'u6', username: '정하은', avatar_url: '', mbti_type: 'ESTJ', personality_data: { O: 50, C: 95, E: 75, A: 60, N: 15, H: 88 }, bio: '계획대로 살기 프로', district: '서울 용산구' },
+    { id: 'u6', username: '정하은', avatar_url: '', mbti_type: 'ESTJ', personality_data: { O: 50, C: 95, E: 75, A: 60, N: 15, H: 88 }, bio: '계획대로 살기 프로', district: '서울 용산구', game: 'LoL', tier: 'Diamond II' },
 ];
 
 

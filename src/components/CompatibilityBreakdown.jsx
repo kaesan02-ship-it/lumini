@@ -7,27 +7,69 @@ const CompatibilityBreakdown = ({ analysis }) => {
         return null;
     }
 
-    const { overallScore, dimensions, strengths, complementary, advice } = analysis;
+    const {
+        overallScore = 0,
+        dimensions = [],
+        strengths = [],
+        complementary = [],
+        advice = null,
+        matchingInsight = null
+    } = analysis || {};
 
     return (
         <div style={{ marginTop: '30px' }}>
             {/* Overall Score */}
             <div style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                padding: '25px',
-                borderRadius: '20px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                padding: '30px',
+                borderRadius: '24px',
                 color: 'white',
-                marginBottom: '25px',
-                textAlign: 'center'
+                marginBottom: '30px',
+                textAlign: 'center',
+                boxShadow: '0 10px 25px rgba(99, 102, 241, 0.25)'
             }}>
-                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: '8px' }}>종합 성향 일치도</div>
-                <div style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '5px' }}>{overallScore}%</div>
-                <div style={{ fontSize: '1rem', opacity: 0.95 }}>
-                    {overallScore >= 80 ? '💚 매우 좋은 궁합이에요!' :
-                        overallScore >= 70 ? '💜 좋은 궁합이에요!' :
-                            overallScore >= 60 ? '💙 괜찮은 궁합이에요!' : '🤍 보완 관계예요!'}
+                <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '10px', fontWeight: 700, letterSpacing: '0.05em' }}>종합 성향 일치도</div>
+                <div style={{ fontSize: '3.5rem', fontWeight: 900, marginBottom: '8px' }}>{overallScore}%</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '6px 16px', borderRadius: '100px', display: 'inline-block' }}>
+                    {overallScore >= 85 ? '🌈 완벽한 소울메이트!' :
+                        overallScore >= 75 ? '✨ 깊은 교감이 가능한 사이' :
+                            overallScore >= 65 ? '🌟 조화로운 인연' : '🤝 서로를 채워주는 관계'}
                 </div>
             </div>
+
+            {/* Matching Insight Section (NEW) */}
+            {matchingInsight && (
+                <div style={{
+                    background: 'white',
+                    borderRadius: '24px',
+                    padding: '25px',
+                    marginBottom: '30px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                }}>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1a202c', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Lightbulb size={20} color="#f59e0b" /> 우리가 매칭된 이유
+                    </h4>
+                    <p style={{
+                        fontSize: '1rem',
+                        lineHeight: 1.8,
+                        color: '#475569',
+                        margin: 0,
+                        wordBreak: 'keep-all'
+                    }}>
+                        {(matchingInsight.description || '').split('**').map((part, i) =>
+                            i % 2 === 1 ? <strong key={i} style={{ color: '#6366f1' }}>{part}</strong> : part
+                        )}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>
+                        {(matchingInsight.keyTraits || []).map(trait => (
+                            <span key={trait} style={{ fontSize: '0.75rem', fontWeight: 800, color: '#6366f1', background: '#eef2ff', padding: '4px 12px', borderRadius: '100px' }}>
+                                #{trait}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Dimension Breakdown */}
             <div style={{ marginBottom: '30px' }}>
@@ -212,7 +254,7 @@ const CompatibilityBreakdown = ({ analysis }) => {
                         관계 조언
                     </h4>
 
-                    {advice.commonGround.length > 0 && (
+                    {advice.commonGround?.length > 0 && (
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#4a5568', marginBottom: '8px' }}>
                                 💚 공통점
@@ -225,7 +267,7 @@ const CompatibilityBreakdown = ({ analysis }) => {
                         </div>
                     )}
 
-                    {advice.differences.length > 0 && (
+                    {advice.differences?.length > 0 && (
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#4a5568', marginBottom: '8px' }}>
                                 ⚖️ 차이점 존중하기
@@ -238,7 +280,7 @@ const CompatibilityBreakdown = ({ analysis }) => {
                         </div>
                     )}
 
-                    {advice.activities.length > 0 && (
+                    {advice.activities?.length > 0 && (
                         <div>
                             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#4a5568', marginBottom: '8px' }}>
                                 🎯 추천 활동

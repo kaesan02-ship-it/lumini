@@ -145,4 +145,43 @@ export const getConversationTopics = async (mbti, interestTags) => {
     }
 };
 
+/**
+ * 아이스브레이킹 질문 생성 (Phase 5)
+ */
+export const getIceBreakerQuestions = async (myMbti, theirMbti, similarity) => {
+    if (USE_MOCK_DATA || !apiKey || apiKey === 'dummy-key') {
+        const mockQuestions = [
+            `안녕하세요! MBTI가 ${theirMbti}시네요! 저희 일치도가 ${similarity}%나 되어서 무척 반가워요. 😊`,
+            `${theirMbti} 성향이신 분들은 보통 세심하시던데, 오늘 하루는 어떠셨나요?`,
+            `루미니가 저희를 소울메이트 후보로 추천해줬어요! 공통점이 많을 것 같은데 어떤 스타일의 대화를 좋아하세요? 🦦`
+        ];
+        await new Promise(r => setTimeout(r, 600));
+        return mockQuestions;
+    }
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "user",
+                    content: `나의 MBTI: ${myMbti}, 상대방의 MBTI: ${theirMbti}, 우리 둘의 성향 일치도: ${similarity}%. 
+                    상대방과 처음 대화를 시작할 때 보내기 좋은 다정하고 센스 있는 첫 인사 및 질문 3가지를 제안해줘. (번호 없이 문장만, 한 줄에 하나씩)`
+                }
+            ],
+            temperature: 0.8,
+        });
+
+        const content = response.choices[0].message.content;
+        return content.split('\n').filter(line => line.trim() !== '').slice(0, 3);
+    } catch (error) {
+        console.error('OpenAI Error:', error);
+        return [
+            "안녕하세요! 반가워요. 😊",
+            "루미니 추천으로 오게 되었어요!",
+            "함께 즐거운 대화 나눠요! 🦦"
+        ];
+    }
+};
+
 export default openai;

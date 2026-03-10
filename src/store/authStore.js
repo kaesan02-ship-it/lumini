@@ -20,6 +20,7 @@ const useAuthStore = create((set) => ({
     user: USE_MOCK_DATA ? MOCK_USER : null,
     session: USE_MOCK_DATA ? MOCK_SESSION : null,
     loading: USE_MOCK_DATA ? false : true,
+    isAdmin: USE_MOCK_DATA ? true : false,
 
     setSession: (session) => {
         // 모크 모드에서 null 세션이 들어오면 모크 유저 유지
@@ -27,10 +28,12 @@ const useAuthStore = create((set) => ({
             set({ session: MOCK_SESSION, user: MOCK_USER, loading: false });
             return;
         }
+        const isAdmin = session?.user?.email === 'admin@lumini.me';
         set({
             session,
             user: session?.user || null,
-            loading: false
+            loading: false,
+            isAdmin
         });
     },
 

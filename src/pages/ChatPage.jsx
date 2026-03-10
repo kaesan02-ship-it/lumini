@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile } from 'lucide-react';
-import { useChat } from '../hooks/useChat';
 import useAuthStore from '../store/authStore';
+import { useChat } from '../hooks/useChat';
+import { getIceBreakerQuestions } from '../lib/openaiClient';
+import { Sparkles, ArrowLeft, Phone, Video, MoreVertical, Send, Smile, RefreshCw } from 'lucide-react';
 
 const CONVERSATION_PROMPTS = [
     { icon: '☕', text: '커피 한잔하며 대화나눌까요?' },
@@ -20,6 +21,8 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
     });
     const [inputText, setInputText] = useState('');
     const [showPrompts, setShowPrompts] = useState(true);
+    const [aiQuestions, setAiQuestions] = useState([]);
+    const [isLoadingAi, setIsLoadingAi] = useState(false);
     const messagesEndRef = useRef(null);
 
     // 자동 스크롤
@@ -44,6 +47,18 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
     const handlePromptClick = (promptText) => {
         setInputText(promptText);
         setShowPrompts(false);
+    };
+
+    const handleGetAiIcebreaker = async () => {
+        setIsLoadingAi(true);
+        try {
+            const questions = await getIceBreakerQuestions(user?.mbti || 'ISFJ', chatUser.mbti, chatUser.similarity);
+            setAiQuestions(questions);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsLoadingAi(false);
+        }
     };
 
     // 랜덤 프롬프트 3개 선택
@@ -185,7 +200,7 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                 </AnimatePresence>
 
                 {/* Conversation Prompts */}
-                {showPrompts && chatMessages.length === 0 && (
+                {showPrompts && chatMessages.length <= 1 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -197,37 +212,84 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                             marginTop: '20px'
                         }}
                     >
-                        <p style={{
-                            fontSize: '0.9rem',
-                            color: '#64748b',
-                            textAlign: 'center',
-                            marginBottom: '10px'
-                        }}>
-                            💡 대화를 시작해보세요
-                        </p>
-                        {randomPrompts.map((prompt, index) => (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
+                            <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0 }}>💡 대화를 시작해보세요</p>
                             <motion.button
-                                key={index}
-                                whileHover={{ scale: 1.02, x: 5 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => handlePromptClick(prompt.text)}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleGetAiIcebreaker}
                                 style={{
-                                    background: 'white',
-                                    border: '2px solid #e2e8f0',
-                                    borderRadius: '15px',
-                                    padding: '15px 20px',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
+                                    background: 'linear-gradient(135deg, #FFD70030, #FFA50030)',
+                                    border: '1px solid #FFD700',
+                                    padding: '4px 12px',
+                                    borderRadius: '100px',
+                                    fontSize: '0.75rem',
+                                    color: '#B8860B',
+                                    fontWeight: 800,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '12px',
-                                    transition: 'all 0.2s ease'
+                                    gap: '5px',
+                                    cursor: 'pointer'
                                 }}
                             >
-                                <span style={{ fontSize: '1.5rem' }}>{prompt.icon}</span>
-                                <span style={{ fontSize: '0.95rem', color: '#2d3748' }}>{prompt.text}</span>
+                                <Sparkles size={12} /> AI 추천 질문
                             </motion.button>
-                        ))}
+                        </div>
+
+                        {isLoadingAi ? (
+                            <div style={{ textAlign: 'center', padding: '20px' }}>
+                                <RefreshCw size={24} className="animate-spin" color="var(--primary)" />
+                            </div>
+                        ) : (
+                            <>
+                                {aiQuestions.length > 0 ? (
+                                    aiQuestions.map((q, i) => (
+                                        <motion.button
+                                            key={`ai-${i}`}
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            onClick={() => handlePromptClick(q)}
+                                            style={{
+                                                background: 'linear-gradient(135deg, #ffffff, #fdf4ff)',
+                                                border: '2px solid #f0abfc',
+                                                borderRadius: '15px',
+                                                padding: '15px 20px',
+                                                cursor: 'pointer',
+                                                textAlign: 'left',
+                                                fontSize: '0.95rem',
+                                                color: '#701a75'
+                                            }}
+                                        >
+                                            ✨ {q}
+                                        </motion.button>
+                                    ))
+                                ) : (
+                                    randomPrompts.map((prompt, index) => (
+                                        <motion.button
+                                            key={index}
+                                            whileHover={{ scale: 1.02, x: 5 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => handlePromptClick(prompt.text)}
+                                            style={{
+                                                background: 'white',
+                                                border: '2px solid #e2e8f0',
+                                                borderRadius: '15px',
+                                                padding: '15px 20px',
+                                                cursor: 'pointer',
+                                                textAlign: 'left',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '1.5rem' }}>{prompt.icon}</span>
+                                            <span style={{ fontSize: '0.95rem', color: '#2d3748' }}>{prompt.text}</span>
+                                        </motion.button>
+                                    ))
+                                )}
+                            </>
+                        )}
                     </motion.div>
                 )}
 

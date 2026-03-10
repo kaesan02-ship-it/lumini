@@ -4,26 +4,38 @@ import RadarChart from './RadarChart';
 import CompatibilityBreakdown from './CompatibilityBreakdown';
 import useFavorites from '../hooks/useFavorites';
 import { analyzeCompatibility } from '../utils/compatibilityAnalysis';
+import { generateMatchingInsight } from '../utils/matchingInsightGenerator';
 import {
     X, MessageCircle, Heart, Award, User as UserIcon,
-    TrendingUp, Sparkles
+    TrendingUp, Sparkles, Camera, Gem, Gamepad2, MapPin
 } from 'lucide-react';
 import { toggleConnection } from '../supabase/queries';
 import useAuthStore from '../store/authStore';
+import useCrystalStore from '../store/crystalStore';
 import LumiMascot from './LumiMascot';
+import IdentityBadge from './IdentityBadge';
 import { getAIAdvice } from '../lib/openaiClient';
 import { getDeepSoulType, buildCatScores } from '../data/deepSoulTypes';
 import { DEEP_QUESTIONS } from '../data/deepQuestions';
+import AIAvatarGenerator from './AIAvatarGenerator';
 
-const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat }) => {
+const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, onStartChat }) => {
     const { toggleFavorite, isFavorite } = useFavorites();
+    const giftCrystals = useCrystalStore(state => state.giftCrystals);
     const isMyProfile = user === null || user === undefined;
     const displayName = isMyProfile ? userName : user?.name;
 
     const [activeTab, setActiveTab] = useState('profile');
     const [aiReport, setAiReport] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
+    const [showAvatarGenerator, setShowAvatarGenerator] = useState(false);
+    const [showGiftModal, setShowGiftModal] = useState(false);
+    const [giftAmount, setGiftAmount] = useState(10);
+    const [currentAvatar, setCurrentAvatar] = useState(profile?.avatarUrl || null);
 
+    // 실제 렌더링 시 사용할 모들은 미리보기 상태에 따라 결정
+    const effectiveIsMyProfile = isMyProfile && !isPreviewMode;
     const isUserFavorited = !isMyProfile && user?.id ? isFavorite(user.id) : false;
 
     // 항상 raw {O,C,E,A,N,H} 에서 9지표 배열로 변환 (Array로 들어와도 재계산)
@@ -103,19 +115,25 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
         const myData = myStandardizedData && myStandardizedData.length === 9 ? myStandardizedData : getMBTIDefaultData(mbtiType);
         const theirData = displayData && displayData.length === 9 ? displayData : getMBTIDefaultData(user?.mbti || user?.mbtiType);
         const result = analyzeCompatibility(myData, theirData);
-        if (result) return result;
-        // analyzeCompatibility가 null을 반환하면 유사도 기반 보었는 기본값 생성
+
+        // 문장형 매칭 인사이트 추가
+        const insight = generateMatchingInsight(myData, theirData, result?.overallScore || user?.similarity || 75);
+
+        if (result) return { ...result, matchingInsight: insight };
+
+        // analyzeCompatibility가 null을 반환하면 유사도 기반 보였는 기본값 생성
         const similarity = user?.similarity ? Math.round(user.similarity) : 75;
         return {
             overallScore: similarity,
             dimensions: [
                 { dimension: '성격 유형', icon: '📊', similarity, color: '#8B5CF6', level: similarity >= 70 ? 'high' : 'medium', label: similarity >= 70 ? '좋은 조화' : '보완 관계', insight: 'MBTI 유형 기반으로 분석한 결과에요.' },
-                { dimension: '소통 방식', icon: '💬', similarity: Math.min(100, similarity + 5), color: '#06B6D4', level: 'medium', label: '조화로운 대화형', insight: '서로다른 소통 스타일이 조넔를 이났 수있어요.' },
+                { dimension: '소통 방식', icon: '💬', similarity: Math.min(100, similarity + 5), color: '#06B6D4', level: 'medium', label: '조화로운 대화형', insight: '서로다른 소통 스타일이 조널를 이룰 수 있어요.' },
                 { dimension: '가치관', icon: '⭐', similarity: Math.max(60, similarity - 8), color: '#F59E0B', level: 'medium', label: '업데이트 예정', insight: '딥소울 검사 후 더 정밀한 분석이 가능해요.' },
             ],
             strengths: [],
             complementary: [],
             advice: null,
+            matchingInsight: insight
         };
     }, [isMyProfile, myStandardizedData, displayData, user?.similarity, user?.mbti, user?.mbtiType, mbtiType]);
 
@@ -190,65 +208,163 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                     </button>
 
                     <div style={{ display: 'flex', gap: '40px', alignItems: 'center', marginBottom: '30px' }}>
-                        <div style={{ position: 'relative' }}>
-                            <LumiMascot
-                                mbti={isMyProfile ? mbtiType : user?.mbti}
-                                personalityData={isMyProfile ? userData : user?.data}
-                                size={180}
-                            />
-                            <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '45px', height: '45px', borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(0,0,0,0.1)', border: '3px solid var(--primary)' }}>
-                                <UserIcon size={24} color="var(--primary)" />
-                            </div>
+                        <div className="relative">
+                            <motion.div
+                                animate={{
+                                    scale: [1, 1.02, 1],
+                                }}
+                                transition={{ repeat: Infinity, duration: 4 }}
+                                style={{
+                                    width: '180px', height: '180px', borderRadius: '50%',
+                                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(244, 63, 94, 0.1))',
+                                    display: 'flex',
+                                    padding: '5px',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    border: '1px solid rgba(255,255,255,0.8)', overflow: 'visible', position: 'relative',
+                                    boxShadow: '0 20px 40px rgba(0,0,0,0.08)'
+                                }}>
+                                <div style={{
+                                    width: '100%', height: '100%', borderRadius: '50%',
+                                    background: 'var(--surface)', overflow: 'hidden',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    border: '2px solid white'
+                                }}>
+                                    <LumiMascot
+                                        mbti={isMyProfile ? mbtiType : user?.mbti}
+                                        personalityData={isMyProfile ? userData : (user?.personality_data || user?.data)}
+                                        size={150}
+                                    />
+                                </div>
+
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setShowAvatarGenerator(true)}
+                                    style={{
+                                        position: 'absolute', bottom: '0px', right: '0px',
+                                        width: '50px', height: '50px', borderRadius: '50%',
+                                        background: 'linear-gradient(135deg, #6366F1, #F43F5E)',
+                                        display: 'flex', alignItems: 'center',
+                                        justifyContent: 'center', boxShadow: '0 8px 20px rgba(99, 102, 241, 0.3)',
+                                        border: '3px solid white', zIndex: 10, cursor: 'pointer'
+                                    }}
+                                    title="AI 아바타 생성"
+                                >
+                                    <Sparkles size={22} color="white" />
+                                </motion.button>
+                            </motion.div>
                         </div>
 
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                                <h2 style={{ fontSize: '2.2rem', fontWeight: 900 }}>{displayName}</h2>
-                                {isMyProfile && (
-                                    <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('changeStep', { detail: 'profile-edit' })); }} style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>편집</button>
-                                )}
+                                {/* Profile Image */}
+                                <div
+                                    style={{ position: 'relative', width: '90px', height: '90px', flexShrink: 0, cursor: effectiveIsMyProfile ? 'pointer' : 'default' }}
+                                    onClick={() => { if (effectiveIsMyProfile) setShowAvatarGenerator(true); }}
+                                    className={effectiveIsMyProfile ? "group relative" : "relative"}
+                                >
+                                    <img
+                                        src={currentAvatar || user?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`}
+                                        alt="Profile"
+                                        style={{ width: '100%', height: '100%', borderRadius: '30px', objectFit: 'cover', background: 'var(--surface)', border: '2px solid var(--glass-border)', boxShadow: '0 10px 20px rgba(0,0,0,0.05)', transition: 'transform 0.2s' }}
+                                        className={effectiveIsMyProfile ? "group-hover:scale-105" : ""}
+                                    />
+                                    {effectiveIsMyProfile && (
+                                        <div className="absolute inset-0 bg-black/40 rounded-[30px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 backdrop-blur-sm pointer-events-none">
+                                            <Camera size={20} />
+                                            <span>변경</span>
+                                        </div>
+                                    )}
+                                    {!effectiveIsMyProfile && isUserFavorited && (
+                                        <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', background: '#ef4444', borderRadius: '50%', padding: '6px', border: '3px solid var(--surface)', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}>
+                                            <Heart size={14} color="white" fill="white" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <h2 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '4px' }}>{effectiveIsMyProfile ? displayName : (isMyProfile ? `${displayName} (미리보기)` : displayName)}</h2>
+                                    {isMyProfile && (
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                onClick={() => setIsPreviewMode(!isPreviewMode)}
+                                                style={{
+                                                    padding: '8px 16px', borderRadius: '20px',
+                                                    background: isPreviewMode ? 'var(--primary)' : 'var(--background)',
+                                                    color: isPreviewMode ? 'white' : 'var(--primary)',
+                                                    border: `1.5px solid var(--primary)`, cursor: 'pointer',
+                                                    fontWeight: 700, fontSize: '0.85rem'
+                                                }}
+                                            >
+                                                {isPreviewMode ? '편집 모드로' : '타인 시점 미리보기'}
+                                            </button>
+                                            {!isPreviewMode && (
+                                                <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('changeStep', { detail: 'profile-edit' })); }} style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>편집</button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {!effectiveIsMyProfile && (
+                                        <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                                            <button onClick={handleToggleFavorite} style={{ padding: '8px 16px', borderRadius: '20px', background: isUserFavorited ? '#FEF2F2' : 'var(--background)', color: isUserFavorited ? '#EF4444' : 'var(--text)', border: `1.5px solid ${isUserFavorited ? '#FCA5A5' : 'var(--glass-border)'}`, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                                                <Heart size={16} fill={isUserFavorited ? "#EF4444" : "transparent"} /> {isUserFavorited ? '관심 해제' : '관심 표현'}
+                                            </button>
+                                            <button onClick={() => onStartChat?.(user)} style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                                                <MessageCircle size={16} /> 대화하기
+                                            </button>
+                                            <button onClick={() => setShowGiftModal(true)} style={{ padding: '8px 16px', borderRadius: '20px', background: 'linear-gradient(135deg, #A855F7, #EC4899)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(236, 72, 153, 0.2)', transition: 'all 0.2s' }}>
+                                                <Gem size={16} fill="white" /> 선물하기
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <div style={{ background: 'var(--primary-faint)', color: 'var(--primary)', padding: '6px 14px', borderRadius: '12px', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span>{mbtiInfo.emoji}</span> {isMyProfile ? mbtiType : user?.mbti}
-                                </div>
-                                {!isMyProfile && (
-                                    <div style={{ background: '#10b98115', color: '#10b981', padding: '6px 14px', borderRadius: '12px', fontWeight: 800, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Sparkles size={16} /> 매칭률 {user.similarity}%
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <IdentityBadge type="MBTI" label={isMyProfile ? mbtiType : user?.mbti} />
+                                {!effectiveIsMyProfile && (user?.similarity > 85 || isPreviewMode) && <IdentityBadge type="HOT" size="md" />}
+                                {(isMyProfile || (user?.id && user.id % 3 === 0)) && <IdentityBadge type="VERIFIED" size="md" />}
+                                {isPreviewMode && (
+                                    <div style={{ background: '#10b98115', color: '#10b981', padding: '6px 14px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Sparkles size={16} /> 매칭률 98% (예시)
                                     </div>
                                 )}
                             </div>
-                            {/* 딥 소울 배지 + 매칭 */}
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
+                            {/* 소울 서랍 (Badge Drawer) */}
+                            <div style={{
+                                marginTop: '15px', display: 'flex', gap: '8px',
+                                borderTop: '1px solid var(--glass-border)', paddingTop: '15px',
+                                flexWrap: 'wrap'
+                            }}>
+                                {user?.game && <IdentityBadge type="GAME" label={user.game} size="sm" />}
+                                {user?.tier && <IdentityBadge type="TIER" label={user.tier} size="sm" />}
                                 {(isMyProfile ? !!localStorage.getItem('lumini_deep_soul') : !!user?.deep_soul) && (
-                                    <div style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        💎 딥 소울 완료
-                                    </div>
-                                )}
-                                {!isMyProfile && user?.deep_soul && !!localStorage.getItem('lumini_deep_soul') && (
-                                    <div style={{ background: '#8B5CF620', color: '#8B5CF6', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800 }}>
-                                        💜 가치관 호환도 확인 가능
-                                    </div>
+                                    <span style={{
+                                        padding: '4px 10px', borderRadius: '10px',
+                                        background: 'linear-gradient(135deg, #4F46E510, #7C3AED10)',
+                                        color: '#6366F1', border: '1.5px solid #6366F120',
+                                        fontSize: '0.75rem', fontWeight: 900
+                                    }}>
+                                        💎 딥소울 인증
+                                    </span>
                                 )}
                             </div>
 
                             {/* Bio / 자기소개 */}
-                            {(isMyProfile ? null : user?.bio) ? (
+                            {(effectiveIsMyProfile ? null : (isMyProfile ? profile?.bio : user?.bio)) ? (
                                 <div style={{ marginTop: '14px', padding: '14px 18px', background: 'var(--background)', borderRadius: '14px', border: '1px solid var(--glass-border)', fontSize: '0.95rem', lineHeight: 1.7, color: 'var(--text)', maxWidth: '420px' }}>
                                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>💬 자기소개</span>
-                                    {user?.bio}
+                                    {isMyProfile ? profile?.bio : user?.bio}
                                 </div>
-                            ) : !isMyProfile && (
+                            ) : !effectiveIsMyProfile && (
                                 <div style={{ marginTop: '14px', padding: '12px 16px', background: 'var(--background)', borderRadius: '14px', border: '1px dashed var(--glass-border)', fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                                     아직 자기소개를 작성하지 않았어요 ✏️
                                 </div>
                             )}
-                            {isMyProfile && (
+                            {effectiveIsMyProfile && (
                                 <div style={{ marginTop: '14px', padding: '14px 18px', background: 'var(--background)', borderRadius: '14px', border: '1px solid var(--glass-border)', fontSize: '0.95rem', lineHeight: 1.7, color: 'var(--text)', maxWidth: '420px', cursor: 'pointer' }}
                                     onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('changeStep', { detail: 'profile-edit' })); }}>
                                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>💬 자기소개</span>
-                                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>자기소개를 채워 더 많은 친구를 만나보세요 →</span>
+                                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>{profile?.bio || '자기소개를 채워 더 많은 친구를 만나보세요 →'}</span>
                                 </div>
                             )}
                         </div>
@@ -256,8 +372,8 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
 
                     {/* Navigation Tabs */}
                     <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--glass-border)', overflowX: 'auto' }}>
-                        {['profile', 'analysis', 'interests', 'deep'].map(tab => {
-                            const LABELS = { profile: '성향 분석', analysis: 'AI 리포트', interests: '관심사', deep: '💎 딥 소울' };
+                        {['profile', 'details', 'analysis', 'interests', 'deep'].map(tab => {
+                            const LABELS = { profile: '성향 분석', details: '상세 정보', analysis: 'AI 리포트', interests: '관심사', deep: '💎 딥 소울' };
                             const hasDeepData = isMyProfile ? !!localStorage.getItem('lumini_deep_soul') : !!user?.deep_soul;
                             const isDeepTab = tab === 'deep';
                             return (
@@ -285,22 +401,33 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                         {activeTab === 'profile' && (
                             <motion.div key="profile" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                                 {/* 레이더 차트를 2열로 — 오른쪽에는 호환도 */}
-                                <div style={{ display: 'grid', gridTemplateColumns: !isMyProfile ? '1.2fr 1fr' : '1fr', gap: '30px', alignItems: 'stretch' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: !effectiveIsMyProfile ? '1.2fr 1fr' : '1fr', gap: '30px', alignItems: 'stretch' }}>
                                     <div className="glass-card" style={{ padding: '24px', background: 'var(--background)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                         <RadarChart
                                             data={displayData}
-                                            comparisonData={!isMyProfile && myStandardizedData ? myStandardizedData : null}
-                                            nameA={!isMyProfile ? (user?.username || '상대방') : '나'}
-                                            nameB={!isMyProfile ? '나' : undefined}
+                                            comparisonData={(!effectiveIsMyProfile && myStandardizedData) ? (isPreviewMode ? displayData : myStandardizedData) : null}
+                                            nameA={!effectiveIsMyProfile ? (isMyProfile ? '나 (미리보기)' : (user?.username || '상대방')) : '나'}
+                                            nameB={!effectiveIsMyProfile ? '나' : undefined}
                                             size={280}
                                         />
                                     </div>
-                                    {!isMyProfile && compatibilityAnalysis && (
+                                    {!effectiveIsMyProfile && (compatibilityAnalysis || isPreviewMode) && (
                                         <div style={{ overflowY: 'auto', maxHeight: '320px' }}>
-                                            <CompatibilityBreakdown analysis={compatibilityAnalysis} />
+                                            <CompatibilityBreakdown analysis={isPreviewMode ? {
+                                                overallScore: 98,
+                                                dimensions: [
+                                                    { dimension: '성격 유형', icon: '📊', similarity: 95, color: '#8B5CF6', level: 'high', label: '완벽한 조화', insight: '서로를 가장 잘 이해할 수 있는 이상적인 관계입니다.' },
+                                                    { dimension: '소통 방식', icon: '💬', similarity: 98, color: '#06B6D4', level: 'high', label: '물 흐르듯 편안한 대화', insight: '깊은 속마음까지 부드럽게 나눌 수 있는 파동을 가지고 있어요.' },
+                                                    { dimension: '가치관', icon: '⭐', similarity: 90, color: '#F59E0B', level: 'high', label: '같은 방향을 바라보는 사이', insight: '추구하는 가치와 삶의 태도가 매우 유사합니다.' },
+                                                ],
+                                                matchingInsight: {
+                                                    description: "사용자님은 **상대방을 포용하는 부드러운 카리스마**를 가지고 있으며, 특히 **창의적인 문제 해결 방식**이 타인에게 매우 매력적으로 다가갑니다.",
+                                                    keyTraits: ['공감능력', '창의적사고', '신뢰감']
+                                                }
+                                            } : compatibilityAnalysis} />
                                         </div>
                                     )}
-                                    {isMyProfile && (
+                                    {effectiveIsMyProfile && (
                                         <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(3, 1fr)' }}>
                                             {(displayData || []).map((d, i) => (
                                                 <div key={i} style={{ padding: '14px', borderRadius: '14px', background: 'var(--background)', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
@@ -310,6 +437,47 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                                             ))}
                                         </div>
                                     )}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'details' && (
+                            <motion.div key="details" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
+                                <div style={{ display: 'grid', gap: '25px', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+
+                                    {/* Location Info */}
+                                    <div className="glass-card" style={{ padding: '28px', background: 'var(--background)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5' }}>
+                                            <MapPin size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: '8px', color: 'var(--text)' }}>주 활동 지역</h3>
+                                            <p style={{ fontSize: '1.05rem', color: (effectiveIsMyProfile ? profile?.district : user?.district) ? 'var(--text)' : 'var(--text-muted)', fontWeight: 600 }}>
+                                                {effectiveIsMyProfile ? (profile?.district || '거주지를 등록하지 않았습니다.') : (user?.district || '비공개이거나 설정하지 않았습니다.')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Game Duo Info */}
+                                    <div className="glass-card" style={{ padding: '28px', background: 'var(--background)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#ffe4e6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48' }}>
+                                            <Gamepad2 size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: '8px', color: 'var(--text)' }}>즐겨하는 게임</h3>
+                                            {(effectiveIsMyProfile ? profile?.game : user?.game) ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>{effectiveIsMyProfile ? profile?.game : user?.game}</span>
+                                                    <span style={{ padding: '4px 10px', borderRadius: '8px', background: 'linear-gradient(135deg, #1e293b, #0f172a)', color: 'white', fontSize: '0.85rem', fontWeight: 800 }}>
+                                                        {effectiveIsMyProfile ? profile?.tier : user?.tier}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <p style={{ fontSize: '1.05rem', color: 'var(--text-muted)', fontWeight: 600 }}>등록된 게임 정보가 없습니다.</p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                 </div>
                             </motion.div>
                         )}
@@ -393,7 +561,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                 </div>
 
                 {/* Sticky Footer for Actions */}
-                {!isMyProfile && (
+                {!effectiveIsMyProfile && (
                     <div style={{ padding: '25px 40px', borderTop: '1px solid var(--glass-border)', background: 'var(--surface)', position: 'sticky', bottom: 0, display: 'flex', gap: '20px', zIndex: 100 }}>
                         <button onClick={() => { onStartChat(user); onClose(); }} className="primary" style={{ flex: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 800 }}>
                             <MessageCircle size={22} /> 대화하기
@@ -403,7 +571,86 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, onStartChat
                         </button>
                     </div>
                 )}
+
+                {/* Gift Modal Overlay */}
+                <AnimatePresence>
+                    {showGiftModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(5px)', borderRadius: '40px', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={() => setShowGiftModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ background: 'var(--surface)', padding: '30px', borderRadius: '24px', width: '90%', maxWidth: '340px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
+                            >
+                                <div style={{ width: '60px', height: '60px', background: 'linear-gradient(135deg, #A855F7, #EC4899)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 10px 20px rgba(236, 72, 153, 0.3)' }}>
+                                    <Gem size={30} fill="white" color="white" />
+                                </div>
+                                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: '10px', color: 'var(--text)' }}>마음 전하기</h3>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+                                    {displayName}님에게 응원의 크리스탈을<br />선물할 수 있어요!
+                                </p>
+
+                                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', justifyContent: 'center' }}>
+                                    {[10, 50, 100].map(amt => (
+                                        <button
+                                            key={amt}
+                                            onClick={() => setGiftAmount(amt)}
+                                            style={{ flex: 1, padding: '12px 0', borderRadius: '14px', border: `2px solid ${giftAmount === amt ? '#EC4899' : 'var(--glass-border)'}`, background: giftAmount === amt ? 'rgba(236, 72, 153, 0.05)' : 'transparent', color: giftAmount === amt ? '#EC4899' : 'var(--text-muted)', fontWeight: 800, fontSize: '1.1rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            {amt}💎
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div style={{ marginBottom: '25px' }}>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>직접 입력</label>
+                                    <input
+                                        type="number"
+                                        value={giftAmount}
+                                        onChange={(e) => setGiftAmount(Number(e.target.value))}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--background)', color: 'var(--text)', fontSize: '1.1rem', fontWeight: 800, textAlign: 'center', outline: 'none' }}
+                                        min="1"
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button onClick={() => setShowGiftModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '16px', background: 'var(--background)', color: 'var(--text-muted)', border: 'none', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer' }}>취소</button>
+                                    <button
+                                        onClick={() => {
+                                            if (giftCrystals(giftAmount)) {
+                                                alert(`${displayName}님에게 ${giftAmount} 크리스탈 선물을 보냈습니다! 🎁✨`);
+                                                setShowGiftModal(false);
+                                            } else {
+                                                alert('앗, 보유한 크리스탈이 부족해요! 💎');
+                                            }
+                                        }}
+                                        style={{ flex: 1, padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #A855F7, #EC4899)', color: 'white', border: 'none', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(236, 72, 153, 0.25)' }}
+                                    >선물하기</button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
+
+            {/* AI Avatar Generator Overlay */}
+            {showAvatarGenerator && (
+                <AIAvatarGenerator
+                    onSelect={(url) => {
+                        setCurrentAvatar(url);
+                        setShowAvatarGenerator(false);
+                        // 실제 앱에서는 여기서 프로필 업데이트 쿼리를 날리거나 전역 상태를 바꿉니다.
+                        if (isMyProfile) {
+                            const event = new CustomEvent('updateProfileAvatar', { detail: url });
+                            window.dispatchEvent(event);
+                        }
+                    }}
+                    onClose={() => setShowAvatarGenerator(false)}
+                />
+            )}
         </div>
     );
 };

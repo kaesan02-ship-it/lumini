@@ -14,6 +14,8 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
     const [selectedTags, setSelectedTags] = useState(profile?.interests || []);
     const [privacy, setPrivacy] = useState(profile?.privacy_level || 'public');
     const [district, setDistrict] = useState(profile?.district || '');
+    const [game, setGame] = useState(profile?.game || '');
+    const [tier, setTier] = useState(profile?.tier || '');
     const [activeTab, setActiveTab] = useState('basic');
 
     const handleSave = () => {
@@ -22,7 +24,9 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
             bio,
             interests: selectedTags,
             privacy,
-            district
+            district,
+            game,
+            tier
         });
         onBack();
     };
@@ -41,6 +45,7 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
             <div style={{ display: 'flex', gap: '15px', marginBottom: '40px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
                 <TabItem active={activeTab === 'basic'} onClick={() => setActiveTab('basic')} label="기본 정보" />
                 <TabItem active={activeTab === 'interests'} onClick={() => setActiveTab('interests')} label="관심사" />
+                <TabItem active={activeTab === 'game'} onClick={() => setActiveTab('game')} label="게임 듀오" />
                 <TabItem active={activeTab === 'privacy'} onClick={() => setActiveTab('privacy')} label="공개 범위" />
             </div>
 
@@ -147,8 +152,67 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
                         <InterestTagsSelector
                             selectedTags={selectedTags}
                             onTagsChange={setSelectedTags}
-                            onComplete={() => setActiveTab('privacy')}
+                            onComplete={() => setActiveTab('game')}
                         />
+                    </motion.div>
+                )}
+
+                {activeTab === 'game' && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Tag size={20} color="var(--primary)" /> 게임 프로필 설정
+                        </h3>
+
+                        <div style={{ display: 'grid', gap: '25px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>주로 즐기는 게임</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {['League of Legends', 'Valorant', 'Battlegrounds', 'Overwatch 2', 'Lost Ark', 'Genshin Impact'].map(g => (
+                                        <button
+                                            key={g}
+                                            onClick={() => setGame(g)}
+                                            style={{
+                                                padding: '10px 18px', borderRadius: '12px', border: '1px solid var(--glass-border)',
+                                                background: game === g ? 'var(--primary)' : 'var(--background)',
+                                                color: game === g ? 'white' : 'var(--text)',
+                                                fontWeight: 700, cursor: 'pointer', transition: '0.2s'
+                                            }}
+                                        >
+                                            {g}
+                                        </button>
+                                    ))}
+                                    <input
+                                        type="text"
+                                        placeholder="직접 입력..."
+                                        value={['League of Legends', 'Valorant', 'Battlegrounds', 'Overwatch 2', 'Lost Ark', 'Genshin Impact'].includes(game) ? '' : game}
+                                        onChange={(e) => setGame(e.target.value)}
+                                        style={{
+                                            padding: '10px 18px', borderRadius: '12px', border: '1px solid var(--glass-border)',
+                                            background: 'var(--background)', color: 'var(--text)', width: '150px'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700 }}>현재 티어 / 레벨</label>
+                                <input
+                                    type="text"
+                                    className="glass-input"
+                                    value={tier}
+                                    onChange={(e) => setTier(e.target.value)}
+                                    placeholder="예: 언랭크, 다이아몬드, Lv.500 등"
+                                    style={{ width: '100%', padding: '15px', borderRadius: '15px', background: 'var(--background)', border: '1px solid var(--glass-border)', color: 'var(--text)' }}
+                                />
+                            </div>
+
+                            <div style={{ background: 'var(--surface-faint)', padding: '20px', borderRadius: '15px', border: '1px dashed var(--glass-border)' }}>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                                    💡 설정된 게임 정보는 매칭 카드와 프로필 하단에 표시되어,<br />
+                                    비슷한 게임 취향을 가진 인연을 찾는 데 도움을 줍니다.
+                                </p>
+                            </div>
+                        </div>
                     </motion.div>
                 )}
 
@@ -190,7 +254,7 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

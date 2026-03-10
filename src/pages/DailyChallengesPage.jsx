@@ -166,16 +166,35 @@ const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
                 </div>
 
                 {/* Streak & Progress */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '16px', padding: '16px', backdropFilter: 'blur(10px)' }}>
-                        <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>연속 달성</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Flame size={22} /> {streak}일
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '15px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '24px', padding: '20px', backdropFilter: 'blur(15px)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', opacity: 0.9, marginBottom: '12px', fontWeight: 700 }}>7일 출석 현황</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            {[1, 2, 3, 4, 5, 6, 7].map(day => (
+                                <div key={day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                    <div style={{
+                                        width: '24px', height: '24px', borderRadius: '50%',
+                                        background: streak >= day ? '#fff' : 'rgba(255,255,255,0.2)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '0.7rem', color: streak >= day ? '#F59E0B' : '#fff',
+                                        fontWeight: 900
+                                    }}>
+                                        {streak >= day ? '✓' : day}
+                                    </div>
+                                    <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>{day}일</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                    <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '16px', padding: '16px', backdropFilter: 'blur(10px)' }}>
-                        <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '4px' }}>오늘 획득</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 900 }}>+{earnedToday}💎</div>
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '18px', padding: '12px 16px', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>현재 스트릭</span>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>{streak}일🔥</span>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '18px', padding: '12px 16px', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>오늘 크리스탈</span>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>+{earnedToday}💎</span>
+                        </div>
                     </div>
                 </div>
             </div>

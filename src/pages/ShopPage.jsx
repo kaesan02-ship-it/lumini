@@ -61,7 +61,7 @@ const PAYMENT_METHODS = [
 const MERCHANT_ID = 'imp10391932'; // PortOne 테스트 가맹점 ID
 
 const ShopPage = ({ onBack }) => {
-    const { crystals, chargeCrystals, spendCrystals, isPremium, activatePremium } = useCrystalStore();
+    const { crystals, chargeCrystals, spendCrystals, isPremium, activatePremium, buyItem, useItem, inventory, isBoostActive } = useCrystalStore();
     const { user } = useAuthStore();
     const [activeTab, setActiveTab] = useState('charge');
     const [purchasedItem, setPurchasedItem] = useState(null);
@@ -119,13 +119,22 @@ const ShopPage = ({ onBack }) => {
     };
 
     const handleBuyItem = (item) => {
-        const success = spendCrystals(item.price);
+        const success = buyItem(item.id, item.price);
         if (success) {
-            setPurchasedItem(`${item.name} 구매 완료!`);
+            setPurchasedItem(`${item.name} 구매 완료! 인벤토리에 보관되었습니다.`);
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
         } else {
             alert(`크리스탈이 부족합니다. 현재 ${crystals}💎 보유 중입니다.`);
+        }
+    };
+
+    const handleUseItem = (item) => {
+        const success = useItem(item.id);
+        if (success) {
+            setPurchasedItem(`${item.name} 사용 완료! 효과가 적용되었습니다.`);
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2000);
         }
     };
 
@@ -365,19 +374,33 @@ const ShopPage = ({ onBack }) => {
                                                 <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '3px' }}>{item.desc}</div>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleBuyItem(item)}
-                                            style={{
-                                                background: crystals >= item.price ? 'var(--primary)' : '#e2e8f0',
-                                                color: crystals >= item.price ? 'white' : '#94a3b8',
-                                                border: 'none', borderRadius: '12px', padding: '10px 18px',
-                                                fontWeight: 800, cursor: crystals >= item.price ? 'pointer' : 'default',
-                                                display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-                                                fontSize: '0.9rem',
-                                            }}
-                                        >
-                                            <Gem size={14} /> {item.price}
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            {inventory[item.id] > 0 && (
+                                                <button
+                                                    onClick={() => handleUseItem(item)}
+                                                    style={{
+                                                        background: 'white', color: 'var(--primary)',
+                                                        border: '2px solid var(--primary)', borderRadius: '12px', padding: '10px 18px',
+                                                        fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem',
+                                                    }}
+                                                >
+                                                    사용하기 ({inventory[item.id]})
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleBuyItem(item)}
+                                                style={{
+                                                    background: crystals >= item.price ? 'var(--primary)' : '#e2e8f0',
+                                                    color: crystals >= item.price ? 'white' : '#94a3b8',
+                                                    border: 'none', borderRadius: '12px', padding: '10px 18px',
+                                                    fontWeight: 800, cursor: crystals >= item.price ? 'pointer' : 'default',
+                                                    display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+                                                    fontSize: '0.9rem',
+                                                }}
+                                            >
+                                                <Gem size={14} /> {item.name.includes('스킨') ? '스킨 구매' : `${item.price}💎`}
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 ))}
                             </div>

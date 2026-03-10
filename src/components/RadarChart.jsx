@@ -10,9 +10,9 @@ import {
   Legend,
 } from 'recharts';
 
-// 프리미엄 파스텔 & 글래스모피즘 느낌의 팔레트
-const PALETTE_A = { stroke: '#8B5CF6', fill: '#C4B5FD' }; // 소프트 바이올렛
-const PALETTE_B = { stroke: '#0EA5E9', fill: '#7DD3FC' }; // 스카이 블루
+// 루미니 전용 파스텔 톤앤매너 팔레트
+const PALETTE_A = { stroke: '#FDA4AF', fill: '#FECDD3' }; // 소프트 로즈 (상대방)
+const PALETTE_B = { stroke: '#818CF8', fill: '#A5B4FC' }; // 소프트 바이올렛 (나)
 
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
@@ -67,15 +67,15 @@ const RadarChart = ({ data, comparisonData, size = 300, nameA, nameB }) => {
       <ResponsiveContainer width="100%" height="100%">
         <RechartsRadarChart cx="50%" cy="50%" outerRadius="72%" data={chartData}>
           <defs>
-            {/* A (상대방/단독) — 바이올렛, 중심 진하고 외곽 옅게 */}
+            {/* A (상대방) — 소프트 로즈: 더 명확하고 짙게 */}
             <radialGradient id="fillA" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#A78BFA" stopOpacity={hasComparison ? 0.55 : 0.7} />
-              <stop offset="100%" stopColor="#8B5CF6" stopOpacity={hasComparison ? 0.1 : 0.22} />
+              <stop offset="0%" stopColor="#FDA4AF" stopOpacity={0.6} />
+              <stop offset="100%" stopColor="#FECDD3" stopOpacity={0.2} />
             </radialGradient>
-            {/* B (나) — 스카이블루: 더 투명하게 하여 A와 겹쳤을때 mix */}
+            {/* B (나) — 소프트 바이올렛: 은은하게 배경 역할 */}
             <radialGradient id="fillB" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#38BDF8" stopOpacity={0.42} />
-              <stop offset="100%" stopColor="#0EA5E9" stopOpacity={0.08} />
+              <stop offset="0%" stopColor="#A5B4FC" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="#C7D2FE" stopOpacity={0.1} />
             </radialGradient>
             <style>{`
               /* 각도 나눔선 — 매우 은은하게 */
@@ -103,27 +103,29 @@ const RadarChart = ({ data, comparisonData, size = 300, nameA, nameB }) => {
           />
           <Tooltip content={<CustomTooltip />} />
 
-          {/* A 데이터 — 도트 없음, 외곽선만 */}
+          {/* A 데이터 — 실선으로 강조 (상대방) */}
           <Radar
             name={nameA || (hasComparison ? '상대방' : '나')}
             dataKey="A"
-            stroke={PALETTE_A.stroke}
-            strokeWidth={hasComparison ? 1.5 : 2}
-            fill="url(#fillA)"
+            stroke={hasComparison ? '#FDA4AF' : PALETTE_B.stroke}
+            strokeWidth={hasComparison ? 2.5 : 2}
+            fill={hasComparison ? 'url(#fillA)' : 'url(#fillB)'}
             fillOpacity={1}
             dot={false}
-            activeDot={{ r: 4, fill: PALETTE_A.stroke, stroke: 'white', strokeWidth: 1.5 }}
+            activeDot={{ r: 4, fill: '#FDA4AF', stroke: 'white', strokeWidth: 1.5 }}
           />
+          {/* B 데이터 (나) — 비교 시 점선 및 투명하게 보조 역할 */}
           {hasComparison && (
             <Radar
               name={nameB || '나'}
               dataKey="B"
-              stroke={PALETTE_B.stroke}
+              stroke="#818CF880"
               strokeWidth={1.5}
+              strokeDasharray="4 2"
               fill="url(#fillB)"
               fillOpacity={1}
               dot={false}
-              activeDot={{ r: 4, fill: PALETTE_B.stroke, stroke: 'white', strokeWidth: 1.5 }}
+              activeDot={{ r: 5, fill: '#818CF8', stroke: 'white', strokeWidth: 1.5 }}
             />
           )}
           {hasComparison && (

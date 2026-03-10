@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Home, ClipboardList, Users, Heart, Brain, ShoppingBag, Target, Gem, BookOpen } from 'lucide-react';
+import { Settings, Home, ClipboardList, Users, Heart, Brain, ShoppingBag, Target, Gem, BookOpen, ShieldCheck } from 'lucide-react';
 import ShopPage from './pages/ShopPage';
 import DailyChallengesPage from './pages/DailyChallengesPage';
 import useCrystalStore from './store/crystalStore';
@@ -32,6 +32,10 @@ import WeeklyReportPage from './pages/WeeklyReportPage';
 import DeepSoulTestPage from './pages/DeepSoulTestPage';
 import DeepSoulResultPage from './pages/DeepSoulResultPage';
 import SoulPetPage from './pages/SoulPetPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import ValueGamePage from './pages/ValueGamePage';
+import AppleGamePage from './pages/AppleGamePage';
 
 // Supabase
 import { supabase } from './supabase/client';
@@ -45,6 +49,7 @@ import useUserStore from './store/userStore';
 // Components
 import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
+import TutorialOverlay from './components/TutorialOverlay';
 
 // Supabase Queries
 import { getNearbyProfiles } from './supabase/queries';
@@ -53,11 +58,37 @@ import { getNearbyProfiles } from './supabase/queries';
 import useFavorites from './hooks/useFavorites';
 
 function App() {
-  const { user, session, setSession, loading: authLoading } = useAuthStore();
+  const { user, session, setSession, loading: authLoading, isAdmin } = useAuthStore();
   const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
   const { crystals, dailyCheckinBonus } = useCrystalStore();
 
   const [step, setStep] = useState('welcome');
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [profileAvatar, setProfileAvatar] = useState(localStorage.getItem('lumini_profile_avatar') || null);
+
+  useEffect(() => {
+    const handleAvatarUpdate = (e) => {
+      setProfileAvatar(e.detail);
+      localStorage.setItem('lumini_profile_avatar', e.detail);
+    };
+    window.addEventListener('updateProfileAvatar', handleAvatarUpdate);
+    return () => window.removeEventListener('updateProfileAvatar', handleAvatarUpdate);
+  }, []);
+
+  // Check first visit
+  useEffect(() => {
+    const hasVisited = localStorage.getItem('lumini_visited');
+    if (!hasVisited) {
+      setShowTutorial(true);
+    }
+  }, []);
+
+  const handleTutorialComplete = () => {
+    localStorage.setItem('lumini_visited', 'true');
+    setShowTutorial(false);
+  };
   const [selectedUser, setSelectedUser] = useState(null);
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -199,8 +230,19 @@ function App() {
         padding: '0 5%', borderBottom: '1px solid #f1f5f9', background: 'rgba(255,255,255,0.8)',
         backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100
       }}>
-        <h1 className="title-gradient" style={{ fontSize: '1.6rem', cursor: 'pointer', fontWeight: 800 }} onClick={() => setStep('dashboard')}>lumini</h1>
+        <h1 className="title-gradient" style={{ fontSize: '1.6rem', cursor: 'pointer', fontWeight: 800 }} onClick={() => setStep('dashboard')}>
+          lumini
+        </h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {isAdmin && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setShowAdmin(true)}
+              style={{ background: '#0f172a', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <ShieldCheck size={14} /> 관리자
+            </motion.button>
+          )}
           {/* Crystal HUD */}
           {step !== 'welcome' && step !== 'test' && step !== 'result' && (
             <motion.div
@@ -215,7 +257,15 @@ function App() {
           <motion.div whileHover={{ scale: 1.1 }} onClick={() => setShowSettings(true)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '50%', background: '#f8fafc' }}>
             <Settings size={22} color="var(--text-muted)" />
           </motion.div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '6px 14px', borderRadius: '30px' }}>
+          <div
+            onClick={() => setShowMyProfile(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '6px 14px',
+              borderRadius: '30px', cursor: 'pointer', transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+            onMouseOut={(e) => e.currentTarget.style.background = '#f8fafc'}
+          >
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(45deg, var(--primary), var(--secondary))' }}></div>
             <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{userName}</span>
           </div>
@@ -246,9 +296,17 @@ function App() {
               nearbyUsers={nearbyUsers}
               onSelectUser={setSelectedUser}
               onNavigate={setStep}
+              userName={userName}
             />
           )}
 
+
+          {step === 'apple-game' && (
+            <AppleGamePage
+              userName={userName}
+              onBack={() => setStep('dashboard')}
+            />
+          )}
 
           {step === 'favorites' && (
             <FavoritesPage
@@ -257,6 +315,7 @@ function App() {
               onSelectUser={setSelectedUser}
               onStartChat={(user) => {
                 setActiveChatUser(user);
+                setStep('chat');
               }}
             />
           )}
@@ -313,7 +372,10 @@ function App() {
               userName={userName}
               mbtiType={mbtiType}
               profile={profile}
-              onBack={() => setStep('dashboard')}
+              onBack={() => {
+                setStep('dashboard');
+                setShowMyProfile(true);
+              }}
               onSave={async (data) => {
                 if (user) {
                   try {
@@ -322,9 +384,10 @@ function App() {
                       bio: data.bio,
                       interests: data.interests,
                       privacy_level: data.privacy,
-                      district: data.district
+                      district: data.district,
+                      game: data.game,
+                      tier: data.tier
                     });
-                    setStep('dashboard');
                   } catch (err) {
                     alert('프로필 저장 중 오류가 발생했습니다.');
                   }
@@ -333,7 +396,14 @@ function App() {
                   if (data.district) {
                     localStorage.setItem('lumini_user_district', data.district);
                   }
-                  setStep('dashboard');
+                  useUserStore.getState().setProfile({
+                    bio: data.bio,
+                    interests: data.interests,
+                    privacy_level: data.privacy,
+                    district: data.district,
+                    game: data.game,
+                    tier: data.tier
+                  });
                 }
               }}
             />
@@ -361,6 +431,13 @@ function App() {
           )}
           {step === 'soul-pet' && (
             <SoulPetPage onBack={() => setStep('dashboard')} />
+          )}
+          {step === 'value-game' && (
+            <ValueGamePage onComplete={(answers) => {
+              console.log('Value Game Completed:', answers);
+              // Future: Save to Supabase/localStorage
+              setStep('dashboard');
+            }} />
           )}
           {step === 'daily-challenges' && (
             <DailyChallengesPage
@@ -407,6 +484,27 @@ function App() {
             />
           )}
         </AnimatePresence>
+
+        {/* Global Admin Overlay */}
+        <AnimatePresence>
+          {isAdmin && showAdmin && (
+            !adminAuthenticated ? (
+              <AdminLoginPage
+                onAuthSuccess={() => setAdminAuthenticated(true)}
+                onBack={() => setShowAdmin(false)}
+              />
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 100 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 100 }}
+                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, background: 'white', overflowY: 'auto' }}
+              >
+                <AdminDashboardPage onBack={() => setShowAdmin(false)} />
+              </motion.div>
+            )
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Bottom Navigation (Mobile Friendly) */}
@@ -432,6 +530,7 @@ function App() {
           userName={userName}
           mbtiType={mbtiType}
           userData={userData}
+          profile={profile}
           onStartChat={(u) => {
             setActiveChatUser(u);
             setSelectedUser(null);
@@ -450,6 +549,13 @@ function App() {
         userData={userData}
         onNavigate={(target) => { setShowSettings(false); setStep(target); }}
       />
+
+      {/* Tutorial Overlay */}
+      <AnimatePresence>
+        {showTutorial && (
+          <TutorialOverlay onComplete={handleTutorialComplete} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

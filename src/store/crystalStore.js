@@ -12,6 +12,8 @@ const useCrystalStore = create(
             crystals: 150, // 신규 유저 환영 보너스
             isPremium: false,
             premiumExpiresAt: null,
+            inventory: {}, // { 'super-like': 2, 'boost': 1 }
+            activeBoostUntil: null, // 부스트 만료 시간
             dailyCheckin: null, // 마지막 출석 체크 날짜
             totalEarned: 150,
             totalSpent: 0,
@@ -34,6 +36,61 @@ const useCrystalStore = create(
                     totalSpent: state.totalSpent + amount,
                 }));
                 return true;
+            },
+
+            // 타 유저에게 크리스탈 선물 (로컬 시뮬레이션: 내 크리스탈 차감 판정 유지)
+            giftCrystals: (amount) => {
+                const { spendCrystals } = get();
+                if (spendCrystals(amount)) {
+                    return true;
+                }
+                return false;
+            },
+
+            // 아이템 구매 (price는 총 가격, quantity는 구매 수량)
+            buyItem: (itemId, price, quantity = 1) => {
+                const { spendCrystals } = get();
+                if (spendCrystals(price)) {
+                    set(state => ({
+                        inventory: {
+                            ...state.inventory,
+                            [itemId]: (state.inventory[itemId] || 0) + quantity
+                        }
+                    }));
+                    return true;
+                }
+                return false;
+            },
+
+            // 아이템 사용
+            useItem: (itemId) => {
+                const { inventory } = get();
+                if (!inventory[itemId] || inventory[itemId] <= 0) return false;
+
+                set(state => {
+                    const newInventory = { ...state.inventory };
+                    newInventory[itemId] -= 1;
+
+                    let newBoost = state.activeBoostUntil;
+                    if (itemId === 'boost') {
+                        const now = new Date();
+                        const duration = 24 * 60 * 60 * 1000; // 24시간
+                        newBoost = new Date(now.getTime() + duration).toISOString();
+                    }
+
+                    return {
+                        inventory: newInventory,
+                        activeBoostUntil: newBoost
+                    };
+                });
+                return true;
+            },
+
+            // 부스트 상태 확인
+            isBoostActive: () => {
+                const { activeBoostUntil } = get();
+                if (!activeBoostUntil) return false;
+                return new Date() < new Date(activeBoostUntil);
             },
 
             // 충전 (결제 시뮬레이션)

@@ -1,17 +1,23 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import RadarChart from '../components/RadarChart';
-import { Users, Heart, Gamepad2, Filter, Sparkles, MapPin, ChevronRight, Gem, Target, Flame } from 'lucide-react';
+import {
+    Users, Heart, Gamepad2, Filter, Sparkles, MapPin,
+    ChevronRight, Gem, Target, Flame, ShieldCheck, Zap
+} from 'lucide-react';
+import IdentityBadge from '../components/IdentityBadge';
 import { sortUsersByMatchingScore } from '../utils/matchingAlgorithm';
 import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
 import { getSoulType } from '../data/soulTypes';
 import useCrystalStore from '../store/crystalStore';
+import LumiMascot from '../components/LumiMascot';
 
-const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNavigate }) => {
+const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNavigate, userName }) => {
     const [activeTab, setActiveTab] = useState('all');
-    const { crystals, isPremium } = useCrystalStore();
+    const { crystals, isPremium, isBoostActive } = useCrystalStore();
     const streak = parseInt(localStorage.getItem('lumini_streak') || '0');
     const hasDeepSoul = !!localStorage.getItem('lumini_deep_soul');
+    const isBoosted = isBoostActive();
     // 내 지역 (localStorage 우선 → mock default)
     const myDistrict = localStorage.getItem('lumini_user_district') || '서울 마포구';
     const completedChallenges = (() => {
@@ -56,21 +62,64 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
             style={{ display: 'grid', gridTemplateColumns: 'minmax(420px, 1fr) 1.5fr', gap: '40px', padding: '10px 0' }}
         >
             <div className="left-panel">
+                {/* 🦦 Lumi Mascot Welcome Message */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '20px',
+                    marginBottom: '30px',
+                    padding: '20px',
+                    background: 'white',
+                    borderRadius: '24px',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+                    border: '1.5px solid #f1f5f9'
+                }}>
+                    <div style={{ width: '80px', height: '80px', flexShrink: 0 }}>
+                        <LumiMascot size={80} personalityData={userData} />
+                    </div>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <div style={{
+                            background: '#f8fafc',
+                            padding: '15px 20px',
+                            borderRadius: '18px',
+                            fontSize: '0.95rem',
+                            fontWeight: 700,
+                            color: '#334155',
+                            lineHeight: 1.5,
+                            position: 'relative'
+                        }}>
+                            {userName}님, 반가워요! 🦦<br />
+                            오늘 루미니에서 <span style={{ color: '#7c3aed' }}>운명의 소울메이트</span>를 만날 확률이 무척 높아요!
+                            <div style={{
+                                position: 'absolute',
+                                left: '-10px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: 0,
+                                height: 0,
+                                borderTop: '10px solid transparent',
+                                borderBottom: '10px solid transparent',
+                                borderRight: '10px solid #f8fafc'
+                            }} />
+                        </div>
+                    </div>
+                </div>
                 {/* 💎 Crystal & Challenge Widget */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                     <motion.div
                         whileHover={{ scale: 1.02 }}
-                        onClick={() => onNavigate && onNavigate('shop')}
+                        onClick={() => onNavigate && onNavigate('apple-game')}
                         style={{
-                            background: 'linear-gradient(135deg, #9333EA, #7C3AED)',
+                            background: 'linear-gradient(135deg, #FF6B6B, #EE5253)',
                             borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
+                            position: 'relative', overflow: 'hidden'
                         }}
                     >
-                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>보유 크리스탈</div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>역대급 중독성 🔥</div>
                         <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Gem size={20} /> {crystals}
+                            🍎 사과 게임
                         </div>
-                        {isPremium && <div style={{ marginTop: '6px', fontSize: '0.72rem', background: 'rgba(255,255,255,0.2)', borderRadius: '100px', padding: '2px 10px', display: 'inline-block' }}>👑 프리미엄</div>}
+                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>드래그로 10 만들기! 🏆</div>
                     </motion.div>
                     <motion.div
                         whileHover={{ scale: 1.02 }}
@@ -86,10 +135,47 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                         </div>
                         <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>🔥 {streak}일 연속</div>
                     </motion.div>
+                    <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => onNavigate && onNavigate('value-game')}
+                        style={{
+                            background: 'linear-gradient(135deg, #06B6D4, #3B82F6)',
+                            borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
+                            position: 'relative', overflow: 'hidden'
+                        }}
+                    >
+                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>가치관 밸런스</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Zap size={20} /> 시작하기
+                        </div>
+                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>매칭 확률 UP 🚀</div>
+                        <motion.div
+                            animate={{ x: [0, 100], opacity: [0, 0.5, 0] }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                            style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '100%', background: 'white', filter: 'blur(10px)', skewX: '-20deg' }}
+                        />
+                    </motion.div>
                 </div>
 
                 {/* My Stats Card */}
-                <div className="glass-card" style={{ padding: '35px', marginBottom: '40px', background: 'var(--surface)' }}>
+                <div className="glass-card" style={{
+                    padding: '35px',
+                    marginBottom: '40px',
+                    background: isBoosted ? 'linear-gradient(135deg, #FFFDF0 0%, #FFFFFF 100%)' : 'var(--surface)',
+                    border: isBoosted ? '2px solid #FCD34D' : '1px solid var(--glass-border)',
+                    boxShadow: isBoosted ? '0 10px 25px rgba(245, 158, 11, 0.15)' : 'var(--shadow)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    {isBoosted && (
+                        <div style={{
+                            position: 'absolute', top: '10px', right: '10px',
+                            background: '#F59E0B', color: 'white', padding: '4px 12px', borderRadius: '100px',
+                            fontSize: '0.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px'
+                        }}>
+                            <Flame size={12} /> 부스트 활성화 중
+                        </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                         <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.4rem' }}>
                             내 성향 리포트
@@ -223,31 +309,54 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '200px' }}>
-                                    <div style={{
-                                        width: '60px', height: '60px', borderRadius: '20px',
-                                        background: `linear-gradient(135deg, ${userSoul.gradient[0]}, ${userSoul.gradient[1]})`,
-                                        border: '1px solid var(--glass-border)', boxShadow: '0 8px 16px rgba(0,0,0,0.05)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: '1.8rem', flexShrink: 0
-                                    }}>
+                                    <motion.div
+                                        animate={{
+                                            boxShadow: user.id % 2 === 0 ? [
+                                                '0 0 0 0px rgba(99, 102, 241, 0)',
+                                                '0 0 0 10px rgba(99, 102, 241, 0.1)',
+                                                '0 0 0 0px rgba(99, 102, 241, 0)'
+                                            ] : 'none'
+                                        }}
+                                        transition={{ repeat: Infinity, duration: 2 }}
+                                        style={{
+                                            width: '60px', height: '60px', borderRadius: '20px',
+                                            background: `linear-gradient(135deg, ${userSoul.gradient[0]}, ${userSoul.gradient[1]})`,
+                                            border: '1px solid var(--glass-border)', boxShadow: '0 8px 16px rgba(0,0,0,0.05)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '1.8rem', flexShrink: 0, position: 'relative'
+                                        }}>
                                         {userSoul.emoji}
-                                    </div>
+                                        {user.id % 2 === 0 && (
+                                            <div style={{
+                                                position: 'absolute', bottom: -2, right: -2,
+                                                width: '12px', height: '12px', borderRadius: '50%',
+                                                background: '#10B981', border: '2px solid white'
+                                            }} />
+                                        )}
+                                    </motion.div>
                                     <div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                                             <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text)' }}>{user.name}</div>
                                             <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '3px 10px', borderRadius: '100px', fontWeight: 800 }}>{userSoul.soulName}</span>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
                                             <Sparkles size={14} color="var(--primary)" />
                                             <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700 }}>매칭률 {user.similarity}%</div>
                                         </div>
+                                        {/* 통합 배지 시스템 */}
+                                        <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                            {user.game && <IdentityBadge type="GAME" label={user.game} size="sm" />}
+                                            {user.tier && <IdentityBadge type="TIER" label={user.tier} size="sm" />}
+                                            {user.id % 3 === 0 && <IdentityBadge type="VERIFIED" size="sm" />}
+                                            {user.similarity > 90 && <IdentityBadge type="HOT" size="sm" />}
+                                        </div>
                                         {/* Bio 미리보기 */}
                                         {user.bio ? (
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }}>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }}>
                                                 {user.deep_soul ? '💎' : user.emoji || '🌟'} {user.bio}
                                             </div>
                                         ) : (
-                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.6 }}>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', opacity: 0.6 }}>
                                                 자기소개가 없어요 ✏️
                                             </div>
                                         )}
