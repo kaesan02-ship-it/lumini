@@ -91,7 +91,17 @@ const useAuthStore = create((set) => ({
 
     signOut: async () => {
         if (!USE_MOCK_DATA) await supabase.auth.signOut();
+
+        // 모든 관련 데이터 제거
         localStorage.removeItem(MOCK_SESSION_KEY);
+        localStorage.removeItem('lumini_profile_avatar');
+        localStorage.removeItem('lumini_user_data');
+        localStorage.removeItem('lumini_mbti_type');
+        localStorage.removeItem('lumini_user_name');
+        localStorage.removeItem('lumini_profile');
+        localStorage.removeItem('lumini_deep_soul');
+        localStorage.removeItem('lumini_user_district');
+
         set({ user: null, session: null, isAdmin: false, loading: false });
     },
 

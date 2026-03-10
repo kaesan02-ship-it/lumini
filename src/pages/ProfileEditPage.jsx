@@ -55,7 +55,7 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '40px' }}>
                             <div style={{ position: 'relative', width: '130px', height: '130px' }}>
                                 <img
-                                    src={profile?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${name}`}
+                                    src={profile?.avatar || profileAvatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${name}`}
                                     alt="Profile"
                                     style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--surface)', boxShadow: '0 10px 30px var(--primary-glow)', background: '#f8fafc' }}
                                 />

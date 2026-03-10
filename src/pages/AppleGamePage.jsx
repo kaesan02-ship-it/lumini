@@ -173,8 +173,15 @@ const AppleGamePage = ({ onBack, userName }) => {
         const selTop = Math.min(selection.startY, selection.endY);
         const selBottom = Math.max(selection.startY, selection.endY);
 
-        const cellWidth = gridRect.width / 10; // COLS=10
-        const cellHeight = gridRect.height / 17; // ROWS=17
+        // 드래그 거리가 너무 짧으면(단순 클릭 등) 무시하여 오동작 방지
+        const dragDist = Math.sqrt(Math.pow(selection.endX - selection.startX, 2) + Math.pow(selection.endY - selection.startY, 2));
+        if (dragDist < 5) {
+            setSelection(null);
+            return;
+        }
+
+        const cellWidth = gridRect.width / 10;
+        const cellHeight = gridRect.height / 17;
 
         const selectedCellsIdx = [];
         for (let i = 0; i < grid.length; i++) {
@@ -188,12 +195,20 @@ const AppleGamePage = ({ onBack, userName }) => {
             const cT = row * cellHeight;
             const cB = (row + 1) * cellHeight;
 
-            // 셋의 중심점이 드래그 영역에 포함되는지 확인 (더 직관적임)
-            const cx = (cL + cR) / 2;
-            const cy = (cT + cB) / 2;
+            // 판정 완화: 셀의 일부(예: 30%)만 포함되어도 선택되도록 개선
+            const overlapL = Math.max(cL, selLeft);
+            const overlapR = Math.min(cR, selRight);
+            const overlapT = Math.max(cT, selTop);
+            const overlapB = Math.min(cB, selBottom);
 
-            if (cx >= selLeft && cx <= selRight && cy >= selTop && cy <= selBottom) {
-                selectedCellsIdx.push(i);
+            if (overlapL < overlapR && overlapT < overlapB) {
+                const overlapArea = (overlapR - overlapL) * (overlapB - overlapT);
+                const cellArea = cellWidth * cellHeight;
+
+                // 셀 면적의 20% 이상 겹치면 선택된 것으로 간주 (훨씬 쾌적한 조작감)
+                if (overlapArea / cellArea > 0.2) {
+                    selectedCellsIdx.push(i);
+                }
             }
         }
 

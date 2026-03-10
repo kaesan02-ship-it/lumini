@@ -355,6 +355,8 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                     if (window.confirm('정말 로그아웃하시겠습니까?')) {
                         await signOut();
                         onClose();
+                        // 웰컴 페이지로 즉시 강제 이동 (상태 초기화 보장)
+                        window.location.href = '/';
                     }
                 }}
             />

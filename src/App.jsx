@@ -70,8 +70,16 @@ function App() {
 
   useEffect(() => {
     const handleAvatarUpdate = (e) => {
-      setProfileAvatar(e.detail);
-      localStorage.setItem('lumini_profile_avatar', e.detail);
+      const avatarUrl = e.detail;
+      setProfileAvatar(avatarUrl);
+      localStorage.setItem('lumini_profile_avatar', avatarUrl);
+
+      // 전역 상태(userStore)에도 즉시 반영하여 다른 페이지와 동기화
+      const currentProfile = useUserStore.getState().profile || {};
+      useUserStore.getState().setProfile({
+        ...currentProfile,
+        avatar: avatarUrl
+      });
     };
     window.addEventListener('updateProfileAvatar', handleAvatarUpdate);
     return () => window.removeEventListener('updateProfileAvatar', handleAvatarUpdate);
@@ -391,6 +399,7 @@ function App() {
                     await updateProfile(user.id, {
                       username: data.name,
                       bio: data.bio,
+                      avatar: profileAvatar, // 현재 아바타 URL 포함
                       interests: data.interests,
                       privacy_level: data.privacy,
                       district: data.district,
@@ -406,6 +415,8 @@ function App() {
                     localStorage.setItem('lumini_user_district', data.district);
                   }
                   useUserStore.getState().setProfile({
+                    ...profile,
+                    avatar: profileAvatar,
                     bio: data.bio,
                     interests: data.interests,
                     privacy_level: data.privacy,
