@@ -9,7 +9,7 @@ const savedUserData = (() => {
     } catch { return null; }
 })();
 
-const savedMbtiType = localStorage.getItem('lumini_mbti_type') || 'Unknown';
+const savedMbtiType = localStorage.getItem('lumini_mbti_type') || '?';
 const savedUserName = localStorage.getItem('lumini_user_name') || '사용자';
 const savedProfile = (() => {
     try {

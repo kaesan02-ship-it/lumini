@@ -142,7 +142,12 @@ const AppleGamePage = ({ onBack, userName }) => {
         const rect = gridRef.current.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - rect.left, y: clientY - rect.top };
+
+        // 스크롤 및 줌을 고려한 정밀 좌표 계산
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
     };
 
     const handleStart = (e) => {

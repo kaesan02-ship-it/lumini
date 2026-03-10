@@ -8,7 +8,7 @@ const SEOUL_GU = ['강남구', '강동구', '강북구', '강서구', '관악구
 const OTHER_DISTRICTS = ['부산 해운대구', '부산 수영구', '인천 연수구', '대구 수성구', '대전 유성구', '광주 남구', '수원시', '성남시 분당구', '용인시', '고양시', '화성시'];
 const ALL_DISTRICTS = [...SEOUL_GU.map(g => `서울 ${g}`), ...OTHER_DISTRICTS];
 
-const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave }) => {
+const ProfileEditPage = ({ userData, userName, mbtiType, profile, profileAvatar, onBack, onSave }) => {
     const [name, setName] = useState(userName);
     const [bio, setBio] = useState(profile?.bio || '안녕하세요! Lumini를 통해 진정한 인연을 찾고 있습니다. 🌟');
     const [selectedTags, setSelectedTags] = useState(profile?.interests || []);

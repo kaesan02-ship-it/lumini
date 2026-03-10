@@ -221,7 +221,7 @@ function App() {
       localStorage.removeItem('lumini_user_data');
       localStorage.removeItem('lumini_mbti_type');
       setUserData(null);
-      setMbtiType('Unknown');
+      setMbtiType('?');
       setStep('welcome');
       setShowSettings(false);
     }
@@ -389,6 +389,7 @@ function App() {
               userName={userName}
               mbtiType={mbtiType}
               profile={profile}
+              profileAvatar={profileAvatar}
               onBack={() => {
                 setStep('dashboard');
                 setShowMyProfile(true);

@@ -46,7 +46,7 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                 </button>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text)' }}>내 성격 진단 결과</h3>
 
-                {mbtiType && mbtiType !== 'Unknown' ? (
+                {mbtiType && mbtiType !== '?' ? (
                     <>
                         <div style={{
                             padding: '20px', borderRadius: '18px', textAlign: 'center',
@@ -308,7 +308,7 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
             <SettingItem
                 icon={<Brain size={18} color="var(--primary)" />}
                 label="내 검사 결과"
-                sublabel={mbtiType && mbtiType !== 'Unknown' ? mbtiType : '미완료'}
+                sublabel={mbtiType && mbtiType !== '?' ? mbtiType : '미완료'}
                 onClick={() => setActiveSection('results')}
             />
 
@@ -355,8 +355,8 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                     if (window.confirm('정말 로그아웃하시겠습니까?')) {
                         await signOut();
                         onClose();
-                        // 웰컴 페이지로 즉시 강제 이동 (상태 초기화 보장)
-                        window.location.href = '/';
+                        // 웰컴 페이지로 즉시 강제 이동 (GitHub Pages 베이스 경로 반영)
+                        window.location.href = import.meta.env.BASE_URL || '/lumini/';
                     }
                 }}
             />
