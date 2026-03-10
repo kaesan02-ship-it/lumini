@@ -165,11 +165,14 @@ const AppleGamePage = ({ onBack, userName }) => {
         setIsDragging(false);
 
         const margin = 20; // 20px 여유 범위 추가 (유저 피드백 반영: 조작감 개선)
-        const rect = {
-            left: Math.min(selection.startX, selection.endX) - margin,
-            right: Math.max(selection.startX, selection.endX) + margin,
-            top: Math.min(selection.startY, selection.endY) - margin,
-            bottom: Math.max(selection.startY, selection.endY) + margin
+
+        // 브라우저 절대 좌표(Screen space) 기준으로 변환하여 오차 원천 차단
+        const gridBounding = gridRef.current.getBoundingClientRect();
+        const screenRect = {
+            left: Math.min(selection.startX, selection.endX) + gridBounding.left - margin,
+            right: Math.max(selection.startX, selection.endX) + gridBounding.left + margin,
+            top: Math.min(selection.startY, selection.endY) + gridBounding.top - margin,
+            bottom: Math.max(selection.startY, selection.endY) + gridBounding.top + margin
         };
 
         const selectedCellsIdx = [];
@@ -177,15 +180,11 @@ const AppleGamePage = ({ onBack, userName }) => {
 
         for (let i = 0; i < grid.length; i++) {
             const cellElement = cells[i];
-            const cellRect = {
-                left: cellElement.offsetLeft,
-                right: cellElement.offsetLeft + cellElement.offsetWidth,
-                top: cellElement.offsetTop,
-                bottom: cellElement.offsetTop + cellElement.offsetHeight
-            };
+            // 각 개별 타일의 실제 절대 좌표를 추출
+            const cellRect = cellElement.getBoundingClientRect();
 
-            if (!(cellRect.left > rect.right || cellRect.right < rect.left ||
-                cellRect.top > rect.bottom || cellRect.bottom < rect.top)) {
+            if (!(cellRect.left > screenRect.right || cellRect.right < screenRect.left ||
+                cellRect.top > screenRect.bottom || cellRect.bottom < screenRect.top)) {
                 if (!grid[i].removed) selectedCellsIdx.push(i);
             }
         }

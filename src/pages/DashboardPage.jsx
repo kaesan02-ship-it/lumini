@@ -146,9 +146,12 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                     >
                         <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>가치관 밸런스</div>
                         <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Zap size={20} /> 시작하기
+                            {hasDeepSoul ? <Sparkles size={20} /> : <Zap size={20} />}
+                            {hasDeepSoul ? '검사 완료!' : '시작하기'}
                         </div>
-                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>매칭 확률 UP 🚀</div>
+                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>
+                            {hasDeepSoul ? '딥 소울 매칭 활성화 됨 💎' : '매칭 확률 UP 🚀'}
+                        </div>
                         <motion.div
                             animate={{ x: [0, 100], opacity: [0, 0.5, 0] }}
                             transition={{ repeat: Infinity, duration: 2 }}

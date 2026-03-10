@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shuffle, Check, X, Heart, Zap, Star, ArrowLeft } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
@@ -48,7 +48,7 @@ const CompatibilityGamePage = ({ onBack, myMbtiType, onNavigate }) => {
         }
     };
 
-    const score = getCompatibility(myMbtiType, partnerType);
+    const score = useMemo(() => getCompatibility(myMbtiType, partnerType), [myMbtiType, partnerType]);
     const isHighMatch = score >= 85;
 
     const handleClaimReward = () => {

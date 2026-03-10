@@ -21,7 +21,7 @@ import AIAvatarGenerator from './AIAvatarGenerator';
 
 const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, onStartChat }) => {
     const { toggleFavorite, isFavorite } = useFavorites();
-    const giftCrystals = useCrystalStore(state => state.giftCrystals);
+    const { crystals, giftCrystals } = useCrystalStore();
     const isMyProfile = user === null || user === undefined;
     const displayName = isMyProfile ? userName : user?.name;
 
@@ -207,81 +207,60 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                         <X size={24} />
                     </button>
 
-                    <div style={{ display: 'flex', gap: '40px', alignItems: 'center', marginBottom: '30px' }}>
+                    <div style={{ display: 'flex', gap: '40px', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap' }}>
                         <div className="relative">
-                            <motion.div
-                                animate={{
-                                    scale: [1, 1.02, 1],
-                                }}
-                                transition={{ repeat: Infinity, duration: 4 }}
+                            <div
                                 style={{
-                                    width: '180px', height: '180px', borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(244, 63, 94, 0.1))',
-                                    display: 'flex',
-                                    padding: '5px',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    border: '1px solid rgba(255,255,255,0.8)', overflow: 'visible', position: 'relative',
-                                    boxShadow: '0 20px 40px rgba(0,0,0,0.08)'
-                                }}>
-                                <div style={{
-                                    width: '100%', height: '100%', borderRadius: '50%',
-                                    background: 'var(--surface)', overflow: 'hidden',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    border: '2px solid white'
-                                }}>
-                                    <LumiMascot
-                                        mbti={isMyProfile ? mbtiType : user?.mbti}
-                                        personalityData={isMyProfile ? userData : (user?.personality_data || user?.data)}
-                                        size={150}
-                                    />
-                                </div>
-
-                                <motion.button
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => setShowAvatarGenerator(true)}
-                                    style={{
-                                        position: 'absolute', bottom: '0px', right: '0px',
-                                        width: '50px', height: '50px', borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #6366F1, #F43F5E)',
-                                        display: 'flex', alignItems: 'center',
-                                        justifyContent: 'center', boxShadow: '0 8px 20px rgba(99, 102, 241, 0.3)',
-                                        border: '3px solid white', zIndex: 10, cursor: 'pointer'
-                                    }}
-                                    title="AI 아바타 생성"
-                                >
-                                    <Sparkles size={22} color="white" />
-                                </motion.button>
-                            </motion.div>
+                                    position: 'relative', width: '130px', height: '130px',
+                                    borderRadius: '50%',
+                                    cursor: effectiveIsMyProfile ? 'pointer' : 'default',
+                                    boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
+                                    border: '4px solid white',
+                                    background: 'var(--surface)'
+                                }}
+                                onClick={() => { if (effectiveIsMyProfile) setShowAvatarGenerator(true); }}
+                                className={effectiveIsMyProfile ? "group relative" : "relative"}
+                            >
+                                <img
+                                    src={currentAvatar || user?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`}
+                                    alt="Profile"
+                                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', transition: 'transform 0.2s', background: '#f8fafc' }}
+                                    className={effectiveIsMyProfile ? "group-hover:scale-105" : ""}
+                                />
+                                {effectiveIsMyProfile && (
+                                    <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 backdrop-blur-sm pointer-events-none z-20">
+                                        <Camera size={24} />
+                                        <span>변경</span>
+                                    </div>
+                                )}
+                                {!effectiveIsMyProfile && isUserFavorited && (
+                                    <div style={{ position: 'absolute', bottom: '0px', right: '0px', background: '#ef4444', borderRadius: '50%', padding: '8px', border: '3px solid var(--surface)', zIndex: 10, boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}>
+                                        <Heart size={16} color="white" fill="white" />
+                                    </div>
+                                )}
+                                {effectiveIsMyProfile && (
+                                    <motion.div
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        style={{
+                                            position: 'absolute', bottom: '0px', right: '0px',
+                                            width: '38px', height: '38px', borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #6366F1, #F43F5E)',
+                                            display: 'flex', alignItems: 'center',
+                                            justifyContent: 'center', boxShadow: '0 8px 20px rgba(99, 102, 241, 0.3)',
+                                            border: '3px solid white', zIndex: 10, cursor: 'pointer'
+                                        }}
+                                        title="AI 아바타 생성"
+                                        className="group-hover:opacity-0 transition-opacity"
+                                    >
+                                        <Sparkles size={18} color="white" />
+                                    </motion.div>
+                                )}
+                            </div>
                         </div>
 
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                                {/* Profile Image */}
-                                <div
-                                    style={{ position: 'relative', width: '90px', height: '90px', flexShrink: 0, cursor: effectiveIsMyProfile ? 'pointer' : 'default' }}
-                                    onClick={() => { if (effectiveIsMyProfile) setShowAvatarGenerator(true); }}
-                                    className={effectiveIsMyProfile ? "group relative" : "relative"}
-                                >
-                                    <img
-                                        src={currentAvatar || user?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`}
-                                        alt="Profile"
-                                        style={{ width: '100%', height: '100%', borderRadius: '30px', objectFit: 'cover', background: 'var(--surface)', border: '2px solid var(--glass-border)', boxShadow: '0 10px 20px rgba(0,0,0,0.05)', transition: 'transform 0.2s' }}
-                                        className={effectiveIsMyProfile ? "group-hover:scale-105" : ""}
-                                    />
-                                    {effectiveIsMyProfile && (
-                                        <div className="absolute inset-0 bg-black/40 rounded-[30px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1 backdrop-blur-sm pointer-events-none">
-                                            <Camera size={20} />
-                                            <span>변경</span>
-                                        </div>
-                                    )}
-                                    {!effectiveIsMyProfile && isUserFavorited && (
-                                        <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', background: '#ef4444', borderRadius: '50%', padding: '6px', border: '3px solid var(--surface)', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}>
-                                            <Heart size={14} color="white" fill="white" />
-                                        </div>
-                                    )}
-                                </div>
-
                                 <div>
                                     <h2 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '4px' }}>{effectiveIsMyProfile ? displayName : (isMyProfile ? `${displayName} (미리보기)` : displayName)}</h2>
                                     {isMyProfile && (
@@ -589,9 +568,12 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                                     <Gem size={30} fill="white" color="white" />
                                 </div>
                                 <h3 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: '10px', color: 'var(--text)' }}>마음 전하기</h3>
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
                                     {displayName}님에게 응원의 크리스탈을<br />선물할 수 있어요!
                                 </p>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '20px', background: 'var(--primary-faint)', padding: '6px 16px', borderRadius: '20px', display: 'inline-block' }}>
+                                    보유 크리스탈: {crystals}💎
+                                </div>
 
                                 <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', justifyContent: 'center' }}>
                                     {[10, 50, 100].map(amt => (

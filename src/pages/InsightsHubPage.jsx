@@ -24,6 +24,20 @@ const InsightsHubPage = ({ onSelectCategory }) => {
             desc: '루미니 유저들의 성격 분포와 내 활동 수치',
             icon: <BarChart2 size={24} color="#ffc658" />,
             color: 'rgba(255, 198, 88, 0.1)'
+        },
+        {
+            id: 'weekly-report',
+            title: '📊 주간 성장 리포트',
+            desc: '나의 한 주 활동 결산 및 활동에 따른 보상 확인',
+            icon: <Calendar size={24} color="#3B82F6" />,
+            color: 'rgba(59, 130, 246, 0.1)'
+        },
+        {
+            id: 'daily-challenges',
+            title: '⚡ 데일리 챌린지 (HOT)',
+            desc: '매일 주어지는 소통 미션을 통해 크리스탈 획득',
+            icon: <TrendingUp size={24} color="#F59E0B" />,
+            color: 'rgba(245, 158, 11, 0.1)'
         }
     ];
 

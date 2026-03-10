@@ -199,9 +199,13 @@ const PostCard = ({ post, user, index }) => {
                         width: '45px', height: '45px', borderRadius: '50%',
                         background: 'linear-gradient(45deg, var(--primary), var(--secondary))',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'white', fontWeight: 700, fontSize: '1.1rem'
+                        color: 'white', fontWeight: 700, fontSize: '1.1rem', overflow: 'hidden', border: '2px solid var(--surface)'
                     }}>
-                        {post.author?.username?.[0] || 'U'}
+                        {post.author?.avatar_url ? (
+                            <img src={post.author.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${post.author?.username || 'U'}`} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#f8fafc' }} />
+                        )}
                     </div>
                     <div>
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>

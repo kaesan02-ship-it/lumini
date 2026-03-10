@@ -20,7 +20,7 @@ const useAuthStore = create((set) => ({
     user: USE_MOCK_DATA ? MOCK_USER : null,
     session: USE_MOCK_DATA ? MOCK_SESSION : null,
     loading: USE_MOCK_DATA ? false : true,
-    isAdmin: USE_MOCK_DATA ? true : false,
+    isAdmin: false,
 
     setSession: (session) => {
         // 모크 모드에서 null 세션이 들어오면 모크 유저 유지
@@ -39,8 +39,11 @@ const useAuthStore = create((set) => ({
 
     signIn: async (email, password) => {
         if (USE_MOCK_DATA) {
-            set({ user: MOCK_USER, session: MOCK_SESSION, loading: false });
-            return { user: MOCK_USER, session: MOCK_SESSION };
+            const isMockAdmin = email === 'admin@lumini.me';
+            const mockUser = { ...MOCK_USER, email: email };
+            const mockSession = { user: mockUser, access_token: 'mock-token' };
+            set({ user: mockUser, session: mockSession, loading: false, isAdmin: isMockAdmin });
+            return { user: mockUser, session: mockSession };
         }
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

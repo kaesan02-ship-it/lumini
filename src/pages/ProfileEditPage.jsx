@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Camera, Shield, Save, Tag } from 'lucide-react';
+import { ArrowLeft, Camera, Shield, Save, Tag, Sparkles } from 'lucide-react';
 import InterestTagsSelector from '../components/InterestTagsSelector';
 
 // 서울 주요 구청 목록
@@ -53,30 +53,32 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, onBack, onSave
                 {activeTab === 'basic' && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '40px' }}>
-                            <div style={{ position: 'relative' }}>
-                                <div style={{
-                                    width: '120px',
-                                    height: '120px',
-                                    borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '3rem',
-                                    color: 'white',
-                                    boxShadow: '0 10px 30px var(--primary-glow)'
-                                }}>
-                                    {name.charAt(0)}
-                                </div>
+                            <div style={{ position: 'relative', width: '130px', height: '130px' }}>
+                                <img
+                                    src={profile?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${name}`}
+                                    alt="Profile"
+                                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--surface)', boxShadow: '0 10px 30px var(--primary-glow)', background: '#f8fafc' }}
+                                />
                                 <button style={{
-                                    position: 'absolute', bottom: '0', right: '0',
-                                    background: 'var(--primary)', color: 'white',
-                                    padding: '10px', borderRadius: '50%', border: '4px solid var(--surface)'
+                                    position: 'absolute', bottom: '0px', right: '0px',
+                                    background: 'var(--surface)', color: 'var(--text-muted)',
+                                    padding: '12px', borderRadius: '50%', border: '1px solid var(--glass-border)',
+                                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
-                                    <Camera size={18} />
+                                    <Camera size={20} />
                                 </button>
                             </div>
-                            <p style={{ marginTop: '15px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>아바타 이미지는 곧 직접 업로드 가능합니다</p>
+                            <button
+                                onClick={onBack}
+                                style={{
+                                    marginTop: '25px', padding: '10px 24px', borderRadius: '20px',
+                                    background: 'linear-gradient(135deg, #6366F1, #F43F5E)', color: 'white', border: 'none',
+                                    fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                    boxShadow: '0 8px 20px rgba(99, 102, 241, 0.3)'
+                                }}
+                            >
+                                <Sparkles size={18} /> 프로필에서 AI 아바타 생성하기
+                            </button>
                         </div>
 
                         <div style={{ display: 'grid', gap: '25px' }}>

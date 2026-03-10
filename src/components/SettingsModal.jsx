@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, User, Settings, LogOut, ChevronRight, RefreshCcw, Moon, Sun, Heart, FileText, Brain, Shield } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
+import useAuthStore from '../store/authStore';
 
 const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiType, userData, onNavigate }) => {
     const { theme, toggleTheme } = useThemeStore();
+    const { signOut } = useAuthStore();
     const [activeSection, setActiveSection] = useState('main');
 
     if (!isOpen) return null;
@@ -350,9 +352,11 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                 icon={<LogOut size={18} color="#ef4444" />}
                 label="로그아웃"
                 isDangerous
-                onClick={() => {
+                onClick={async () => {
                     if (window.confirm('정말 로그아웃하시겠습니까?')) {
-                        alert('로그아웃 기능은 곧 추가됩니다!');
+                        await signOut();
+                        onClose();
+                        window.location.reload();
                     }
                 }}
             />

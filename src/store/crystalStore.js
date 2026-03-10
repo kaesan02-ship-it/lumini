@@ -9,13 +9,13 @@ import { persist } from 'zustand/middleware';
 const useCrystalStore = create(
     persist(
         (set, get) => ({
-            crystals: 150, // 신규 유저 환영 보너스
+            crystals: 500, // 신규 유저 환영 보너스 (가입 혜택)
             isPremium: false,
             premiumExpiresAt: null,
             inventory: {}, // { 'super-like': 2, 'boost': 1 }
             activeBoostUntil: null, // 부스트 만료 시간
             dailyCheckin: null, // 마지막 출석 체크 날짜
-            totalEarned: 150,
+            totalEarned: 500,
             totalSpent: 0,
 
             // 크리스탈 획득

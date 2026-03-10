@@ -275,7 +275,7 @@ function App() {
       {/* Main Content Area */}
       <main style={{ padding: '0 5%' }}>
         <AnimatePresence mode="wait">
-          {step === 'welcome' && <LandingPage key="landing" onStart={() => setStep('test')} />}
+          {step === 'welcome' && <LandingPage key="landing" onStart={() => setStep('test')} onNavigateLogin={() => setStep('auth')} />}
 
           {step === 'test' && (
             <motion.div key="test" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ padding: '40px 0' }}>
@@ -573,9 +573,6 @@ const CommunityHubPage = ({ onNavigate }) => {
     { step: 'compatibility-game', emoji: '💕', title: '소울 궁합 게임', desc: '6문제로 알아보는 나의 이상형 궁합 · +15💎', gradient: ['#FDF4FF', '#FAE8FF'], accent: '#D946EF' },
     { step: 'ranking', emoji: '🏆', title: '소울 랭킹', desc: '주간/월간 활동 리더보드 · +30💎 보상', gradient: ['#FFF7ED', '#FED7AA'], accent: '#F59E0B' },
     { step: 'groups', emoji: '💬', title: '소울 그룹', desc: '성향별 그룹 채팅 · 관심사 모임 참여', gradient: ['#EFF6FF', '#DBEAFE'], accent: '#3B82F6' },
-    { step: 'weekly-report', emoji: '📊', title: '주간 성장 리포트', desc: '나의 한 주 활동 · XP · 레벨 확인', gradient: ['#F0FDF4', '#DCFCE7'], accent: '#10B981', badge: 'NEW' },
-    { step: 'growth', emoji: '🌱', title: '소울 성장 일지', desc: '감정 체크인 · 소셜 미션 · AI 상담사', gradient: ['#FFF1F5', '#FCE7F3'], accent: '#EC4899' },
-    { step: 'daily-challenges', emoji: '⚡', title: '데일리 챌린지', desc: '매일 새로운 소통 챌린지 · +10💎', gradient: ['#FFFBEB', '#FEF3C7'], accent: '#F59E0B', badge: 'HOT' },
   ];
   return (
     <div style={{ minHeight: '100vh', background: 'var(--background)', paddingBottom: '120px' }}>

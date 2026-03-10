@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Users, MapPin, Zap, ClipboardList, TrendingUp, Heart, Gamepad2 } from 'lucide-react';
 
-const LandingPage = ({ onStart }) => {
+const LandingPage = ({ onStart, onNavigateLogin }) => {
     return (
         <div className="landing-container">
             {/* Header Hero Section */}
@@ -73,7 +73,20 @@ const LandingPage = ({ onStart }) => {
                     >
                         성격 기반 매칭 시작하기
                     </button>
-                    <p style={{ marginTop: '20px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    {onNavigateLogin && (
+                        <div style={{ marginTop: '20px' }}>
+                            <button
+                                onClick={onNavigateLogin}
+                                style={{
+                                    background: 'transparent', border: 'none', color: 'var(--primary)',
+                                    fontWeight: 700, fontSize: '1rem', cursor: 'pointer', textDecoration: 'underline'
+                                }}
+                            >
+                                이미 계정이 있으신가요? 로그인
+                            </button>
+                        </div>
+                    )}
+                    <p style={{ marginTop: '15px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                         현재 1,240명이 매칭 대기 중입니다
                     </p>
                 </motion.div>

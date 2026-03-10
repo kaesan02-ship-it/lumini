@@ -59,18 +59,8 @@ const StatsPage = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
                             <StatCard
                                 icon={<Activity color="#8884d8" />}
-                                label="내가 쓴 게시글"
+                                label="내가 쓴 커뮤니티 게시글"
                                 value={activityStats?.postCount || 0}
-                            />
-                            <StatCard
-                                icon={<Users color="#82ca9d" />}
-                                label="참여 중인 하이브"
-                                value={activityStats?.hiveCount || 0}
-                            />
-                            <StatCard
-                                icon={<MapIcon color="#ffc658" />}
-                                label="참가한 모임"
-                                value={activityStats?.eventCount || 0}
                             />
                         </div>
 

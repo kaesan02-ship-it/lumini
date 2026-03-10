@@ -152,19 +152,14 @@ const AIAvatarGenerator = ({ onSelect, onClose }) => {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: i * 0.1 }}
-                                        whileHover={{ scale: 1.1, rotate: [-1, 1, -1] }}
-                                        onClick={() => onSelect(url)}
                                         style={{
                                             width: '120px', height: '120px', borderRadius: '32px',
                                             overflow: 'hidden', border: '4px solid white',
-                                            boxShadow: '0 15px 30px rgba(0,0,0,0.15)', cursor: 'pointer',
-                                            position: 'relative'
+                                            boxShadow: '0 15px 30px rgba(0,0,0,0.15)',
+                                            position: 'relative', margin: '0 auto'
                                         }}
                                     >
                                         <img src={url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#f8fafc' }} />
-                                        <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(255,255,255,0.8)', padding: '4px', borderRadius: '50%' }}>
-                                            <Check size={14} color="#ef4444" />
-                                        </div>
                                     </motion.div>
                                 ))}
                             </div>
@@ -172,15 +167,15 @@ const AIAvatarGenerator = ({ onSelect, onClose }) => {
                             <div style={{ display: 'flex', gap: '15px' }}>
                                 <button
                                     onClick={() => setGeneratedAvatars([])}
-                                    style={{ flex: 1, height: '56px', borderRadius: '20px', border: '2px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: 800, cursor: 'pointer' }}
+                                    style={{ flex: 1, height: '56px', borderRadius: '20px', border: '2px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}
                                 >
                                     다시 생성
                                 </button>
                                 <button
-                                    onClick={onClose}
-                                    style={{ flex: 1, height: '56px', borderRadius: '20px', border: 'none', background: '#0f172a', color: 'white', fontWeight: 800, cursor: 'pointer' }}
+                                    onClick={() => onSelect(generatedAvatars[0])}
+                                    style={{ flex: 1.5, height: '56px', borderRadius: '20px', border: 'none', background: 'linear-gradient(135deg, #6366F1, #F43F5E)', color: 'white', fontWeight: 800, cursor: 'pointer', boxShadow: '0 8px 15px rgba(99, 102, 241, 0.3)', transition: 'all 0.2s' }}
                                 >
-                                    나중에 하기
+                                    이 아바타 적용하기
                                 </button>
                             </div>
                         </div>
