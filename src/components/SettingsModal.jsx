@@ -347,7 +347,6 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                 <ChevronRight size={16} color="var(--text-muted)" />
             </div>
 
-            {/* 로그아웃 */}
             <SettingItem
                 icon={<LogOut size={18} color="#ef4444" />}
                 label="로그아웃"
@@ -356,7 +355,6 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                     if (window.confirm('정말 로그아웃하시겠습니까?')) {
                         await signOut();
                         onClose();
-                        window.location.reload();
                     }
                 }}
             />

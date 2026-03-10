@@ -17,6 +17,7 @@ import IdentityBadge from './IdentityBadge';
 import { getAIAdvice } from '../lib/openaiClient';
 import { getDeepSoulType, buildCatScores } from '../data/deepSoulTypes';
 import { DEEP_QUESTIONS } from '../data/deepQuestions';
+import { getSoulType } from '../data/soulTypes';
 import AIAvatarGenerator from './AIAvatarGenerator';
 
 const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, onStartChat }) => {
@@ -162,27 +163,9 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
     };
 
     const mbtiInfo = useMemo(() => {
-        const mbtis = {
-            'ENFJ': { name: '정의로운 사회운동가', emoji: '🌟' },
-            'ENFP': { name: '재기발랄한 활동가', emoji: '🎨' },
-            'ENTJ': { name: '대담한 통솔자', emoji: '👑' },
-            'ENTP': { name: '뜨거운 논쟁을 즐기는 변론가', emoji: '💡' },
-            'ESFJ': { name: '사교적인 외교관', emoji: '🤝' },
-            'ESFP': { name: '자유로운 영혼의 연예인', emoji: '🎭' },
-            'ESTJ': { name: '엄격한 관리자', emoji: '📋' },
-            'ESTP': { name: '모험을 즐기는 사업가', emoji: '🚀' },
-            'INFJ': { name: '선의의 옹호자', emoji: '🌙' },
-            'INFP': { name: '열정적인 중재자', emoji: '🦋' },
-            'INTJ': { name: '용의주도한 전략가', emoji: '♟️' },
-            'INTP': { name: '논리적인 사색가', emoji: '🔬' },
-            'ISFJ': { name: '용감한 수호자', emoji: '🛡️' },
-            'ISFP': { name: '호기심 많은 예술가', emoji: '🎨' },
-            'ISTJ': { name: '청렴결백한 논리주의자', emoji: '📚' },
-            'ISTP': { name: '만능 재주꾼', emoji: '🔧' }
-        };
-        const type = isMyProfile ? mbtiType : user?.mbti;
-        return mbtis[type] || { name: '알 수 없음', emoji: '❓' };
-    }, [isMyProfile, mbtiType, user?.mbti]);
+        const type = isMyProfile ? mbtiType : (user?.mbti || user?.mbtiType);
+        return getSoulType(type);
+    }, [isMyProfile, mbtiType, user?.mbti, user?.mbtiType]);
 
     return (
         <div style={{
@@ -299,7 +282,18 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                             </div>
 
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <IdentityBadge type="MBTI" label={isMyProfile ? mbtiType : user?.mbti} />
+                                <IdentityBadge type="MBTI" label={isMyProfile ? mbtiType : (user?.mbti || user?.mbtiType)} />
+                                <span style={{
+                                    padding: '4px 12px',
+                                    background: 'var(--primary-faint)',
+                                    color: 'var(--primary)',
+                                    borderRadius: '100px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 800,
+                                    border: '1px solid var(--primary-glow)'
+                                }}>
+                                    {mbtiInfo.soulName}
+                                </span>
                                 {!effectiveIsMyProfile && (user?.similarity > 85 || isPreviewMode) && <IdentityBadge type="HOT" size="md" />}
                                 {(isMyProfile || (user?.id && user.id % 3 === 0)) && <IdentityBadge type="VERIFIED" size="md" />}
                                 {isPreviewMode && (

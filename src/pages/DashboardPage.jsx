@@ -190,12 +190,21 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                         <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.4rem' }}>
                             내 성향 리포트
                         </h3>
-                        <div style={{
-                            fontSize: '1rem', color: 'var(--primary)', background: 'var(--primary-faint)',
-                            padding: '6px 16px', borderRadius: '30px', fontWeight: 800,
-                            boxShadow: '0 2px 4px var(--primary-glow)'
-                        }}>
-                            {mbtiType || '알 수 없음'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                                fontSize: '0.8rem', color: 'var(--primary)', background: 'var(--primary-faint)',
+                                padding: '4px 12px', borderRadius: '30px', fontWeight: 800,
+                                border: '1px solid var(--primary-glow)'
+                            }}>
+                                {mbtiType ? getSoulType(mbtiType).soulName : '분석 대기 중'}
+                            </div>
+                            <div style={{
+                                fontSize: '1rem', color: 'var(--text-muted)', background: 'var(--background)',
+                                padding: '6px 16px', borderRadius: '30px', fontWeight: 800,
+                                border: '1px solid var(--glass-border)'
+                            }}>
+                                {mbtiType || '?'}
+                            </div>
                         </div>
                     </div>
                     {userData ? (
