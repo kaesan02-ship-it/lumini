@@ -411,9 +411,19 @@ const Divider = () => (
 );
 
 const SettingItem = ({ icon, label, sublabel, isDangerous, onClick }) => (
-    <div
+    <motion.div
+        whileHover={{ x: 4, background: 'rgba(0,0,0,0.02)' }}
+        whileTap={{ scale: 0.98 }}
         onClick={onClick}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            padding: '12px 0',
+            borderRadius: '12px',
+            transition: 'background 0.2s'
+        }}
     >
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div style={{ color: isDangerous ? '#ef4444' : 'var(--text-muted)' }}>{icon}</div>
@@ -427,7 +437,7 @@ const SettingItem = ({ icon, label, sublabel, isDangerous, onClick }) => (
             )}
             <ChevronRight size={16} color="var(--text-muted)" />
         </div>
-    </div>
+    </motion.div>
 );
 
 export default SettingsModal;
