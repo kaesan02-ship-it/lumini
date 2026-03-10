@@ -219,7 +219,10 @@ const AppleGamePage = ({ onBack, userName }) => {
 
         if (selectedCellsIdx.length > 0) {
             const sum = selectedCellsIdx.reduce((acc, idx) => acc + grid[idx].value, 0);
+            console.log('Selected count:', selectedCellsIdx.length, 'Sum:', sum);
+
             if (sum === 10) {
+                console.log('SUCCESS! Sum 10 found.');
                 const newGrid = [...grid];
                 selectedCellsIdx.forEach(idx => {
                     newGrid[idx] = { ...newGrid[idx], removed: true };

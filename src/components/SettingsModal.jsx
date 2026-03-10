@@ -352,11 +352,20 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                 label="로그아웃"
                 isDangerous
                 onClick={async () => {
+                    console.log('Logout button clicked');
                     if (window.confirm('정말 로그아웃하시겠습니까?')) {
-                        await signOut();
-                        onClose();
-                        // 웰컴 페이지로 즉시 강제 이동 (GitHub Pages 베이스 경로 반영)
-                        window.location.href = import.meta.env.BASE_URL || '/lumini/';
+                        try {
+                            console.log('Calling signOut...');
+                            await signOut();
+                            console.log('signOut completed. Closing modal...');
+                            onClose();
+                            const baseUrl = import.meta.env.BASE_URL || '/lumini/';
+                            console.log('Redirecting to:', baseUrl);
+                            window.location.href = baseUrl;
+                        } catch (err) {
+                            console.error('Logout failed:', err);
+                            alert('로그아웃 중 오류가 발생했습니다.');
+                        }
                     }
                 }}
             />
