@@ -137,7 +137,14 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                     </motion.div>
                     <motion.div
                         whileHover={{ scale: 1.02 }}
-                        onClick={() => onNavigate && onNavigate('value-game')}
+                        onClick={() => {
+                            if (hasDeepSoul) {
+                                // 이미 완료한 경우 결과 페이지로
+                                onNavigate && onNavigate('deep-soul-result');
+                            } else {
+                                onNavigate && onNavigate('value-game');
+                            }
+                        }}
                         style={{
                             background: 'linear-gradient(135deg, #06B6D4, #3B82F6)',
                             borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',

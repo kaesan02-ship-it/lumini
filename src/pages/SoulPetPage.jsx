@@ -375,14 +375,33 @@ const SoulPetPage = ({ onBack }) => {
                             </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleFeed}
-                                style={{ padding: '16px', borderRadius: '18px', border: 'none', background: 'linear-gradient(135deg, #F59E0B, #F97316)', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
-                                🍚 밥 주기
-                            </motion.button>
-                            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handlePlay}
-                                style={{ padding: '16px', borderRadius: '18px', border: 'none', background: 'linear-gradient(135deg, #EC4899, #8B5CF6)', color: 'white', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
-                                🎮 놀아주기
-                            </motion.button>
+                            {(() => {
+                                const now = Date.now();
+                                const feedCoolMs = 3600000;
+                                const playCoolMs = 1800000;
+                                const feedLeft = petData.lastFed ? Math.max(0, feedCoolMs - (now - petData.lastFed)) : 0;
+                                const playLeft = petData.lastPlayed ? Math.max(0, playCoolMs - (now - petData.lastPlayed)) : 0;
+                                const feedMin = Math.ceil(feedLeft / 60000);
+                                const playMin = Math.ceil(playLeft / 60000);
+                                return (<>
+                                    <div>
+                                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleFeed}
+                                            disabled={feedLeft > 0}
+                                            style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: feedLeft > 0 ? '#e2e8f0' : 'linear-gradient(135deg, #F59E0B, #F97316)', color: feedLeft > 0 ? '#94a3b8' : 'white', fontWeight: 800, fontSize: '1rem', cursor: feedLeft > 0 ? 'not-allowed' : 'pointer' }}>
+                                            🍚 밥 주기
+                                        </motion.button>
+                                        {feedLeft > 0 && <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '5px', fontWeight: 600 }}>⏳ {feedMin}분 후 가능</div>}
+                                    </div>
+                                    <div>
+                                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handlePlay}
+                                            disabled={playLeft > 0}
+                                            style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: playLeft > 0 ? '#e2e8f0' : 'linear-gradient(135deg, #EC4899, #8B5CF6)', color: playLeft > 0 ? '#94a3b8' : 'white', fontWeight: 800, fontSize: '1rem', cursor: playLeft > 0 ? 'not-allowed' : 'pointer' }}>
+                                            🎮 놀아주기
+                                        </motion.button>
+                                        {playLeft > 0 && <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '5px', fontWeight: 600 }}>⏳ {playMin}분 후 가능</div>}
+                                    </div>
+                                </>);
+                            })()}
                         </div>
                         <div style={{ padding: '16px 20px', borderRadius: '16px', background: 'linear-gradient(135deg, #EEF2FF, #FAF5FF)', border: '1px solid #6366F120' }}>
                             <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#6366F1', marginBottom: '4px' }}>🎯 {petData.name} 레벨 보너스</div>

@@ -164,30 +164,29 @@ const AppleGamePage = ({ onBack, userName }) => {
         if (!isDragging || !selection) return;
         setIsDragging(false);
 
-        const margin = 20; // 20px 여유 범위 추가 (유저 피드백 반영: 조작감 개선)
+        if (!gridRef.current) { setSelection(null); return; }
+        const gridRect = gridRef.current.getBoundingClientRect();
 
-        // 브라우저 절대 좌표(Screen space) 기준으로 변환하여 오차 원천 차단
-        const gridBounding = gridRef.current.getBoundingClientRect();
-        const screenRect = {
-            left: Math.min(selection.startX, selection.endX) + gridBounding.left - margin,
-            right: Math.max(selection.startX, selection.endX) + gridBounding.left + margin,
-            top: Math.min(selection.startY, selection.endY) + gridBounding.top - margin,
-            bottom: Math.max(selection.startY, selection.endY) + gridBounding.top + margin
-        };
+        // 드래그 영역(외부 좌표, 창 기준)
+        const selLeft = Math.min(selection.startX, selection.endX);
+        const selRight = Math.max(selection.startX, selection.endX);
+        const selTop = Math.min(selection.startY, selection.endY);
+        const selBottom = Math.max(selection.startY, selection.endY);
 
+        // gridRef.current의 자식 요소(cell) 중심점 판정
+        const gridChildren = Array.from(gridRef.current.children);
         const selectedCellsIdx = [];
-        const cells = gridRef.current.children;
 
-        for (let i = 0; i < grid.length; i++) {
-            const cellElement = cells[i];
-            // 각 개별 타일의 실제 절대 좌표를 추출
-            const cellRect = cellElement.getBoundingClientRect();
-
-            if (!(cellRect.left > screenRect.right || cellRect.right < screenRect.left ||
-                cellRect.top > screenRect.bottom || cellRect.bottom < screenRect.top)) {
-                if (!grid[i].removed) selectedCellsIdx.push(i);
+        gridChildren.forEach((cellEl, i) => {
+            if (grid[i]?.removed) return;
+            const cr = cellEl.getBoundingClientRect();
+            // 셋 중심점 (창 기준)
+            const cx = cr.left + cr.width / 2 - gridRect.left;
+            const cy = cr.top + cr.height / 2 - gridRect.top;
+            if (cx >= selLeft && cx <= selRight && cy >= selTop && cy <= selBottom) {
+                selectedCellsIdx.push(i);
             }
-        }
+        });
 
         if (selectedCellsIdx.length > 0) {
             const sum = selectedCellsIdx.reduce((acc, idx) => acc + grid[idx].value, 0);
@@ -199,7 +198,6 @@ const AppleGamePage = ({ onBack, userName }) => {
                 setGrid(newGrid);
                 setScore(prev => prev + (selectedCellsIdx.length * 10));
 
-                // Pop SFX
                 const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-pop-down-3129.mp3');
                 audio.volume = 0.4;
                 if (!isMuted) audio.play().catch(() => { });
@@ -256,7 +254,7 @@ const AppleGamePage = ({ onBack, userName }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(244, 63, 94, 0.1)', padding: '12px 25px', borderRadius: '20px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
                                 <Timer size={24} color="#f43f5e" />
-                                <span style={{ fontWeight: 900, color: '#f43f5e', fontSize: '1.8rem', fontFamily: 'monospace' }}>
+                                <span style={{ fontWeight: 900, color: '#f43f5e', fontSize: '1.8rem', fontFamily: "'Poppins', 'Nunito', sans-serif", letterSpacing: '-1px' }}>
                                     {timeLeft}초
                                 </span>
                             </div>

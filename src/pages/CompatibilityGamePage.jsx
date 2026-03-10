@@ -29,7 +29,16 @@ const getCompatibility = (typeA, typeB) => {
 
 const CompatibilityGamePage = ({ onBack, myMbtiType, onNavigate }) => {
     const { earnCrystals } = useCrystalStore();
-    const [phase, setPhase] = useState('intro'); // intro | quiz | result
+
+    // 하루 1회 제한
+    const today = new Date().toDateString();
+    const doneDate = localStorage.getItem('lumini_compatibility_done_date');
+    const alreadyDoneToday = doneDate === today;
+
+    const [phase, setPhase] = useState(alreadyDoneToday ? 'done' : 'intro');
+    const [savedPartnerType] = useState(() => localStorage.getItem('lumini_compatibility_partner') || '');
+    const [savedScore] = useState(() => parseInt(localStorage.getItem('lumini_compatibility_score') || '0'));
+
     const [answers, setAnswers] = useState([]);
     const [current, setCurrent] = useState(0);
     const [partnerType, setPartnerType] = useState('');
@@ -41,9 +50,14 @@ const CompatibilityGamePage = ({ onBack, myMbtiType, onNavigate }) => {
         if (current + 1 < QUESTIONS.length) {
             setCurrent(current + 1);
         } else {
-            // 퀴즈 완료 → 결과 계산
             const randomTypes = ['INFP', 'ENFJ', 'INTJ', 'ESFP', 'ENTP', 'ISFJ', 'INFJ', 'ENTJ'];
-            setPartnerType(randomTypes[Math.floor(Math.random() * randomTypes.length)]);
+            const chosen = randomTypes[Math.floor(Math.random() * randomTypes.length)];
+            setPartnerType(chosen);
+            // 날짜 저장
+            localStorage.setItem('lumini_compatibility_done_date', new Date().toDateString());
+            localStorage.setItem('lumini_compatibility_partner', chosen);
+            const s = getCompatibility(myMbtiType, chosen);
+            localStorage.setItem('lumini_compatibility_score', s.toString());
             setPhase('result');
         }
     };
@@ -84,6 +98,28 @@ const CompatibilityGamePage = ({ onBack, myMbtiType, onNavigate }) => {
 
             <div style={{ maxWidth: '560px', margin: '0 auto', padding: '30px 5%' }}>
                 <AnimatePresence mode="wait">
+                    {phase === 'done' && (
+                        <motion.div key="done" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                            <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+                                <div style={{ fontSize: '5rem', marginBottom: '16px' }}>✅</div>
+                                <h2 style={{ fontWeight: 900, fontSize: '1.5rem', marginBottom: '10px' }}>오늘 이미 완료했어요!</h2>
+                                <p style={{ color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.6 }}>
+                                    궁합 게임은 하루에 한 번만 참여할 수 있어요.<br />내일 다시 도전해보세요! 💕
+                                </p>
+                                {savedPartnerType && (
+                                    <div style={{ background: 'var(--primary-faint)', borderRadius: '20px', padding: '20px', marginBottom: '20px' }}>
+                                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '8px' }}>오늘의 궁합 결과</div>
+                                        <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--primary)' }}>{savedScore}점</div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>상대 유형: {savedPartnerType}</div>
+                                    </div>
+                                )}
+                                <motion.button whileHover={{ scale: 1.03 }} onClick={onBack}
+                                    style={{ padding: '14px 32px', borderRadius: '30px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer' }}>
+                                    돌아가기
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    )}
                     {phase === 'intro' && (
                         <motion.div key="intro" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                             <div style={{ textAlign: 'center', padding: '20px' }}>

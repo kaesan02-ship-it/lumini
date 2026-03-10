@@ -62,7 +62,7 @@ const useAuthStore = create((set) => ({
 
     signOut: async () => {
         if (!USE_MOCK_DATA) await supabase.auth.signOut();
-        set({ user: null, session: null });
+        set({ user: null, session: null, isAdmin: false, loading: false });
     },
 
     signInWithGoogle: async () => {

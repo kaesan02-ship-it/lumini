@@ -106,15 +106,16 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                             width: '45px',
                             height: '45px',
                             borderRadius: '50%',
+                            overflow: 'hidden',
                             background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontWeight: 700,
-                            fontSize: '1.2rem'
+                            flexShrink: 0
                         }}>
-                            {chatUser.name[0]}
+                            <img
+                                src={chatUser.avatar_url || `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(chatUser.name || 'user')}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
+                                alt={chatUser.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={e => { e.target.style.display = 'none'; }}
+                            />
                         </div>
                         <div>
                             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#1a202c' }}>

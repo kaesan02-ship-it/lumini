@@ -85,6 +85,15 @@ function App() {
     }
   }, []);
 
+  // 로그아웃 시 welcome으로 자동 이동
+  useEffect(() => {
+    if (!authLoading && !user && step !== 'welcome' && step !== 'auth') {
+      setStep('welcome');
+      setShowSettings(false);
+      setShowMyProfile(false);
+    }
+  }, [user, authLoading]);
+
   const handleTutorialComplete = () => {
     localStorage.setItem('lumini_visited', 'true');
     setShowTutorial(false);
