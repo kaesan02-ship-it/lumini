@@ -8,6 +8,8 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
     const { theme, toggleTheme } = useThemeStore();
     const { signOut } = useAuthStore();
     const [activeSection, setActiveSection] = useState('main');
+    const [confirmReset, setConfirmReset] = useState(false);
+    const [confirmLogout, setConfirmLogout] = useState(false);
 
     if (!isOpen) return null;
 
@@ -337,35 +339,49 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
 
             {/* 진단 초기화 */}
             <div
-                onClick={onReset}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                onClick={() => {
+                    if (!confirmReset) {
+                        setConfirmReset(true);
+                        setTimeout(() => setConfirmReset(false), 3000);
+                        return;
+                    }
+                    onReset();
+                    setConfirmReset(false);
+                }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '12px 0', borderRadius: '12px' }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <div style={{ color: '#f59e0b' }}><RefreshCcw size={18} /></div>
-                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>진단 데이터 초기화</span>
+                    <span style={{ color: confirmReset ? '#ef4444' : 'var(--text)', fontWeight: 600 }}>
+                        {confirmReset ? '모든 데이터 삭제 (클릭 시 실행)' : '진단 데이터 초기화'}
+                    </span>
                 </div>
                 <ChevronRight size={16} color="var(--text-muted)" />
             </div>
 
             <SettingItem
                 icon={<LogOut size={18} color="#ef4444" />}
-                label="로그아웃"
+                label={confirmLogout ? "정말 로그아웃 할까요?" : "로그아웃"}
+                sublabel={confirmLogout ? "한 번 더 클릭" : ""}
                 isDangerous
                 onClick={async () => {
+                    if (!confirmLogout) {
+                        setConfirmLogout(true);
+                        setTimeout(() => setConfirmLogout(false), 3000);
+                        return;
+                    }
                     console.log('Logout button clicked');
-                    if (window.confirm('정말 로그아웃하시겠습니까?')) {
-                        try {
-                            console.log('Calling signOut...');
-                            await signOut();
-                            console.log('signOut completed. Closing modal...');
-                            onClose();
-                            const baseUrl = import.meta.env.BASE_URL || '/lumini/';
-                            console.log('Redirecting to:', baseUrl);
-                            window.location.href = baseUrl;
-                        } catch (err) {
-                            console.error('Logout failed:', err);
-                            alert('로그아웃 중 오류가 발생했습니다.');
-                        }
+                    try {
+                        console.log('Calling signOut...');
+                        await signOut();
+                        console.log('signOut completed. Closing modal...');
+                        onClose();
+                        const baseUrl = import.meta.env.BASE_URL || '/lumini/';
+                        console.log('Redirecting to:', baseUrl);
+                        window.location.href = baseUrl;
+                    } catch (err) {
+                        console.error('Logout failed:', err);
+                        alert('로그아웃 중 오류가 발생했습니다.');
                     }
                 }}
             />

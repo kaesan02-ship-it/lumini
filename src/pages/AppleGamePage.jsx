@@ -6,7 +6,7 @@ import useCrystalStore from '../store/crystalStore';
 const COLS = 17;
 const ROWS = 10;
 const GAME_TIME = 100; // 1분 40초
-const FREE_PLAYS = 5;
+const FREE_PLAYS = 999;
 
 const AppleGamePage = ({ onBack, userName }) => {
     const { crystals, useItem, buyItem, inventory, spendCrystals } = useCrystalStore();

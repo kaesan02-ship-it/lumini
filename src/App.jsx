@@ -217,14 +217,12 @@ function App() {
   };
 
   const resetData = useCallback(() => {
-    if (window.confirm("모든 진단 데이터가 초기화됩니다. 계속하시겠습니까?")) {
-      localStorage.removeItem('lumini_user_data');
-      localStorage.removeItem('lumini_mbti_type');
-      setUserData(null);
-      setMbtiType('?');
-      setStep('welcome');
-      setShowSettings(false);
-    }
+    localStorage.removeItem('lumini_user_data');
+    localStorage.removeItem('lumini_mbti_type');
+    setUserData(null);
+    setMbtiType('?');
+    setStep('welcome');
+    setShowSettings(false);
   }, []);
 
   const handleSendMessage = () => {
