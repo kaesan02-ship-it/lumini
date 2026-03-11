@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Edit2, Check, X } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
+import useAuthStore from '../store/authStore';
 
 // ─── 아이템 카탈로그 ───────────────────────────────────────────────
 const ITEMS = [
@@ -202,6 +203,10 @@ const OtterCanvas = ({ petData, previewItem = null, animation, onPlayTap, mood }
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────
 const SoulPetPage = ({ onBack }) => {
+    const { user } = useAuthStore();
+    const userId = user?.id || 'guest';
+    const PET_STORAGE_KEY = `lumini_soul_pet_${userId}`;
+
     const { crystals, spendCrystals } = useCrystalStore();
     const [activeTab, setActiveTab] = useState('pet');
     const [previewItem, setPreviewItem] = useState(null);
@@ -213,7 +218,7 @@ const SoulPetPage = ({ onBack }) => {
 
     const [petData, setPetData] = useState(() => {
         try {
-            return JSON.parse(localStorage.getItem('lumini_soul_pet') || 'null') || {
+            return JSON.parse(localStorage.getItem(PET_STORAGE_KEY) || 'null') || {
                 name: '루미', level: 1, exp: 0, maxExp: 100,
                 hunger: 80, happiness: 70,
                 equippedHat: null, equippedBg: null, equippedAcc: null,
@@ -229,7 +234,7 @@ const SoulPetPage = ({ onBack }) => {
         }
     });
 
-    const savePet = (data) => { localStorage.setItem('lumini_soul_pet', JSON.stringify(data)); setPetData(data); };
+    const savePet = (data) => { localStorage.setItem(PET_STORAGE_KEY, JSON.stringify(data)); setPetData(data); };
     const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200); };
     const triggerAnim = (type) => { setAnimation(type); setTimeout(() => setAnimation(null), 1200); };
 

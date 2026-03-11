@@ -102,6 +102,13 @@ function App() {
     }
   }, [user, authLoading]);
 
+  // 로그인 시 DB에서 크리스탈 정보 최신화
+  useEffect(() => {
+    if (user && user.id) {
+       useCrystalStore.getState().fetchCrystalsFromDB(user.id);
+    }
+  }, [user]);
+
   const handleTutorialComplete = () => {
     localStorage.setItem('lumini_visited', 'true');
     setShowTutorial(false);
@@ -193,6 +200,11 @@ function App() {
     return () => window.removeEventListener('changeStep', handleStepChange);
   }, []);
 
+  // 페이지 이동 시 스크롤 최상단 초기화
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
+
   // --- [Handlers] ---
   const handleTestComplete = (data, type) => {
     // Save raw personality object { O, C, E, A, N, H }
@@ -240,10 +252,13 @@ function App() {
     <div className="app-container" style={{ minHeight: '100vh', paddingBottom: step === 'welcome' ? '0' : '90px' }}>
 
       {/* Top Navbar */}
+      {user && step !== 'welcome' && step !== 'auth' && (
       <nav style={{
-        height: '75px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '0 5%', borderBottom: '1px solid #f1f5f9', background: 'rgba(255,255,255,0.8)',
-        backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100
+        position: 'fixed', top: 0, width: '100%',
+        padding: '12px 20px', display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', background: 'rgba(255,255,255,0.9)',
+        backdropFilter: 'blur(10px)', zIndex: 100,
+        boxShadow: '0 2px 20px rgba(0,0,0,0.05)'
       }}>
         <h1 className="title-gradient" style={{ fontSize: '1.6rem', cursor: 'pointer', fontWeight: 800 }} onClick={() => setStep('dashboard')}>
           lumini
@@ -286,6 +301,7 @@ function App() {
           </div>
         </div>
       </nav>
+      )}
 
       {/* Main Content Area */}
       <main style={{ padding: '0 5%' }}>
@@ -398,7 +414,7 @@ function App() {
                     await updateProfile(user.id, {
                       username: data.name,
                       bio: data.bio,
-                      avatar: profileAvatar, // 현재 아바타 URL 포함
+                      avatar_url: profileAvatar, // DB 컬럼명에 맞춤
                       interests: data.interests,
                       privacy_level: data.privacy,
                       district: data.district,
@@ -406,6 +422,7 @@ function App() {
                       tier: data.tier
                     });
                   } catch (err) {
+                    console.error(err);
                     alert('프로필 저장 중 오류가 발생했습니다.');
                   }
                 } else {
@@ -415,7 +432,7 @@ function App() {
                   }
                   useUserStore.getState().setProfile({
                     ...profile,
-                    avatar: profileAvatar,
+                    avatar_url: profileAvatar,
                     bio: data.bio,
                     interests: data.interests,
                     privacy_level: data.privacy,
@@ -527,14 +544,14 @@ function App() {
       </main>
 
       {/* Bottom Navigation (Mobile Friendly) */}
-      {step !== 'welcome' && step !== 'test' && step !== 'result' && (
+      {user && step !== 'welcome' && step !== 'auth' && (
         <nav className="bottom-nav">
           <NavItem active={step === 'dashboard'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} />
           <NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} />
           <NavItem active={step === 'daily-challenges'} icon={<Target size={22} />} label="챌린지" onClick={() => setStep('daily-challenges')} />
           <NavItem active={['community', 'magazine', 'ranking', 'compatibility-game', 'groups', 'group-chat', 'weekly-report'].includes(step)} icon={<Users size={22} />} label="커뮤니티" onClick={() => setStep('community')} />
           <NavItem active={step.includes('insight') || step === 'growth' || step === 'stats'} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} />
-          <NavItem active={step === 'shop'} icon={<ShoppingBag size={22} />} label="상점" onClick={() => setStep('shop')} />
+          <NavItem icon={<ShoppingBag size={24} />} label="상점" active={step === 'shop'} onClick={() => setStep('shop')} />
         </nav>
       )}
 

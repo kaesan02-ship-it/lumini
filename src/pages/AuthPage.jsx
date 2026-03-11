@@ -111,7 +111,17 @@ const AuthPage = ({ onAuthSuccess }) => {
                 }
             }
         } catch (error) {
-            toast.error(error.message || '로그인에 실패했습니다.');
+            console.error('Auth Error:', error);
+            // Supabase 등 고유 에러 메시지가 영문일 수 있으므로 번역 또는 그대로 표기
+            if (error.message?.includes('Password should be at least')) {
+                toast.error('비밀번호는 최소 6자 이상이어야 합니다.');
+            } else if (error.message?.includes('already registered')) {
+                toast.error('이미 가입된 특수/이메일 계정입니다.');
+            } else if (error.message?.includes('Invalid login credentials')) {
+                toast.error('이메일 또는 비밀번호가 일치하지 않습니다.');
+            } else {
+                toast.error(error.message || '인증 과정에서 오류가 발생했습니다.');
+            }
         } finally {
             setLoading(false);
         }
@@ -124,8 +134,8 @@ const AuthPage = ({ onAuthSuccess }) => {
 
     return (
         <div style={{
-            minHeight: '100vh', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', padding: '20px', background: 'var(--background)'
+            minHeight: '100vh', display: 'flex', alignItems: 'flex-start',
+            justifyContent: 'center', padding: '20px', paddingTop: '80px', background: 'var(--background)'
         }}>
             <AnimatePresence>
                 {showWelcomeBonus && <WelcomeBonusPopup onClose={handleWelcomeClose} />}
@@ -176,10 +186,14 @@ const AuthPage = ({ onAuthSuccess }) => {
                     {!isLogin && (
                         <>
                             <div style={{ position: 'relative' }}>
-                                <User size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input type="text" placeholder="사용자 이름" required value={username}
+                                <User size={20} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                                <input
+                                    type="text"
+                                    placeholder="이름 (성명)"
+                                    value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: '14px', background: 'var(--background)', border: '1.5px solid var(--glass-border)', color: 'var(--text)', outline: 'none' }}
+                                    required
+                                    style={{ width: '100%', padding: '16px 16px 16px 48px', borderRadius: '14px', border: '2px solid transparent', background: 'var(--background)', fontSize: '1rem', transition: 'all 0.3s' }}
                                 />
                             </div>
                             <div style={{ position: 'relative' }}>

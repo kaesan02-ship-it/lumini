@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Sparkles, Image as ImageIcon, Hash, X } from 'lucide-react';
 import { createPost } from '../supabase/queries';
 import useAuthStore from '../store/authStore';
+import useUserStore from '../store/userStore';
 
 const AI_TIPS = [
     "💡 감정을 솔직하게 표현해보세요. 공감되는 글이 더 많은 연결을 만들어요.",
@@ -14,6 +15,7 @@ const AI_TIPS = [
 
 const CreatePostPage = ({ onBack, onSuccess, userName: propUserName }) => {
     const { user } = useAuthStore();
+    const { profile } = useUserStore();
     const [content, setContent] = useState('');
     const [category, setCategory] = useState('experience');
     const [loading, setLoading] = useState(false);
@@ -22,13 +24,14 @@ const CreatePostPage = ({ onBack, onSuccess, userName: propUserName }) => {
     const [currentTip] = useState(() => AI_TIPS[Math.floor(Math.random() * AI_TIPS.length)]);
     const fileInputRef = useRef(null);
 
-    // 실제 표시할 작성자명
+    // 실제 표시할 작성자명 및 아바타
     const displayName = propUserName
-        || localStorage.getItem('lumini_user_name')
-        || user?.username
+        || profile?.username
+        || user?.user_metadata?.username
         || user?.email?.split('@')[0]
         || '루미니 멤버';
     const avatarLetter = displayName[0]?.toUpperCase() || 'L';
+    const avatarUrl = profile?.avatar_url || localStorage.getItem('lumini_profile_avatar');
 
     const handleImageSelect = (e) => {
         const files = Array.from(e.target.files || []);
@@ -96,9 +99,10 @@ const CreatePostPage = ({ onBack, onSuccess, userName: propUserName }) => {
                             width: '40px', height: '40px', borderRadius: '50%',
                             background: 'linear-gradient(45deg, var(--primary), var(--secondary))',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'white', fontWeight: 700, fontSize: '1.1rem'
+                            color: 'white', fontWeight: 700, fontSize: '1.1rem',
+                            overflow: 'hidden'
                         }}>
-                            {avatarLetter}
+                            {avatarUrl ? <img src={avatarUrl} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : avatarLetter}
                         </div>
                         <div>
                             <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem' }}>{displayName}</p>
@@ -191,6 +195,24 @@ const CreatePostPage = ({ onBack, onSuccess, userName: propUserName }) => {
                             }}>
                             <Sparkles size={18} /> AI 글쓰기 도움
                         </button>
+                    </div>
+
+                    {/* 모바일 및 하단 접근용 플로팅급 등록 버튼 추가 */}
+                    <div style={{ marginTop: '40px', textAlign: 'center' }}>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={handleSubmit} disabled={!content.trim() || loading}
+                            className="primary"
+                            style={{
+                                width: '100%', padding: '16px 20px', borderRadius: '16px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                fontSize: '1.1rem', fontWeight: 800,
+                                opacity: content.trim() ? 1 : 0.5,
+                                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)'
+                            }}
+                        >
+                            <Send size={20} /> {loading ? '업로드 중...' : '이 내용으로 게시물 등록하기 🚀'}
+                        </motion.button>
                     </div>
                 </div>
             </div>

@@ -27,8 +27,8 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
     const isMyProfile = user === null || user === undefined;
     const displayName = isMyProfile ? userName : user?.name;
     const { user: currentUser } = useAuthStore();
-    
-    const displayAge = isMyProfile 
+
+    const displayAge = isMyProfile
         ? (currentUser?.user_metadata?.age || profile?.age)
         : (user?.age || user?.user_metadata?.age);
 
@@ -39,7 +39,13 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
     const [showAvatarGenerator, setShowAvatarGenerator] = useState(false);
     const [showGiftModal, setShowGiftModal] = useState(false);
     const [giftAmount, setGiftAmount] = useState(10);
-    const [currentAvatar, setCurrentAvatar] = useState(profile?.avatarUrl || null);
+    const [currentAvatar, setCurrentAvatar] = useState(profile?.avatar || profile?.avatarUrl || localStorage.getItem('lumini_profile_avatar') || null);
+
+    React.useEffect(() => {
+        if (isMyProfile) {
+            setCurrentAvatar(profile?.avatar || profile?.avatarUrl || localStorage.getItem('lumini_profile_avatar') || null);
+        }
+    }, [profile, isMyProfile]);
 
     // 실제 렌더링 시 사용할 모들은 미리보기 상태에 따라 결정
     const effectiveIsMyProfile = isMyProfile && !isPreviewMode;
@@ -211,7 +217,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                                 className={effectiveIsMyProfile ? "group relative" : "relative"}
                             >
                                 <img
-                                    src={currentAvatar || user?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`}
+                                    src={currentAvatar || user?.avatar || profile?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`}
                                     alt="Profile"
                                     style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', transition: 'transform 0.2s', background: '#f8fafc' }}
                                     className={effectiveIsMyProfile ? "group-hover:scale-105" : ""}

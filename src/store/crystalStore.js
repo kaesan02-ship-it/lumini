@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '../supabase/client';
+import { USE_MOCK_DATA } from '../config';
+import useAuthStore from './authStore';
 
 /**
  * 루미 크리스탈 (Lumi Crystal) 가상 재화 시스템
@@ -14,16 +17,32 @@ const useCrystalStore = create(
             premiumExpiresAt: null,
             inventory: {}, // { 'super-like': 2, 'boost': 1 }
             activeBoostUntil: null, // 부스트 만료 시간
-            dailyCheckin: null, // 마지막 출석 체크 날짜
+            dailyCheckin: {}, // 마지막 출석 체크 날짜 (유저 기반 Object 변경)
             totalEarned: 500,
             totalSpent: 0,
 
+            // DB에서 크리스탈 동기화
+            fetchCrystalsFromDB: async (userId) => {
+                if (USE_MOCK_DATA || !userId) return;
+                const { data } = await supabase.from('profiles').select('crystals').eq('id', userId).single();
+                if (data && typeof data.crystals === 'number') {
+                    set({ crystals: data.crystals });
+                }
+            },
+
             // 크리스탈 획득
             earnCrystals: (amount, reason = '') => {
-                set(state => ({
-                    crystals: state.crystals + amount,
-                    totalEarned: state.totalEarned + amount,
-                }));
+                set(state => {
+                    const newCrystals = state.crystals + amount;
+                    if (!USE_MOCK_DATA) {
+                        const userId = useAuthStore.getState().user?.id;
+                        if (userId) supabase.from('profiles').update({ crystals: newCrystals }).eq('id', userId);
+                    }
+                    return {
+                        crystals: newCrystals,
+                        totalEarned: state.totalEarned + amount,
+                    };
+                });
                 return amount;
             },
 
@@ -31,10 +50,17 @@ const useCrystalStore = create(
             spendCrystals: (amount) => {
                 const { crystals } = get();
                 if (crystals < amount) return false;
-                set(state => ({
-                    crystals: state.crystals - amount,
-                    totalSpent: state.totalSpent + amount,
-                }));
+                set(state => {
+                    const newCrystals = state.crystals - amount;
+                    if (!USE_MOCK_DATA) {
+                        const userId = useAuthStore.getState().user?.id;
+                        if (userId) supabase.from('profiles').update({ crystals: newCrystals }).eq('id', userId);
+                    }
+                    return {
+                        crystals: newCrystals,
+                        totalSpent: state.totalSpent + amount,
+                    };
+                });
                 return true;
             },
 
@@ -95,24 +121,44 @@ const useCrystalStore = create(
 
             // 충전 (결제 시뮬레이션)
             chargeCrystals: (amount) => {
-                set(state => ({
-                    crystals: state.crystals + amount,
-                    totalEarned: state.totalEarned + amount,
-                }));
+                set(state => {
+                    const newCrystals = state.crystals + amount;
+                    if (!USE_MOCK_DATA) {
+                        const userId = useAuthStore.getState().user?.id;
+                        if (userId) supabase.from('profiles').update({ crystals: newCrystals }).eq('id', userId);
+                    }
+                    return {
+                        crystals: newCrystals,
+                        totalEarned: state.totalEarned + amount,
+                    };
+                });
             },
 
             // 일일 출석 체크 (하루 한 번, +30💎)
             dailyCheckinBonus: () => {
                 const today = new Date().toDateString();
+                const userId = useAuthStore.getState().user?.id || 'guest';
                 const { dailyCheckin } = get();
-                if (dailyCheckin === today) return 0; // 이미 받음
+                
+                let checkinMap = typeof dailyCheckin === 'object' && dailyCheckin !== null ? dailyCheckin : {};
+                
+                if (checkinMap[userId] === today) return 0; // 이미 받음
 
                 const bonus = 30;
-                set(state => ({
-                    crystals: state.crystals + bonus,
-                    totalEarned: state.totalEarned + bonus,
-                    dailyCheckin: today,
-                }));
+                set(state => {
+                    const newCrystals = state.crystals + bonus;
+                    if (!USE_MOCK_DATA && userId !== 'guest') {
+                        supabase.from('profiles').update({ crystals: newCrystals }).eq('id', userId);
+                    }
+                    const newCheckinMap = typeof state.dailyCheckin === 'object' && state.dailyCheckin !== null ? { ...state.dailyCheckin } : {};
+                    newCheckinMap[userId] = today;
+                    
+                    return {
+                        crystals: newCrystals,
+                        totalEarned: state.totalEarned + bonus,
+                        dailyCheckin: newCheckinMap,
+                    };
+                });
                 return bonus;
             },
 

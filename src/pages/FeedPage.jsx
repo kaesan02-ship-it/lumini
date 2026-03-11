@@ -95,8 +95,35 @@ const FeedPage = ({ onCreatePost, onSelectPost }) => {
                         borderRadius: '20px', border: '1px solid var(--glass-border)'
                     }}>
                         <MessageSquare size={50} color="var(--glass-border)" style={{ marginBottom: '15px' }} />
-                        <h3 style={{ margin: 0, color: 'var(--text)' }}>게시물이 아직 없습니다</h3>
-                        <p style={{ color: 'var(--text-muted)' }}>첫 번째 이야기를 들려주세요!</p>
+                        <h3 style={{ margin: 0, color: 'var(--text)', marginBottom: '10px' }}>게시물이 아직 없습니다</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>첫 번째 이야기를 들려주세요!</p>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={onCreatePost}
+                            className="primary"
+                            style={{ padding: '10px 24px', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', marginBottom: '20px' }}
+                        >
+                            첫 글 작성하기
+                        </motion.button>
+                        
+                        <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed var(--glass-border)' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '15px' }}>👇 다른 유저들의 이야기를 참고해보세요!</p>
+                            <div style={{ display: 'grid', gap: '15px', textAlign: 'left' }}>
+                            {[
+                                { id: 'mock1', author: { username: '루미니 도우미 (가이드)' }, category: 'tip', content: '💬 서로의 다름을 존중하는 따뜻한 공간, 루미니에 오신 것을 환영합니다! 우울하거나 기쁜 일이 있을 때 이곳에 기록해보세요.', likes_count: 5, comments_count: 0, created_at: new Date().toISOString() },
+                                { id: 'mock2', author: { username: '루미니 도우미 (가이드)' }, category: 'experience', content: '🦦 하단의 [상점] 탭에서 보석을 모아 내 소울펫을 예쁘게 꾸며줄 수 있어요. 매일매일 찾아와서 먹이를 주면 더욱 빨리 성장한답니다!', likes_count: 12, comments_count: 0, created_at: new Date(Date.now() - 3600000).toISOString() }
+                            ].map((dummyPost) => (
+                                <div key={dummyPost.id} style={{ display: 'block', background: 'var(--background)', padding: '15px', borderRadius: '12px', opacity: 0.8 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>L</div>
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{dummyPost.author.username}</span>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.5 }}>{dummyPost.content}</p>
+                                </div>
+                            ))}
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gap: '20px' }}>

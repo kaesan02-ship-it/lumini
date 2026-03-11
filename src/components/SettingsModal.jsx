@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, User, Settings, LogOut, ChevronRight, RefreshCcw, Moon, Sun, Heart, FileText, Brain, Shield } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
 import useAuthStore from '../store/authStore';
+import { getSoulType } from '../data/soulTypes';
 
 const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiType, userData, onNavigate }) => {
     const { theme, toggleTheme } = useThemeStore();
@@ -56,10 +57,10 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                             border: '1px solid var(--glass-border)'
                         }}>
                             <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '6px' }}>
-                                {mbtiType}
+                                {getSoulType(mbtiType)?.soulName || mbtiType}
                             </div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                                HEXACO + Big5 통합 9지표 분석
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>
+                                {mbtiType} (HEXACO + Big5 통합 9지표 분석)
                             </div>
                         </div>
 
@@ -310,7 +311,7 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
             <SettingItem
                 icon={<Brain size={18} color="var(--primary)" />}
                 label="내 검사 결과"
-                sublabel={mbtiType && mbtiType !== '?' ? mbtiType : '미완료'}
+                sublabel={mbtiType && mbtiType !== '?' ? (getSoulType(mbtiType)?.soulName || mbtiType) : '미완료'}
                 onClick={() => setActiveSection('results')}
             />
 

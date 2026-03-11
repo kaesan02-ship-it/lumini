@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timer, Trophy, RefreshCw, ArrowLeft, Star, Heart, Gem, Info, Volume2, VolumeX, ShoppingBag, Play, Sparkles } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
+import useAuthStore from '../store/authStore';
+import { supabase } from '../supabase/client';
+import { USE_MOCK_DATA } from '../config';
 
 const COLS = 17;
 const ROWS = 10;
@@ -10,13 +13,42 @@ const FREE_PLAYS = 999;
 
 const AppleGamePage = ({ onBack, userName }) => {
     const { crystals, useItem, buyItem, inventory, spendCrystals } = useCrystalStore();
+    const { user } = useAuthStore();
+    const userId = user?.id || 'guest';
+    const scoreKey = `apple_game_best_score_${userId}`;
     const [score, setScore] = useState(0);
-    const [bestScore, setBestScore] = useState(() => parseInt(localStorage.getItem('apple_game_best_score') || '0'));
+    const [bestScore, setBestScore] = useState(() => parseInt(localStorage.getItem(scoreKey) || '0'));
     const [timeLeft, setTimeLeft] = useState(GAME_TIME);
     const [grid, setGrid] = useState([]);
+    const [gridScale, setGridScale] = useState(1);
     const [gameState, setGameState] = useState('ready'); // ready, playing, finished, shopping
     const [dailyPlays, setDailyPlays] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
+    const [leaderboard, setLeaderboard] = useState([]);
+
+    // Supabase에서 최고 기록 로드 및 리더보드 로드
+    useEffect(() => {
+        if (!USE_MOCK_DATA) {
+            if (user) {
+                supabase.from('profiles').select('apple_game_best_score').eq('id', user.id).single()
+                    .then(({ data, error }) => {
+                        if (data && !error) {
+                            setBestScore(data.apple_game_best_score || 0);
+                            localStorage.setItem(scoreKey, (data.apple_game_best_score || 0).toString());
+                        }
+                    });
+            }
+
+            // Top 5 리더보드 쿼리
+            supabase.from('profiles')
+                .select('username, apple_game_best_score')
+                .order('apple_game_best_score', { ascending: false })
+                .limit(5)
+                .then(({ data, error }) => {
+                    if (data && !error) setLeaderboard(data);
+                });
+        }
+    }, [user, scoreKey]);
 
     // Drag states
     const [selection, setSelection] = useState(null);
@@ -52,6 +84,20 @@ const AppleGamePage = ({ onBack, userName }) => {
             const count = parseInt(localStorage.getItem('apple_game_daily_count') || '0');
             setDailyPlays(count);
         }
+    }, []);
+
+    // 모바일 리사이즈 시 그리드 스케일 반응형 조절
+    useEffect(() => {
+        const handleResize = () => {
+            const containerWidth = window.innerWidth * 0.96; // 96% of screen width
+            const maxWidth = 750; // 기본 pc 사이즈
+            
+            // 최대 1(원래 크기)까지만 커지도록 제한
+            setGridScale(Math.min(1, containerWidth / maxWidth));
+        };
+        handleResize(); // 초기화
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const startGame = async () => {
@@ -131,7 +177,10 @@ const AppleGamePage = ({ onBack, userName }) => {
 
             setBestScore(prevBest => {
                 const newBest = Math.max(prevBest, score);
-                localStorage.setItem('apple_game_best_score', newBest.toString());
+                localStorage.setItem(scoreKey, newBest.toString());
+                if (!USE_MOCK_DATA && user?.id && newBest > prevBest) {
+                    supabase.from('profiles').update({ apple_game_best_score: newBest }).eq('id', user.id);
+                }
                 return newBest;
             });
         }
@@ -403,7 +452,9 @@ const AppleGamePage = ({ onBack, userName }) => {
                                     display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`,
                                     gridTemplateRows: `repeat(${ROWS}, 1fr)`, gap: '6px',
                                     position: 'relative', cursor: 'crosshair', background: 'transparent',
-                                    padding: '5px', borderRadius: '20px'
+                                    padding: '5px', borderRadius: '20px',
+                                    transform: `scale(${gridScale})`, transformOrigin: 'top center',
+                                    width: '100%', maxWidth: '750px', margin: '0 auto'
                                 }}
                             >
                                 {grid.map((cell) => (
@@ -465,23 +516,37 @@ const AppleGamePage = ({ onBack, userName }) => {
                             <h3 style={{ fontWeight: 900, fontSize: '1.2rem', color: '#1e293b' }}>명예의 전당</h3>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            {[
-                                { name: '딸기퐁듀', score: 4250, rank: 1 },
-                                { name: '애플수달', score: 3820, rank: 2 },
-                                { name: '루미니언', score: 3150, rank: 3 },
-                                { name: '별빛가득', score: 2850, rank: 4 },
-                                { name: userName || '나', score: Math.max(bestScore, score), isMe: true, rank: 5 }
-                            ].sort((a, b) => b.score - a.score).map((item, i) => (
-                                <div key={i} style={{
-                                    display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
-                                    background: item.isMe ? 'rgba(99, 102, 241, 0.1)' : 'white',
-                                    border: item.isMe ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid #e2e8f0',
-                                    borderRadius: '16px', transition: 'transform 0.2s'
-                                }}>
-                                    <span style={{ fontWeight: 800, color: item.isMe ? '#4f46e5' : '#64748b', fontSize: '1rem' }}>{i + 1}위 {item.name}</span>
-                                    <span style={{ fontWeight: 900, color: item.isMe ? '#4f46e5' : '#334155', fontSize: '1rem' }}>{item.score.toLocaleString()}</span>
-                                </div>
-                            ))}
+                            {leaderboard.length > 0 ? (
+                                leaderboard.map((item, i) => (
+                                    <div key={i} style={{
+                                        display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
+                                        background: item.username === userName ? 'rgba(99, 102, 241, 0.1)' : 'white',
+                                        border: item.username === userName ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid #e2e8f0',
+                                        borderRadius: '16px', transition: 'transform 0.2s'
+                                    }}>
+                                        <span style={{ fontWeight: 800, color: item.username === userName ? '#4f46e5' : '#64748b', fontSize: '1rem' }}>{i + 1}위 {item.username || '루미니언'}</span>
+                                        <span style={{ fontWeight: 900, color: item.username === userName ? '#4f46e5' : '#334155', fontSize: '1rem' }}>{(item.apple_game_best_score || 0).toLocaleString()}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                [
+                                    { name: '딸기퐁듀', score: 4250, rank: 1 },
+                                    { name: '애플수달', score: 3820, rank: 2 },
+                                    { name: '루미니언', score: 3150, rank: 3 },
+                                    { name: '별빛가득', score: 2850, rank: 4 },
+                                    { name: userName || '나', score: Math.max(bestScore, score), isMe: true, rank: 5 }
+                                ].sort((a, b) => b.score - a.score).map((item, i) => (
+                                    <div key={i} style={{
+                                        display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
+                                        background: item.isMe ? 'rgba(99, 102, 241, 0.1)' : 'white',
+                                        border: item.isMe ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid #e2e8f0',
+                                        borderRadius: '16px', transition: 'transform 0.2s'
+                                    }}>
+                                        <span style={{ fontWeight: 800, color: item.isMe ? '#4f46e5' : '#64748b', fontSize: '1rem' }}>{i + 1}위 {item.name}</span>
+                                        <span style={{ fontWeight: 900, color: item.isMe ? '#4f46e5' : '#334155', fontSize: '1rem' }}>{item.score.toLocaleString()}</span>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
 

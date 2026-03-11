@@ -1,6 +1,6 @@
 // 환경 설정
 export const IS_DEVELOPMENT = import.meta.env.DEV;
-export const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK !== 'false'; // 기본값 true
+export const USE_MOCK_DATA = false;
 
 // API 설정
 export const API_URL = import.meta.env.VITE_API_URL || 'https://api.lumini.app';
