@@ -290,7 +290,7 @@ function App() {
       {/* Main Content Area */}
       <main style={{ padding: '0 5%' }}>
         <AnimatePresence mode="wait">
-          {step === 'welcome' && <LandingPage key="landing" onStart={() => setStep('test')} onNavigateLogin={() => setStep('auth')} />}
+          {step === 'welcome' && <LandingPage key="landing" onStart={() => setStep('auth')} onNavigateLogin={() => setStep('auth')} />}
 
           {step === 'test' && (
             <motion.div key="test" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ padding: '40px 0' }}>
@@ -428,7 +428,7 @@ function App() {
             />
           )}
           {step === 'auth' && (
-            <AuthPage onAuthSuccess={() => setStep('dashboard')} />
+            <AuthPage onAuthSuccess={() => setStep(userData ? 'dashboard' : 'test')} />
           )}
           {step === 'insights' && (
             <InsightsHubPage onSelectCategory={(cat) => setStep(cat)} />

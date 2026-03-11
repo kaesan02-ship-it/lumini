@@ -185,15 +185,15 @@ const AppleGamePage = ({ onBack, userName }) => {
             return;
         }
 
-        const cellWidth = gridRect.width / 10;
-        const cellHeight = gridRect.height / 17;
+        const cellWidth = gridRect.width / COLS;
+        const cellHeight = gridRect.height / ROWS;
 
         const selectedCellsIdx = [];
         for (let i = 0; i < grid.length; i++) {
             if (grid[i].removed) continue;
 
-            const row = Math.floor(i / 10);
-            const col = i % 10;
+            const row = Math.floor(i / COLS);
+            const col = i % COLS;
 
             const cL = col * cellWidth;
             const cR = (col + 1) * cellWidth;

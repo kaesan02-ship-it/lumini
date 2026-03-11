@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, Github, Chrome, ArrowRight, Loader, Sparkles } from 'lucide-react';
+import { Mail, Lock, User, Github, Chrome, ArrowRight, Loader, Sparkles, Eye, EyeOff, CalendarDays } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { toast } from 'react-hot-toast';
 import { USE_MOCK_DATA } from '../config';
@@ -84,6 +84,8 @@ const AuthPage = ({ onAuthSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
+    const [age, setAge] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [showWelcomeBonus, setShowWelcomeBonus] = useState(false);
 
     const { signIn, signUp, signInWithGoogle } = useAuthStore();
@@ -97,7 +99,7 @@ const AuthPage = ({ onAuthSuccess }) => {
                 toast.success('환영합니다! 👋');
                 onAuthSuccess();
             } else {
-                const result = await signUp(email, password, { username });
+                const result = await signUp(email, password, { username, age: parseInt(age) || null });
                 // 가입 특전 팝업 표시
                 const alreadyGiven = localStorage.getItem('lumini_welcome_bonus_given');
                 if (!alreadyGiven) {
@@ -172,13 +174,22 @@ const AuthPage = ({ onAuthSuccess }) => {
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '18px' }}>
                     {!isLogin && (
-                        <div style={{ position: 'relative' }}>
-                            <User size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                            <input type="text" placeholder="사용자 이름" required value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: '14px', background: 'var(--background)', border: '1.5px solid var(--glass-border)', color: 'var(--text)', outline: 'none' }}
-                            />
-                        </div>
+                        <>
+                            <div style={{ position: 'relative' }}>
+                                <User size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                <input type="text" placeholder="사용자 이름" required value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: '14px', background: 'var(--background)', border: '1.5px solid var(--glass-border)', color: 'var(--text)', outline: 'none' }}
+                                />
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <CalendarDays size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                <input type="number" placeholder="나이 (예: 25)" required value={age}
+                                    onChange={(e) => setAge(e.target.value)}
+                                    style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: '14px', background: 'var(--background)', border: '1.5px solid var(--glass-border)', color: 'var(--text)', outline: 'none' }}
+                                />
+                            </div>
+                        </>
                     )}
                     <div style={{ position: 'relative' }}>
                         <Mail size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -189,10 +200,16 @@ const AuthPage = ({ onAuthSuccess }) => {
                     </div>
                     <div style={{ position: 'relative' }}>
                         <Lock size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                        <input type="password" placeholder="비밀번호" required value={password}
+                        <input type={showPassword ? "text" : "password"} placeholder="비밀번호" required value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: '14px', background: 'var(--background)', border: '1.5px solid var(--glass-border)', color: 'var(--text)', outline: 'none' }}
+                            style={{ width: '100%', padding: '14px 44px 14px 44px', borderRadius: '14px', background: 'var(--background)', border: '1.5px solid var(--glass-border)', color: 'var(--text)', outline: 'none' }}
                         />
+                        <div 
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </div>
                     </div>
 
                     <motion.button type="submit" disabled={loading} className="primary" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}

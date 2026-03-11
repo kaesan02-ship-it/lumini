@@ -7,7 +7,8 @@ import { analyzeCompatibility } from '../utils/compatibilityAnalysis';
 import { generateMatchingInsight } from '../utils/matchingInsightGenerator';
 import {
     X, MessageCircle, Heart, Award, User as UserIcon,
-    TrendingUp, Sparkles, Camera, Gem, Gamepad2, MapPin
+    TrendingUp, Sparkles, Camera, Gem, Gamepad2, MapPin,
+    ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import { toggleConnection } from '../supabase/queries';
 import useAuthStore from '../store/authStore';
@@ -25,6 +26,11 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
     const { crystals, giftCrystals } = useCrystalStore();
     const isMyProfile = user === null || user === undefined;
     const displayName = isMyProfile ? userName : user?.name;
+    const { user: currentUser } = useAuthStore();
+    
+    const displayAge = isMyProfile 
+        ? (currentUser?.user_metadata?.age || profile?.age)
+        : (user?.age || user?.user_metadata?.age);
 
     const [activeTab, setActiveTab] = useState('profile');
     const [aiReport, setAiReport] = useState(null);
@@ -245,7 +251,20 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                                 <div>
-                                    <h2 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '4px' }}>{effectiveIsMyProfile ? displayName : (isMyProfile ? `${displayName} (미리보기)` : displayName)}</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                        <h2 style={{ fontSize: '2.2rem', fontWeight: 900, margin: 0 }}>
+                                            {effectiveIsMyProfile ? displayName : (isMyProfile ? `${displayName} (미리보기)` : displayName)}
+                                        </h2>
+                                        {displayAge ? (
+                                            <div title="인증된 사용자 연령입니다." style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#e0f2fe', color: '#0369a1', padding: '5px 12px', borderRadius: '100px', fontSize: '0.85rem', fontWeight: 800 }}>
+                                                <ShieldCheck size={15} /> 나이 인증 ({displayAge}세)
+                                            </div>
+                                        ) : (
+                                            <div title="나이 인증이 진행되지 않았습니다." style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#fee2e2', color: '#dc2626', padding: '5px 12px', borderRadius: '100px', fontSize: '0.85rem', fontWeight: 800 }}>
+                                                <ShieldAlert size={15} /> 미인증
+                                            </div>
+                                        )}
+                                    </div>
                                     {isMyProfile && (
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <button

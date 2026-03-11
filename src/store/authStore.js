@@ -77,7 +77,7 @@ const useAuthStore = create((set) => ({
                 email,
                 username: metadata?.username || email.split('@')[0],
                 avatar_url: '',
-                user_metadata: { username: metadata?.username || '' },
+                user_metadata: { username: metadata?.username || '', age: metadata?.age || null },
             };
             const mockSession = { user: mockUser, access_token: 'mock-token', isAdmin: false };
             localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(mockSession));
