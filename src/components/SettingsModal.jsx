@@ -342,7 +342,7 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                 onClick={() => {
                     if (!confirmReset) {
                         setConfirmReset(true);
-                        setTimeout(() => setConfirmReset(false), 3000);
+                        setTimeout(() => setConfirmReset(false), 15000);
                         return;
                     }
                     onReset();
@@ -367,7 +367,7 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                 onClick={async () => {
                     if (!confirmLogout) {
                         setConfirmLogout(true);
-                        setTimeout(() => setConfirmLogout(false), 3000);
+                        setTimeout(() => setConfirmLogout(false), 15000);
                         return;
                     }
                     console.log('Logout button clicked');
