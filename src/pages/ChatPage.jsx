@@ -184,10 +184,10 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
             <div style={{
                 flex: 1,
                 overflowY: 'auto',
-                padding: '20px',
+                padding: '15px 20px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '15px'
+                gap: '10px'
             }}>
                 <AnimatePresence>
                     {chatMessages.map((message, index) => (
@@ -209,12 +209,12 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '10px',
-                            marginTop: '20px'
+                            gap: '8px',
+                            marginTop: '15px'
                         }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
-                            <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0 }}>💡 대화를 시작해보세요</p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>💡 대화를 시작해보세요</p>
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -222,24 +222,24 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                                 style={{
                                     background: 'linear-gradient(135deg, #FFD70030, #FFA50030)',
                                     border: '1px solid #FFD700',
-                                    padding: '4px 12px',
+                                    padding: '3px 10px',
                                     borderRadius: '100px',
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.7rem',
                                     color: '#B8860B',
                                     fontWeight: 800,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '5px',
+                                    gap: '4px',
                                     cursor: 'pointer'
                                 }}
                             >
-                                <Sparkles size={12} /> AI 추천 질문
+                                <Sparkles size={11} /> AI 추천 질문
                             </motion.button>
                         </div>
 
                         {isLoadingAi ? (
-                            <div style={{ textAlign: 'center', padding: '20px' }}>
-                                <RefreshCw size={24} className="animate-spin" color="var(--primary)" />
+                            <div style={{ textAlign: 'center', padding: '15px' }}>
+                                <RefreshCw size={22} className="animate-spin" color="var(--primary)" />
                             </div>
                         ) : (
                             <>
@@ -252,12 +252,12 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                                             onClick={() => handlePromptClick(q)}
                                             style={{
                                                 background: 'linear-gradient(135deg, #ffffff, #fdf4ff)',
-                                                border: '2px solid #f0abfc',
-                                                borderRadius: '15px',
-                                                padding: '15px 20px',
+                                                border: '1.5px solid #f0abfc',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
                                                 cursor: 'pointer',
                                                 textAlign: 'left',
-                                                fontSize: '0.95rem',
+                                                fontSize: '0.9rem',
                                                 color: '#701a75'
                                             }}
                                         >
@@ -273,19 +273,19 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                                             onClick={() => handlePromptClick(prompt.text)}
                                             style={{
                                                 background: 'white',
-                                                border: '2px solid #e2e8f0',
-                                                borderRadius: '15px',
-                                                padding: '15px 20px',
+                                                border: '1.5px solid #e2e8f0',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
                                                 cursor: 'pointer',
                                                 textAlign: 'left',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '12px',
+                                                gap: '10px',
                                                 transition: 'all 0.2s ease'
                                             }}
                                         >
-                                            <span style={{ fontSize: '1.5rem' }}>{prompt.icon}</span>
-                                            <span style={{ fontSize: '0.95rem', color: '#2d3748' }}>{prompt.text}</span>
+                                            <span style={{ fontSize: '1.3rem' }}>{prompt.icon}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#2d3748' }}>{prompt.text}</span>
                                         </motion.button>
                                     ))
                                 )}
@@ -301,10 +301,11 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
             <div style={{
                 background: 'white',
                 borderTop: '1px solid #e2e8f0',
-                padding: '15px 20px',
+                padding: '10px 16px',
                 display: 'flex',
-                gap: '12px',
-                alignItems: 'center'
+                gap: '10px',
+                alignItems: 'center',
+                paddingBottom: 'max(10px, env(safe-area-inset-bottom))'
             }}>
                 <motion.button
                     whileHover={{ scale: 1.1 }}

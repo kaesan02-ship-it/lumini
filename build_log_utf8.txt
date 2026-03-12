@@ -1,0 +1,79 @@
+﻿
+> lumini-app@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m??[39m 28 modules transformed.
+node.exe : [31m??[39m 
+Build failed in 172ms
+위치 줄:1 문자:1
++ & "C:\Program Files\n
+odejs/node.exe" "C:\Pro
+gram Files\nodejs/node_
+mo ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: ([31m??[39m B   
+ uild failed in 172    
+ms:String) [], Rem    o
+teException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+[31merror during build
+:
+[31msrc/store/authStor
+e.js (95:0): Expression
+ expected[31m
+file: [36mD:/antigravi
+ty/lumini-app/src/store
+/authStore.js:95:0[31m
+[33m
+93:     )
+94: );
+95: }));
+    ^
+96: 
+97: export default useA
+uthStore;
+[31m
+    at getRollupError (
+file:///D:/antigravity/
+lumini-app/node_modules
+/rollup/dist/es/shared/
+parseAst.js:402:41)
+    at ParseError.initi
+alise (file:///D:/antig
+ravity/lumini-app/node_
+modules/rollup/dist/es/
+shared/node-entry.js:14
+465:28)
+    at convertNode (fil
+e:///D:/antigravity/lum
+ini-app/node_modules/ro
+llup/dist/es/shared/nod
+e-entry.js:16437:10)
+    at convertProgram (
+file:///D:/antigravity/
+lumini-app/node_modules
+/rollup/dist/es/shared/
+node-entry.js:15677:12)
+    at Module.setSource
+ (file:///D:/antigravit
+y/lumini-app/node_modul
+es/rollup/dist/es/share
+d/node-entry.js:17392:2
+4)
+    at async ModuleLoad
+er.addModuleSource (fil
+e:///D:/antigravity/lum
+ini-app/node_modules/ro
+llup/dist/es/shared/nod
+e-entry.js:21474:13)[3
+9m

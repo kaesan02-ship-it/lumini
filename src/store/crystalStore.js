@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
 import useAuthStore from './authStore';
+import { getProfile, updateProfile } from '../supabase/queries';
 
 /**
  * 루미 크리스탈 (Lumi Crystal) 가상 재화 시스템
@@ -12,21 +13,25 @@ import useAuthStore from './authStore';
 const useCrystalStore = create(
     persist(
         (set, get) => ({
-            crystals: 500, // 신규 유저 환영 보너스 (가입 혜택)
+            crystals: 100, // 신규 유저 환영 보너스 (가입 혜택)
             isPremium: false,
             premiumExpiresAt: null,
             inventory: {}, // { 'super-like': 2, 'boost': 1 }
             activeBoostUntil: null, // 부스트 만료 시간
             dailyCheckin: {}, // 마지막 출석 체크 날짜 (유저 기반 Object 변경)
-            totalEarned: 500,
+            totalEarned: 100,
             totalSpent: 0,
 
             // DB에서 크리스탈 동기화
             fetchCrystalsFromDB: async (userId) => {
-                if (USE_MOCK_DATA || !userId) return;
-                const { data } = await supabase.from('profiles').select('crystals').eq('id', userId).single();
-                if (data && typeof data.crystals === 'number') {
-                    set({ crystals: data.crystals });
+                if (!userId) return;
+                try {
+                    const profile = await getProfile(userId);
+                    if (profile && typeof profile.crystals === 'number') {
+                        set({ crystals: profile.crystals });
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch crystals:', err);
                 }
             },
 
@@ -34,10 +39,15 @@ const useCrystalStore = create(
             earnCrystals: (amount, reason = '') => {
                 set(state => {
                     const newCrystals = state.crystals + amount;
-                    if (!USE_MOCK_DATA) {
-                        const userId = useAuthStore.getState().user?.id;
-                        if (userId) supabase.from('profiles').update({ crystals: newCrystals }).eq('id', userId);
+                    
+                    // DB/Mock 업데이트 시전
+                    const userId = useAuthStore.getState().user?.id || 'mock-user-001';
+                    if (userId) {
+                        updateProfile(userId, { crystals: newCrystals }).catch(err => {
+                            console.error('Failed to update crystals in DB:', err);
+                        });
                     }
+
                     return {
                         crystals: newCrystals,
                         totalEarned: state.totalEarned + amount,
@@ -134,7 +144,7 @@ const useCrystalStore = create(
                 });
             },
 
-            // 일일 출석 체크 (하루 한 번, +30💎)
+            // 일일 출석 체크 (하루 한 번, +10💎)
             dailyCheckinBonus: () => {
                 const today = new Date().toDateString();
                 const userId = useAuthStore.getState().user?.id || 'guest';
@@ -144,7 +154,7 @@ const useCrystalStore = create(
                 
                 if (checkinMap[userId] === today) return 0; // 이미 받음
 
-                const bonus = 30;
+                const bonus = 10;
                 set(state => {
                     const newCrystals = state.crystals + bonus;
                     if (!USE_MOCK_DATA && userId !== 'guest') {

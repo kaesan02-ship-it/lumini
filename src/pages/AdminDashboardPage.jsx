@@ -9,23 +9,58 @@ import { supabase } from '../supabase/client';
 
 const AdminDashboardPage = ({ onBack }) => {
     const [stats, setStats] = useState({
-        totalUsers: 1420,
-        activeToday: 425,
-        newMatches: 89,
-        reports: 3,
-        revenue: '1,240,000'
+        totalUsers: 0,
+        activeToday: 0,
+        newMatches: 0,
+        reports: 0,
+        revenue: '0'
     });
 
-    const [users, setUsers] = useState([
-        { id: 1, name: '김민수', email: 'minsu@gmail.com', mbti: 'INTJ', joined: '2024-03-01', status: 'Active' },
-        { id: 2, name: '이지원', email: 'jiwon@naver.com', mbti: 'ENFP', joined: '2024-03-05', status: 'Active' },
-        { id: 3, name: '박하늘', email: 'sky@daum.net', mbti: 'INFJ', joined: '2024-03-08', status: 'Suspended' },
-    ]);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [reports, setReports] = useState([]);
 
-    const [reports, setReports] = useState([
-        { id: 101, from: '유저A', to: '익명B', reason: '부적절한 언어', date: '10분 전', status: 'pending' },
-        { id: 102, from: '루미나', to: '최고야', reason: '도배/스팸', date: '2시간 전', status: 'pending' },
-    ]);
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            setLoading(true);
+            try {
+                // 1. 통계 가져오기
+                const { count: totalCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+                const { count: activeCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).not('last_login', 'is', null);
+                
+                setStats(prev => ({
+                    ...prev,
+                    totalUsers: totalCount || 0,
+                    activeToday: activeCount || 0
+                }));
+
+                // 2. 유저 리스트 가져오기
+                const { data: userList, error: userError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+
+                if (userError) throw userError;
+                setUsers(userList.map(u => ({
+                    id: u.id,
+                    name: u.username || '익명',
+                    email: u.email || 'N/A',
+                    mbti: u.mbti_type || '?',
+                    joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A',
+                    status: 'Active' // 실제 상태 필드가 있다면 연동
+                })));
+
+            } catch (err) {
+                console.error('Admin data fetch error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAdminData();
+    }, []);
 
     const toggleStatus = (id) => {
         setUsers(users.map(u => u.id === id ? { ...u, status: u.status === 'Active' ? 'Suspended' : 'Active' } : u));
@@ -44,10 +79,24 @@ const AdminDashboardPage = ({ onBack }) => {
         setReports(reports.filter(r => r.id !== id));
     };
 
-    const giveCrystals = (name) => {
+    const giveCrystals = async (id, name) => {
         const amount = prompt(`${name} 유저에게 지급할 크리스탈 양을 입력하세요:`, '100');
-        if (amount) {
-            alert(`${name} 유저에게 ${amount}💎 크리스탈이 지급 되었습니다.`);
+        if (amount && !isNaN(parseInt(amount))) {
+            const added = parseInt(amount);
+            try {
+                const { data, error } = await supabase.from('profiles').select('crystals').eq('id', id).single();
+                if (error) throw error;
+                const currentCrystals = typeof data.crystals === 'number' ? data.crystals : 0;
+                const newTotal = currentCrystals + added;
+                
+                const { error: updateError } = await supabase.from('profiles').update({ crystals: newTotal }).eq('id', id);
+                if (updateError) throw updateError;
+                
+                alert(`${name} 유저에게 ${added}💎 크리스탈이 지급 되었습니다. (총 ${newTotal}💎)`);
+            } catch (err) {
+                console.error(err);
+                alert('지급 중 오류가 발생했습니다.');
+            }
         }
     };
 
@@ -91,55 +140,61 @@ const AdminDashboardPage = ({ onBack }) => {
                             <input
                                 type="text"
                                 placeholder="유저 검색..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                 style={{ padding: '10px 15px 10px 38px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '250px', outline: 'none', fontSize: '0.9rem' }}
                             />
                         </div>
                     </div>
 
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                                    <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>이름</th>
-                                    <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>MBTI</th>
-                                    <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>가입일</th>
-                                    <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>상태</th>
-                                    <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b', textAlign: 'right' }}>관리</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.map(user => (
-                                    <tr key={user.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                        <td style={{ padding: '15px 10px' }}>
-                                            <div style={{ fontWeight: 700, color: '#1e293b' }}>{user.name}</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user.email}</div>
-                                        </td>
-                                        <td style={{ padding: '15px 10px' }}>
-                                            <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 800, fontSize: '0.75rem' }}>{user.mbti}</span>
-                                        </td>
-                                        <td style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>{user.joined}</td>
-                                        <td style={{ padding: '15px 10px' }}>
-                                            <span style={{
-                                                padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
-                                                background: user.status === 'Active' ? '#dcfce7' : '#fee2e2',
-                                                color: user.status === 'Active' ? '#166534' : '#991b1b'
-                                            }}>{user.status}</span>
-                                        </td>
-                                        <td style={{ padding: '15px 10px', textAlign: 'right' }}>
-                                            <button
-                                                onClick={() => giveCrystals(user.name)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9333ea', padding: '5px' }} title="크리스탈 지급"><Gem size={18} /></button>
-                                            <button
-                                                onClick={() => toggleStatus(user.id)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '5px' }} title="상태 변경"><UserCog size={18} /></button>
-                                            <button
-                                                onClick={() => deleteUser(user.id)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '5px' }} title="회원 탈퇴"><Trash2 size={18} /></button>
-                                        </td>
+                        {loading ? (
+                            <div style={{ padding: '50px', textAlign: 'center', color: '#94a3b8' }}>데이터를 불러오는 중...</div>
+                        ) : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
+                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>이름</th>
+                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>MBTI</th>
+                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>가입일</th>
+                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>상태</th>
+                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b', textAlign: 'right' }}>관리</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).map(user => (
+                                        <tr key={user.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                                            <td style={{ padding: '15px 10px' }}>
+                                                <div style={{ fontWeight: 700, color: '#1e293b' }}>{user.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user.email}</div>
+                                            </td>
+                                            <td style={{ padding: '15px 10px' }}>
+                                                <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 800, fontSize: '0.75rem' }}>{user.mbti}</span>
+                                            </td>
+                                            <td style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>{user.joined}</td>
+                                            <td style={{ padding: '15px 10px' }}>
+                                                <span style={{
+                                                    padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                                                    background: user.status === 'Active' ? '#dcfce7' : '#fee2e2',
+                                                    color: user.status === 'Active' ? '#166534' : '#991b1b'
+                                                }}>{user.status}</span>
+                                            </td>
+                                            <td style={{ padding: '15px 10px', textAlign: 'right' }}>
+                                                <button
+                                                    onClick={() => giveCrystals(user.id, user.name)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9333ea', padding: '5px' }} title="크리스탈 지급"><Gem size={18} /></button>
+                                                <button
+                                                    onClick={() => toggleStatus(user.id)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '5px' }} title="상태 변경"><UserCog size={18} /></button>
+                                                <button
+                                                    onClick={() => deleteUser(user.id)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '5px' }} title="회원 탈퇴"><Trash2 size={18} /></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
 

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Home, ClipboardList, Users, Heart, Brain, ShoppingBag, Target, Gem, BookOpen, ShieldCheck } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 import ShopPage from './pages/ShopPage';
 import DailyChallengesPage from './pages/DailyChallengesPage';
 import useCrystalStore from './store/crystalStore';
+import Tooltip from './components/Tooltip';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -62,11 +64,19 @@ function App() {
   const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
   const { crystals, dailyCheckinBonus } = useCrystalStore();
 
-  const [step, setStep] = useState('welcome');
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [step, setStep] = useState('auth');
+  const [showAdmin, setShowAdmin] = useState(() => sessionStorage.getItem('lumini_admin_open') === 'true');
+  const [adminAuthenticated, setAdminAuthenticated] = useState(() => useAuthStore.getState().isAdmin);
   const [showTutorial, setShowTutorial] = useState(false);
   const [profileAvatar, setProfileAvatar] = useState(localStorage.getItem('lumini_profile_avatar') || null);
+
+  useEffect(() => {
+    sessionStorage.setItem('lumini_admin_open', showAdmin);
+  }, [showAdmin]);
+
+  useEffect(() => {
+    setAdminAuthenticated(isAdmin);
+  }, [isAdmin]);
 
   useEffect(() => {
     const handleAvatarUpdate = (e) => {
@@ -75,15 +85,19 @@ function App() {
       localStorage.setItem('lumini_profile_avatar', avatarUrl);
 
       // 전역 상태(userStore)에도 즉시 반영하여 다른 페이지와 동기화
-      const currentProfile = useUserStore.getState().profile || {};
-      useUserStore.getState().setProfile({
-        ...currentProfile,
-        avatar: avatarUrl
-      });
+      if (profile) {
+        useUserStore.getState().setProfile({
+          ...profile,
+          avatar: avatarUrl
+        });
+      }
     };
     window.addEventListener('updateProfileAvatar', handleAvatarUpdate);
-    return () => window.removeEventListener('updateProfileAvatar', handleAvatarUpdate);
-  }, []);
+
+    return () => {
+      window.removeEventListener('updateProfileAvatar', handleAvatarUpdate);
+    };
+  }, [profile]);
 
   // Check first visit
   useEffect(() => {
@@ -93,19 +107,63 @@ function App() {
     }
   }, []);
 
-  // 로그아웃 시 welcome으로 자동 이동
-  useEffect(() => {
-    if (!authLoading && !user && step !== 'welcome' && step !== 'auth') {
-      setStep('welcome');
-      setShowSettings(false);
-      setShowMyProfile(false);
-    }
-  }, [user, authLoading]);
+    // 로그아웃 시 welcome으로 자동 이동
+    useEffect(() => {
+        // 인증 로딩 중이거나 세션 초기화 중이면 리다이렉트 유예
+        if (authLoading) return;
 
-  // 로그인 시 DB에서 크리스탈 정보 최신화
+        const currentSession = useAuthStore.getState().session;
+        const currentUser = useAuthStore.getState().user;
+
+        if (!currentUser && !currentSession && step !== 'welcome' && step !== 'auth') {
+            setStep('auth');
+            setShowSettings(false);
+            setShowMyProfile(false);
+        } else if ((currentUser || currentSession) && (step === 'welcome' || step === 'auth')) {
+            // 세션 복구 시 권한에 따라 대시보드 또는 어드민으로 이동
+            const isUserAdmin = currentUser?.email === 'admin@lumini.me' || currentUser?.user_metadata?.isAdmin;
+            setStep(isUserAdmin ? 'admin' : 'dashboard');
+        }
+    }, [user, session, authLoading, step]);
+
+  // 브라우저 해시(#) 변경 감지 및 내비게이션 동기화
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && hash !== step) {
+        setStep(hash);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // 초기 로드 시 해시값 확인
+    const initialHash = window.location.hash.replace('#', '');
+    if (initialHash && initialHash !== step) {
+      setStep(initialHash);
+    } else {
+      // 해시가 없을 경우 현재 step으로 해시 설정
+      window.location.hash = step;
+    }
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // step 상태 변화 시 URL 해시 업데이트
+  useEffect(() => {
+    const currentHash = window.location.hash.replace('#', '');
+    if (step && step !== currentHash) {
+      window.location.hash = step;
+    }
+  }, [step]);
+
+  // 유저가 로드되었을 때 필요한 정보(크리스탈, 프로필) 동기화
   useEffect(() => {
     if (user && user.id) {
+       // 크리스탈 정보 가져오기
        useCrystalStore.getState().fetchCrystalsFromDB(user.id);
+       // 프로필 정보 가져오기 (이름 등 반영을 위함)
+       fetchProfile(user.id);
     }
   }, [user]);
 
@@ -123,56 +181,64 @@ function App() {
   const [chatMessages, setChatMessages] = useState([]); // For mock 1:1 chat if needed
   const [chatInput, setChatInput] = useState('');
 
+  const fetchNearbyUsers = useCallback(async () => {
+    try {
+      const profiles = await getNearbyProfiles(20);
+      const currentUserId = user?.id || 'mock-user-001';
+      const mapped = profiles
+        .filter(p => p.id !== currentUserId)
+        .map(p => {
+          const pd = p.personality_data || {};
+          const O = pd.O || 0, C = pd.C || 0, E = pd.E || 0;
+          const A = pd.A || 0, N = pd.N || 0, H = pd.H || 50;
+          return {
+            id: p.id,
+            name: p.username || '익명',
+            mbti: p.mbti_type || 'Unknown',
+            bio: p.bio || '',
+            district: p.district || '',
+            interests: p.interests || [],
+            similarity: 80 + Math.floor(Math.random() * 15),
+            deep_soul: p.deep_soul || null,
+            pet_data: p.pet_data || null,
+            data: [
+              { subject: '사교성', A: Math.round(E), fullMark: 100 },
+              { subject: '창의성', A: Math.round(O * 0.6 + E * 0.4), fullMark: 100 },
+              { subject: '공감력', A: Math.round(A * 0.6 + (100 - N) * 0.4), fullMark: 100 },
+              { subject: '계획성', A: Math.round(C), fullMark: 100 },
+              { subject: '성실성', A: Math.round(pd.H || 50), fullMark: 100 },
+            ]
+          };
+        });
+      setNearbyUsers(mapped);
+    } catch (err) {
+      console.error('Failed to load nearby users:', err);
+    }
+  }, [user, setNearbyUsers]);
+
   // Favorites Hook
   const { toggleFavorite, isFavorite } = useFavorites();
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
         setSession(currentSession);
+        
         if (currentSession?.user) {
           await fetchProfile(currentSession.user.id);
+          const isUserAdmin = currentSession.user.email === 'admin@lumini.me' || currentSession.user.user_metadata?.isAdmin;
+          if (step === 'welcome' || step === 'auth' || step === 'dashboard') {
+            setStep(isUserAdmin ? 'admin' : 'dashboard');
+          }
         }
       } catch (err) {
-        console.log('Session init skipped (mock mode):', err.message);
+        console.log('Session init error or skipped (mock mode):', err.message);
       }
 
-      // Always load nearby users (works in mock mode too)
-      try {
-        const profiles = await getNearbyProfiles(20);
-        const currentUserId = user?.id || 'mock-user-001';
-        const mapped = profiles
-          .filter(p => p.id !== currentUserId)
-          .map(p => {
-            const pd = p.personality_data || {};
-            const O = pd.O || 0, C = pd.C || 0, E = pd.E || 0;
-            const A = pd.A || 0, N = pd.N || 0, H = pd.H || 50;
-            return {
-              id: p.id,
-              name: p.username || '익명',
-              mbti: p.mbti_type || 'Unknown',
-              bio: p.bio || '',
-              similarity: 80 + Math.floor(Math.random() * 15),
-              deep_soul: p.deep_soul || null,
-              data: [
-                { subject: '사교성', A: Math.round(E), fullMark: 100 },
-                { subject: '창의성', A: Math.round(O * 0.6 + E * 0.4), fullMark: 100 },
-                { subject: '공감력', A: Math.round(A * 0.6 + (100 - N) * 0.4), fullMark: 100 },
-                { subject: '계획성', A: Math.round(C), fullMark: 100 },
-                { subject: '자기주도', A: Math.round(C * 0.55 + H * 0.45), fullMark: 100 },
-                { subject: '유연성', A: Math.round(O), fullMark: 100 },
-                { subject: '따뜻함', A: Math.round(A), fullMark: 100 },
-                { subject: '회복탄력', A: Math.round(100 - N), fullMark: 100 },
-                { subject: '신뢰도', A: Math.round(H), fullMark: 100 },
-              ]
-            };
-          });
-
-        setNearbyUsers(mapped);
-      } catch (err) {
-        console.error('Failed to load nearby users:', err);
-      }
+      await fetchNearbyUsers();
     };
 
     initializeApp();
@@ -185,14 +251,19 @@ function App() {
     });
 
     return () => subscription.unsubscribe();
-  }, [setSession, fetchProfile]);
+  }, [setSession, fetchProfile, fetchNearbyUsers]);
 
   // Handle step based on data — 새로고침 시 검사 결과가 있으면 대시보드로 이동
-  useEffect(() => {
-    if (userData && (step === 'welcome' || step === 'test')) {
-      setStep('dashboard');
-    }
-  }, [userData]);
+    useEffect(() => {
+        if (userData && (step === 'welcome' || step === 'test')) {
+            // 어드민인 경우 대시보드가 아닌 어드민으로 (예외처리)
+            if (isAdmin) {
+                setStep('admin');
+            } else {
+                setStep('dashboard');
+            }
+        }
+    }, [userData, isAdmin]);
 
   useEffect(() => {
     const handleStepChange = (e) => setStep(e.detail);
@@ -206,7 +277,7 @@ function App() {
   }, [step]);
 
   // --- [Handlers] ---
-  const handleTestComplete = (data, type) => {
+  const handleTestComplete = async (data, type) => {
     // Save raw personality object { O, C, E, A, N, H }
     setUserData(data);
     setMbtiType(type);
@@ -214,10 +285,14 @@ function App() {
     // Also update Supabase if logged in
     if (user) {
       try {
-        updateProfile(user.id, {
+        await updateProfile(user.id, {
           personality_data: data,
           mbti_type: type
         });
+        // 갱신된 프로필 정보를 다시 가져와서 전역 상태 동기화
+        await fetchProfile(user.id);
+        // 주변 유저 목록도 새로고침 (매칭률 변화 가능성)
+        await fetchNearbyUsers();
       } catch (err) {
         console.error("Profile update failed (silently ignored in mock mode):", err);
       }
@@ -249,7 +324,8 @@ function App() {
   // Nearby users are now fetched in the initializeApp effect above
 
   return (
-    <div className="app-container" style={{ minHeight: '100vh', paddingBottom: step === 'welcome' ? '0' : '90px' }}>
+    <div className="app-container" style={{ minHeight: '100vh' }}>
+      <Toaster position="top-center" reverseOrder={false} />
 
       {/* Top Navbar */}
       {user && step !== 'welcome' && step !== 'auth' && (
@@ -304,7 +380,7 @@ function App() {
       )}
 
       {/* Main Content Area */}
-      <main style={{ padding: '0 5%' }}>
+      <main style={{ padding: (step === 'welcome' || step === 'auth') ? '0' : '100px 5% 120px' }}>
         <AnimatePresence mode="wait">
           {step === 'welcome' && <LandingPage key="landing" onStart={() => setStep('auth')} onNavigateLogin={() => setStep('auth')} />}
 
@@ -430,22 +506,30 @@ function App() {
                   if (data.district) {
                     localStorage.setItem('lumini_user_district', data.district);
                   }
-                  useUserStore.getState().setProfile({
-                    ...profile,
-                    avatar_url: profileAvatar,
-                    bio: data.bio,
-                    interests: data.interests,
-                    privacy_level: data.privacy,
-                    district: data.district,
-                    game: data.game,
-                    tier: data.tier
-                  });
+                  if (typeof useUserStore?.getState === 'function') {
+                    useUserStore.getState().setProfile({
+                      ...profile,
+                      avatar_url: profileAvatar,
+                      bio: data.bio,
+                      interests: data.interests,
+                      privacy_level: data.privacy,
+                      district: data.district,
+                      game: data.game,
+                      tier: data.tier
+                    });
+                  }
                 }
               }}
             />
           )}
           {step === 'auth' && (
-            <AuthPage onAuthSuccess={() => setStep(userData ? 'dashboard' : 'test')} />
+            <AuthPage 
+              onAuthSuccess={(session) => {
+                  const isUserAdmin = session?.user?.email === 'admin@lumini.me' || session?.user?.user_metadata?.isAdmin;
+                  setStep(isUserAdmin ? 'admin' : 'dashboard');
+              }} 
+              onAdminClick={() => setShowAdmin(true)}
+            />
           )}
           {step === 'insights' && (
             <InsightsHubPage onSelectCategory={(cat) => setStep(cat)} />
@@ -466,12 +550,12 @@ function App() {
             <ShopPage onBack={() => setStep('dashboard')} />
           )}
           {step === 'soul-pet' && (
-            <SoulPetPage onBack={() => setStep('dashboard')} />
+            <SoulPetPage onBack={() => setStep('dashboard')} nearbyUsers={nearbyUsers} />
           )}
           {step === 'value-game' && (
             <ValueGamePage onComplete={(answers) => {
               console.log('Value Game Completed:', answers);
-              // Future: Save to Supabase/localStorage
+              localStorage.setItem('lumini_value_game_completed', 'true');
               setStep('dashboard');
             }} />
           )}
@@ -523,21 +607,23 @@ function App() {
 
         {/* Global Admin Overlay */}
         <AnimatePresence>
-          {isAdmin && showAdmin && (
+          {showAdmin && (
             !adminAuthenticated ? (
               <AdminLoginPage
                 onAuthSuccess={() => setAdminAuthenticated(true)}
                 onBack={() => setShowAdmin(false)}
               />
             ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 100 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 100 }}
-                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, background: 'white', overflowY: 'auto' }}
-              >
-                <AdminDashboardPage onBack={() => setShowAdmin(false)} />
-              </motion.div>
+              isAdmin && ( // 실제 관리자 데이터 권한 확인은 여기서 수행
+                <motion.div
+                  initial={{ opacity: 0, y: 100 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 100 }}
+                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, background: 'white', overflowY: 'auto' }}
+                >
+                  <AdminDashboardPage onBack={() => setShowAdmin(false)} />
+                </motion.div>
+              )
             )
           )}
         </AnimatePresence>
@@ -546,12 +632,12 @@ function App() {
       {/* Bottom Navigation (Mobile Friendly) */}
       {user && step !== 'welcome' && step !== 'auth' && (
         <nav className="bottom-nav">
-          <NavItem active={step === 'dashboard'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} />
-          <NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} />
-          <NavItem active={step === 'daily-challenges'} icon={<Target size={22} />} label="챌린지" onClick={() => setStep('daily-challenges')} />
-          <NavItem active={['community', 'magazine', 'ranking', 'compatibility-game', 'groups', 'group-chat', 'weekly-report'].includes(step)} icon={<Users size={22} />} label="커뮤니티" onClick={() => setStep('community')} />
-          <NavItem active={step.includes('insight') || step === 'growth' || step === 'stats'} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} />
-          <NavItem icon={<ShoppingBag size={24} />} label="상점" active={step === 'shop'} onClick={() => setStep('shop')} />
+          <Tooltip text="홈 화면으로 이동합니다."><NavItem active={step === 'dashboard'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} /></Tooltip>
+          <Tooltip text="동네 소식과 커뮤니티 피드를 확인합니다."><NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} /></Tooltip>
+          <Tooltip text="일일 과제를 수행하고 보상을 받으세요."><NavItem active={step === 'daily-challenges'} icon={<Target size={22} />} label="챌린지" onClick={() => setStep('daily-challenges')} /></Tooltip>
+          <Tooltip text="다양한 소울 모임과 게임에 참여하세요."><NavItem active={['community', 'magazine', 'ranking', 'compatibility-game', 'groups', 'group-chat', 'weekly-report'].includes(step)} icon={<Users size={22} />} label="커뮤니티" onClick={() => setStep('community')} /></Tooltip>
+          <Tooltip text="성향 분석 및 통계 데이터를 확인합니다."><NavItem active={step.includes('insight') || step === 'growth' || step === 'stats'} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} /></Tooltip>
+          <Tooltip text="포인트를 아이템으로 교환합니다."><NavItem icon={<ShoppingBag size={24} />} label="상점" active={step === 'shop'} onClick={() => setStep('shop')} /></Tooltip>
         </nav>
       )}
 

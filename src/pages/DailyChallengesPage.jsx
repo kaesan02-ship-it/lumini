@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Target, CheckCircle, Lock, Gift, ChevronRight, Star, Zap, MessageCircle, Users, Edit3 } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
+import useAuthStore from '../store/authStore';
 
 // 챌린지 데이터 — 매일 업데이트되는 소울 챌린지
 const getDailyChallenges = () => {
@@ -69,19 +70,24 @@ const DAILY_QUESTIONS = [
 
 const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
     const { crystals, earnCrystals, dailyCheckinBonus, dailyCheckin } = useCrystalStore();
-    const [challenges, setChallenges] = useState(getDailyChallenges());
+    const { user } = useAuthStore();
+    const userId = user?.id || 'guest';
+    const streakKey = `lumini_streak_${userId}`;
+    const challengesDoneKey = `lumini_challenges_done_${userId}`;
+    const soulHistoryKey = `lumini_soul_history_${userId}`;
+
     const [streak, setStreak] = useState(() => {
-        return parseInt(localStorage.getItem('lumini_streak') || '0');
+        return parseInt(localStorage.getItem(streakKey) || '0');
     });
     const [todayAnswered, setTodayAnswered] = useState(false);
     const [answerInput, setAnswerInput] = useState('');
     const [showAnswerBox, setShowAnswerBox] = useState(false);
     const [completedToday, setCompletedToday] = useState(() => {
-        const saved = localStorage.getItem('lumini_challenges_done');
-        const today = new Date().toDateString();
+        const saved = localStorage.getItem(challengesDoneKey);
+        const todayText = new Date().toDateString();
         if (saved) {
             const parsed = JSON.parse(saved);
-            return parsed.date === today ? parsed.ids : [];
+            return parsed.date === todayText ? parsed.ids : [];
         }
         return [];
     });
@@ -90,6 +96,7 @@ const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
     const today = new Date().toDateString();
     const alreadyCheckedIn = dailyCheckin === today;
 
+    const challenges = getDailyChallenges();
     const todayQuestion = DAILY_QUESTIONS[new Date().getDay()];
     const totalReward = challenges.reduce((sum, c) => sum + c.reward, 0);
     const earnedToday = challenges
@@ -104,16 +111,16 @@ const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
     // 자동 출석 체크 완료 처리
     useEffect(() => {
         if (!completedToday.includes('checkin')) {
-            handleComplete('checkin', 30);
+            handleComplete('checkin', 10);
         }
-    }, []);
+    }, [userId]);
 
     const handleComplete = (challengeId, reward) => {
         if (completedToday.includes(challengeId)) return;
 
         const newCompleted = [...completedToday, challengeId];
         setCompletedToday(newCompleted);
-        localStorage.setItem('lumini_challenges_done', JSON.stringify({ date: today, ids: newCompleted }));
+        localStorage.setItem(challengesDoneKey, JSON.stringify({ date: today, ids: newCompleted }));
 
         earnCrystals(reward);
         showToast(`+${reward}💎 획득!`);
@@ -122,7 +129,7 @@ const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
         if (challengeId === 'checkin') {
             const newStreak = streak + 1;
             setStreak(newStreak);
-            localStorage.setItem('lumini_streak', newStreak.toString());
+            localStorage.setItem(streakKey, newStreak.toString());
         }
     };
 
@@ -133,10 +140,10 @@ const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
             question: todayQuestion,
             answer: answerInput.trim(),
         };
-        const prev = (() => { try { return JSON.parse(localStorage.getItem('lumini_soul_history') || '[]'); } catch { return []; } })();
+        const prev = (() => { try { return JSON.parse(localStorage.getItem(soulHistoryKey) || '[]'); } catch { return []; } })();
         // 오늘 날짜 중복 방지
         const filtered = prev.filter(h => h.date !== historyItem.date);
-        localStorage.setItem('lumini_soul_history', JSON.stringify([historyItem, ...filtered].slice(0, 30)));
+        localStorage.setItem(soulHistoryKey, JSON.stringify([historyItem, ...filtered].slice(0, 30)));
         setTodayAnswered(true);
         setShowAnswerBox(false);
         handleComplete('daily-q', 10);

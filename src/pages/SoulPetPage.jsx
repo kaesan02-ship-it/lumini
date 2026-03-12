@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Edit2, Check, X } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useAuthStore from '../store/authStore';
+import Tooltip from '../components/Tooltip';
 
 // ─── 아이템 카탈로그 ───────────────────────────────────────────────
 const ITEMS = [
@@ -202,7 +203,7 @@ const OtterCanvas = ({ petData, previewItem = null, animation, onPlayTap, mood }
 };
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────
-const SoulPetPage = ({ onBack }) => {
+const SoulPetPage = ({ onBack, nearbyUsers }) => {
     const { user } = useAuthStore();
     const userId = user?.id || 'guest';
     const PET_STORAGE_KEY = `lumini_soul_pet_${userId}`;
@@ -214,7 +215,6 @@ const SoulPetPage = ({ onBack }) => {
     const [nameInput, setNameInput] = useState('');
     const [toast, setToast] = useState('');
     const [animation, setAnimation] = useState(null);
-    const [showProfileCard, setShowProfileCard] = useState(false);
 
     const [petData, setPetData] = useState(() => {
         try {
@@ -390,19 +390,23 @@ const SoulPetPage = ({ onBack }) => {
                                 const playMin = Math.ceil(playLeft / 60000);
                                 return (<>
                                     <div>
-                                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleFeed}
-                                            disabled={feedLeft > 0}
-                                            style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: feedLeft > 0 ? '#e2e8f0' : 'linear-gradient(135deg, #F59E0B, #F97316)', color: feedLeft > 0 ? '#94a3b8' : 'white', fontWeight: 800, fontSize: '1rem', cursor: feedLeft > 0 ? 'not-allowed' : 'pointer' }}>
-                                            🍚 밥 주기
-                                        </motion.button>
+                                        <Tooltip text={feedLeft > 0 ? `${feedMin}분 후에 다시 줄 수 있어요` : "루미에게 맛있는 밥을 줍니다 (+배고픔 회복)"}>
+                                            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleFeed}
+                                                disabled={feedLeft > 0}
+                                                style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: feedLeft > 0 ? '#e2e8f0' : 'linear-gradient(135deg, #F59E0B, #F97316)', color: feedLeft > 0 ? '#94a3b8' : 'white', fontWeight: 800, fontSize: '1rem', cursor: feedLeft > 0 ? 'not-allowed' : 'pointer' }}>
+                                                🍚 밥 주기
+                                            </motion.button>
+                                        </Tooltip>
                                         {feedLeft > 0 && <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '5px', fontWeight: 600 }}>⏳ {feedMin}분 후 가능</div>}
                                     </div>
                                     <div>
-                                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handlePlay}
-                                            disabled={playLeft > 0}
-                                            style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: playLeft > 0 ? '#e2e8f0' : 'linear-gradient(135deg, #EC4899, #8B5CF6)', color: playLeft > 0 ? '#94a3b8' : 'white', fontWeight: 800, fontSize: '1rem', cursor: playLeft > 0 ? 'not-allowed' : 'pointer' }}>
-                                            🎮 놀아주기
-                                        </motion.button>
+                                        <Tooltip text={playLeft > 0 ? `${playMin}분 후에 다시 놀 수 있어요` : "루미와 즐겁게 놉니다 (+행복도 상승)"}>
+                                            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handlePlay}
+                                                disabled={playLeft > 0}
+                                                style={{ width: '100%', padding: '16px', borderRadius: '18px', border: 'none', background: playLeft > 0 ? '#e2e8f0' : 'linear-gradient(135deg, #EC4899, #8B5CF6)', color: playLeft > 0 ? '#94a3b8' : 'white', fontWeight: 800, fontSize: '1rem', cursor: playLeft > 0 ? 'not-allowed' : 'pointer' }}>
+                                                🎮 놀아주기
+                                            </motion.button>
+                                        </Tooltip>
                                         {playLeft > 0 && <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '5px', fontWeight: 600 }}>⏳ {playMin}분 후 가능</div>}
                                     </div>
                                 </>);
@@ -507,29 +511,54 @@ const SoulPetPage = ({ onBack }) => {
 
                         {/* 다른 멤버 예시 */}
                         <h4 style={{ fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>✨ 다른 멤버들의 소울 펫</h4>
-                        {[
-                            { name: '별이', ownerName: '소이', level: 7, equippedHat: 'hat_gem', equippedBg: 'bg_space', equippedAcc: 'acc_music', hunger: 90, happiness: 85, ownedItems: ['hat_gem', 'bg_space', 'acc_music'] },
-                            { name: '하루', ownerName: '준혁', level: 3, equippedHat: 'hat_flower', equippedBg: 'bg_cherry', equippedAcc: 'acc_heart', hunger: 70, happiness: 65, ownedItems: ['hat_flower', 'bg_cherry', 'acc_heart'] },
-                            { name: '코코', ownerName: '민아', level: 5, equippedHat: 'hat_star', equippedBg: 'bg_ocean', equippedAcc: 'acc_fish', hunger: 80, happiness: 95, ownedItems: ['hat_star', 'bg_ocean', 'acc_fish'] },
-                        ].map((friend, idx) => {
-                            const friendMood = (() => {
-                                if (friend.happiness > 80) return { face: '🥰', mood: '행복해요!' };
-                                return { face: '😊', mood: '즐거워요!' };
-                            })();
-                            return (
-                                <div key={idx} className="glass-card" style={{ borderRadius: '20px', overflow: 'hidden', marginBottom: '16px', padding: 0 }}>
-                                    <div style={{ padding: '12px 16px', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--glass-border)' }}>
-                                        <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{friend.ownerName}님의 펫</span>
-                                        <span style={{ fontSize: '0.72rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>Lv.{friend.level}</span>
+                        {/* Neighbor Users Souls (Actual Data) */}
+                        {Array.isArray(nearbyUsers) && nearbyUsers.filter(u => u?.pet_data).length > 0 ? (
+                            nearbyUsers.filter(u => u?.pet_data).slice(0, 3).map((u, idx) => {
+                                const friend = {
+                                    name: u.pet_data.name || '루미',
+                                    ownerName: u.username || u.name,
+                                    level: u.pet_data.level || 1,
+                                    equippedHat: u.pet_data.equippedHat,
+                                    equippedBg: u.pet_data.equippedBg,
+                                    equippedAcc: u.pet_data.equippedAcc,
+                                    hunger: u.pet_data.hunger || 80,
+                                    happiness: u.pet_data.happiness || 70,
+                                    ownedItems: u.pet_data.ownedItems || []
+                                };
+                                const friendMood = friend.happiness > 80 ? { face: '🥰', mood: '행복해요!' } : { face: '😊', mood: '즐거워요!' };
+                                
+                                return (
+                                    <div key={`real-${u.id}`} className="glass-card" style={{ borderRadius: '20px', overflow: 'hidden', marginBottom: '16px', padding: 0 }}>
+                                        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>🦦 {friend.ownerName}의 {friend.name}</span>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800 }}>Lv.{friend.level}</span>
+                                        </div>
+                                        <div style={{ height: '160px', opacity: 0.9 }}>
+                                            <OtterCanvas petData={friend} animation={null} onPlayTap={() => {}} mood={friendMood} isSmall={true} />
+                                        </div>
                                     </div>
-                                    <OtterCanvas petData={friend} animation={null} onPlayTap={() => { }} mood={friendMood} />
-                                    <div style={{ padding: '12px 16px', background: 'var(--surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ fontWeight: 800, fontSize: '1rem' }}>{friend.name}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#10B981', fontWeight: 700 }}>+{Math.min(5, friend.level * 0.5).toFixed(1)}% 보너스</div>
+                                );
+                            })
+                        ) : (
+                            /* Fallback to Mock with Label */
+                            [
+                                { name: '별이', ownerName: '소이', level: 7, equippedHat: 'hat_gem', equippedBg: 'bg_space', equippedAcc: 'acc_music', hunger: 90, happiness: 85, ownedItems: ['hat_gem', 'bg_space', 'acc_music'] },
+                                { name: '하루', ownerName: '준혁', level: 3, equippedHat: 'hat_flower', equippedBg: 'bg_cherry', equippedAcc: 'acc_heart', hunger: 70, happiness: 65, ownedItems: ['hat_flower', 'bg_cherry', 'acc_heart'] },
+                            ].map((friend, idx) => {
+                                const friendMood = friend.happiness > 80 ? { face: '🥰', mood: '행복해요!' } : { face: '😊', mood: '즐거워요!' };
+                                return (
+                                    <div key={idx} className="glass-card" style={{ borderRadius: '20px', overflow: 'hidden', marginBottom: '16px', padding: 0, opacity: 0.8 }}>
+                                        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8' }}>🦦 {friend.ownerName}의 {friend.name} (예시)</span>
+                                            <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>Lv.{friend.level}</span>
+                                        </div>
+                                        <div style={{ height: '140px' }}>
+                                            <OtterCanvas petData={friend} animation={null} onPlayTap={() => {}} mood={friendMood} isSmall={true} />
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })
+                        )}
                     </div>
                 )}
             </div>

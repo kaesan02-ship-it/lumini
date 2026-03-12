@@ -9,8 +9,6 @@ import { USE_MOCK_DATA } from '../config';
 const COLS = 17;
 const ROWS = 10;
 const GAME_TIME = 100; // 1분 40초
-const FREE_PLAYS = 999;
-
 const AppleGamePage = ({ onBack, userName }) => {
     const { crystals, useItem, buyItem, inventory, spendCrystals } = useCrystalStore();
     const { user } = useAuthStore();
@@ -25,6 +23,10 @@ const AppleGamePage = ({ onBack, userName }) => {
     const [dailyPlays, setDailyPlays] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
+
+    const FREE_PLAYS = 3;
+    const dailyCountKey = `apple_game_daily_count_${userId}`;
+    const lastDateKey = `apple_game_last_date_${userId}`;
 
     // Supabase에서 최고 기록 로드 및 리더보드 로드
     useEffect(() => {
@@ -73,18 +75,18 @@ const AppleGamePage = ({ onBack, userName }) => {
     }, []);
 
     useEffect(() => {
-        const lastDate = localStorage.getItem('apple_game_last_date');
+        const lastDate = localStorage.getItem(lastDateKey);
         const today = new Date().toDateString();
 
         if (lastDate !== today) {
-            localStorage.setItem('apple_game_last_date', today);
-            localStorage.setItem('apple_game_daily_count', '0');
+            localStorage.setItem(lastDateKey, today);
+            localStorage.setItem(dailyCountKey, '0');
             setDailyPlays(0);
         } else {
-            const count = parseInt(localStorage.getItem('apple_game_daily_count') || '0');
+            const count = parseInt(localStorage.getItem(dailyCountKey) || '0');
             setDailyPlays(count);
         }
-    }, []);
+    }, [userId]);
 
     // 모바일 리사이즈 시 그리드 스케일 반응형 조절
     useEffect(() => {
@@ -113,7 +115,7 @@ const AppleGamePage = ({ onBack, userName }) => {
         } else {
             const newCount = dailyPlays + 1;
             setDailyPlays(newCount);
-            localStorage.setItem('apple_game_daily_count', newCount.toString());
+            localStorage.setItem(dailyCountKey, newCount.toString());
         }
 
         setScore(0);
@@ -179,7 +181,11 @@ const AppleGamePage = ({ onBack, userName }) => {
                 const newBest = Math.max(prevBest, score);
                 localStorage.setItem(scoreKey, newBest.toString());
                 if (!USE_MOCK_DATA && user?.id && newBest > prevBest) {
-                    supabase.from('profiles').update({ apple_game_best_score: newBest }).eq('id', user.id);
+                    supabase.from('profiles').update({ apple_game_best_score: newBest }).eq('id', user.id)
+                        .then(({ error }) => {
+                            if (error) console.error('Failed to save best score:', error);
+                            else console.log('Best score saved to Supabase');
+                        });
                 }
                 return newBest;
             });
@@ -529,23 +535,9 @@ const AppleGamePage = ({ onBack, userName }) => {
                                     </div>
                                 ))
                             ) : (
-                                [
-                                    { name: '딸기퐁듀', score: 4250, rank: 1 },
-                                    { name: '애플수달', score: 3820, rank: 2 },
-                                    { name: '루미니언', score: 3150, rank: 3 },
-                                    { name: '별빛가득', score: 2850, rank: 4 },
-                                    { name: userName || '나', score: Math.max(bestScore, score), isMe: true, rank: 5 }
-                                ].sort((a, b) => b.score - a.score).map((item, i) => (
-                                    <div key={i} style={{
-                                        display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
-                                        background: item.isMe ? 'rgba(99, 102, 241, 0.1)' : 'white',
-                                        border: item.isMe ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid #e2e8f0',
-                                        borderRadius: '16px', transition: 'transform 0.2s'
-                                    }}>
-                                        <span style={{ fontWeight: 800, color: item.isMe ? '#4f46e5' : '#64748b', fontSize: '1rem' }}>{i + 1}위 {item.name}</span>
-                                        <span style={{ fontWeight: 900, color: item.isMe ? '#4f46e5' : '#334155', fontSize: '1rem' }}>{item.score.toLocaleString()}</span>
-                                    </div>
-                                ))
+                                <div style={{ textAlign: 'center', padding: '30px 10px', color: '#64748b', fontSize: '0.9rem', fontWeight: 600 }}>
+                                    아직 명예의 전당에<br />기록된 점수가 없습니다. 🍎
+                                </div>
                             )}
                         </div>
                     </div>

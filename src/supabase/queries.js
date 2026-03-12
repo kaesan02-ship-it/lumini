@@ -5,11 +5,15 @@ import { USE_MOCK_DATA } from '../config';
 // 인메모리 모크 스토어 (CRUD가 즉시 반영됨)
 // =============================================
 
+// 유저별 프로필 저장소
+const MOCK_PROFILE_STORE = {};
+
 const MOCK_USER_ME = {
     id: 'mock-user-001', username: '루미니 탐험가', avatar_url: '',
     mbti_type: 'ENFP', personality_data: { O: 85, C: 45, E: 90, A: 75, N: 30, H: 95 },
     bio: '반가워요! 루미니에서 함께 성장해요 ✨',
-    district: '서울 마포구'
+    district: '서울 마포구',
+    crystals: 100
 };
 
 const MOCK_USERS = [
@@ -31,6 +35,8 @@ const MOCK_USERS = [
     { id: 'u6', username: '정하은', avatar_url: '', mbti_type: 'ESTJ', personality_data: { O: 50, C: 95, E: 75, A: 60, N: 15, H: 88 }, bio: '계획대로 살기 프로', district: '서울 용산구', game: 'LoL', tier: 'Diamond II' },
 ];
 
+// 초기 모크 데이터 로드
+MOCK_USERS.forEach(u => MOCK_PROFILE_STORE[u.id] = u);
 
 // 인메모리 게시물
 let mockPosts = [
@@ -87,25 +93,104 @@ const nextId = () => `mock-${++idCounter}`;
 
 // --- [Profiles] ---
 export const getProfile = async (userId) => {
-    if (USE_MOCK_DATA) return MOCK_USER_ME;
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (USE_MOCK_DATA) {
+        // 이미 저장소에 있으면 반환
+        if (MOCK_PROFILE_STORE[userId]) return MOCK_PROFILE_STORE[userId];
+
+        // 없으면 새로 생성하여 저장소에 기록
+        // 닉네임 추천 로직 개선 (데모 계정 대응)
+        let suggestedName = '루미니';
+        if (userId === 'mock-demo@lumini.me') {
+            suggestedName = '루미니 탐험가';
+        } else if (userId === 'mock-admin@lumini.me') {
+            suggestedName = '관리자';
+        } else if (userId.startsWith('mock-')) {
+            const parts = userId.split('mock-');
+            if (parts[1]) {
+                suggestedName = parts[1].split('@')[0].split('-')[0]; // email-timestamp 호환
+            }
+        }
+
+        const newProfile = { 
+            ...MOCK_USER_ME, 
+            id: userId, 
+            username: suggestedName 
+        };
+        MOCK_PROFILE_STORE[userId] = newProfile;
+        return newProfile;
+    }
+    try {
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        if (error) {
+            console.error('Supabase getProfile error:', error);
+            // 만약 유저를 찾지 못한 경우(가입 직후 등) 빈 프로필 반환 시도 또는 에러 전파
+            if (error.code === 'PGRST116') return null; 
+            throw error;
+        }
+        return data;
+    } catch (err) {
+        console.error('getProfile execution failed:', err);
+        throw err;
+    }
+};
+
+export const updateProfile = async (userId, updates) => {
+    if (USE_MOCK_DATA) {
+        const existing = MOCK_PROFILE_STORE[userId] || { id: userId, ...MOCK_USER_ME };
+        const updated = { ...existing, ...updates };
+        MOCK_PROFILE_STORE[userId] = updated;
+        return updated;
+    }
+    const { data, error } = await supabase.from('profiles').upsert({ id: userId, ...updates }, { onConflict: 'id' }).select().single();
     if (error) throw error;
     return data;
 };
 
 export const upsertProfile = async (profileData) => {
-    if (USE_MOCK_DATA) return { ...MOCK_USER_ME, ...profileData };
-    const { data, error } = await supabase.from('profiles').upsert(profileData, { onConflict: 'id' }).select().single();
+    if (USE_MOCK_DATA) {
+        console.log('Mock Upsert Profile:', profileData);
+        // 모크 데이터 저장소 업데이트
+        const updatedProfile = { 
+            ...MOCK_PROFILE_STORE[profileData.id], 
+            ...profileData,
+            updated_at: new Date().toISOString()
+        };
+        MOCK_PROFILE_STORE[profileData.id] = updatedProfile;
+
+        // 로컬 상태 동기화 (userStore 등에서 참조할 수 있도록)
+        if (profileData.username) localStorage.setItem('lumini_user_name', profileData.username);
+        if (profileData.mbti_type) localStorage.setItem('lumini_mbti_type', profileData.mbti_type);
+        
+        return updatedProfile;
+    }
+    
+    const { data, error } = await supabase
+        .from('profiles')
+        .upsert({
+            ...profileData,
+            updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
     if (error) throw error;
     return data;
 };
 
 // --- [Social / Connections] ---
 export const getNearbyProfiles = async (limit = 10) => {
-    if (USE_MOCK_DATA) return MOCK_USERS.slice(0, limit);
-    const { data, error } = await supabase.from('profiles').select('*').limit(limit);
-    if (error) throw error;
-    return data;
+    if (USE_MOCK_DATA) return [...MOCK_USERS].reverse().slice(0, limit);
+    try {
+        const { data, error } = await supabase.from('profiles').select('*, pet_data').order('created_at', { ascending: false }).limit(limit);
+        if (error) {
+            console.error('getNearbyProfiles error:', error);
+            return []; // 에러 시 빈 배열 반환하여 크래시 방지
+        }
+        return data || [];
+    } catch (err) {
+        console.error('getNearbyProfiles exception:', err);
+        return [];
+    }
 };
 
 export const toggleConnection = async (reqId, targetId, sim) => {
@@ -158,7 +243,7 @@ export const getPosts = async (category = null) => {
         if (category) filtered = filtered.filter(p => p.category === category);
         return filtered;
     }
-    let query = supabase.from('posts').select('*, author:profiles!posts_author_id_fkey(*)').order('created_at', { ascending: false });
+    let query = supabase.from('posts').select('*, author:profiles(*)').order('created_at', { ascending: false });
     if (category) query = query.eq('category', category);
     const { data, error } = await query;
     if (error) throw error;

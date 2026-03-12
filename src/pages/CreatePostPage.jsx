@@ -25,9 +25,9 @@ const CreatePostPage = ({ onBack, onSuccess, userName: propUserName }) => {
     const fileInputRef = useRef(null);
 
     // 실제 표시할 작성자명 및 아바타
-    const displayName = propUserName
-        || profile?.username
+    const displayName = profile?.username
         || user?.user_metadata?.username
+        || propUserName
         || user?.email?.split('@')[0]
         || '루미니 멤버';
     const avatarLetter = displayName[0]?.toUpperCase() || 'L';

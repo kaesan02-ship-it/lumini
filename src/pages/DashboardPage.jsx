@@ -11,6 +11,7 @@ import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
 import { getSoulType } from '../data/soulTypes';
 import useCrystalStore from '../store/crystalStore';
 import LumiMascot from '../components/LumiMascot';
+import Tooltip from '../components/Tooltip';
 
 const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNavigate, userName }) => {
     const [activeTab, setActiveTab] = useState('all');
@@ -39,10 +40,10 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
         return sortedUsers.filter(u => u.district && u.district === myDistrict);
     }, [sortedUsers, myDistrict]);
 
-    // 탭 기준 유저 목록
+    // 탭 기준 유저 목록 (상위 5명만 노출)
     const displayedUsers = useMemo(() => {
-        if (activeTab === 'friend') return neighborUsers;
-        return sortedUsers;
+        const users = activeTab === 'friend' ? neighborUsers : sortedUsers;
+        return users.slice(0, 5);
     }, [activeTab, sortedUsers, neighborUsers]);
 
     const categories = [
@@ -115,11 +116,13 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                             position: 'relative', overflow: 'hidden'
                         }}
                     >
-                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>역대급 중독성 🔥</div>
-                        <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            🍎 사과 게임
-                        </div>
-                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>드래그로 10 만들기! 🏆</div>
+                        <Tooltip text="중독성 강한 숫자 퍼즐 게임!">
+                            <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>역대급 중독성 🔥</div>
+                            <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🍎 사과 게임
+                            </div>
+                            <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>드래그로 10 만들기! 🏆</div>
+                        </Tooltip>
                     </motion.div>
                     <motion.div
                         whileHover={{ scale: 1.02 }}
@@ -129,42 +132,40 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                             borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
                         }}
                     >
-                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>오늘의 챌린지</div>
-                        <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Target size={20} /> {completedChallenges}/3
-                        </div>
-                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>🔥 {streak}일 연속</div>
+                        <Tooltip text="매일 주어지는 미션을 완료하고 크리스탈을 받으세요.">
+                            <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>오늘의 챌린지</div>
+                            <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Target size={20} /> {completedChallenges}/3
+                            </div>
+                            <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>🔥 {streak}일 연속</div>
+                        </Tooltip>
                     </motion.div>
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => {
-                            if (hasDeepSoul) {
-                                // 이미 완료한 경우 결과 페이지로
-                                onNavigate && onNavigate('deep-soul-result');
-                            } else {
-                                onNavigate && onNavigate('value-game');
-                            }
-                        }}
-                        style={{
-                            background: 'linear-gradient(135deg, #06B6D4, #3B82F6)',
-                            borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
-                            position: 'relative', overflow: 'hidden'
-                        }}
-                    >
-                        <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>가치관 밸런스</div>
-                        <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {hasDeepSoul ? <Sparkles size={20} /> : <Zap size={20} />}
-                            {hasDeepSoul ? '검사 완료!' : '시작하기'}
-                        </div>
-                        <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>
-                            {hasDeepSoul ? '딥 소울 매칭 활성화 됨 💎' : '매칭 확률 UP 🚀'}
-                        </div>
+                    {!localStorage.getItem('lumini_value_game_completed') && (
                         <motion.div
-                            animate={{ x: [0, 100], opacity: [0, 0.5, 0] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                            style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '100%', background: 'white', filter: 'blur(10px)', skewX: '-20deg' }}
-                        />
-                    </motion.div>
+                            whileHover={{ scale: 1.02 }}
+                            onClick={() => onNavigate && onNavigate('value-game')}
+                            style={{
+                                background: 'linear-gradient(135deg, #06B6D4, #3B82F6)',
+                                borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
+                                position: 'relative', overflow: 'hidden'
+                            }}
+                        >
+                            <Tooltip text="나의 핵심 가치관을 선택하고 더 잘 맞는 인연을 추천받으세요.">
+                                <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>가치관 밸런스</div>
+                                <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Zap size={20} /> 시작하기
+                                </div>
+                                <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>
+                                    매칭 확률 UP 🚀
+                                </div>
+                            </Tooltip>
+                            <motion.div
+                                animate={{ x: [0, 100], opacity: [0, 0.5, 0] }}
+                                transition={{ repeat: Infinity, duration: 2 }}
+                                style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '100%', background: 'white', filter: 'blur(10px)', skewX: '-20deg' }}
+                            />
+                        </motion.div>
+                    )}
                 </div>
 
                 {/* My Stats Card */}
@@ -249,7 +250,7 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                     <div style={{ fontSize: '2.2rem', flexShrink: 0 }}>{hasDeepSoul ? '💎' : '✨'}</div>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>
-                            {hasDeepSoul ? '딥 소울 매칭 활성화됨' : '더 깊은 인연 찾기'}
+                            {hasDeepSoul ? '딥 소울 매칭 활성화됨' : '딥 소울 매칭 시작하기'}
                         </div>
                         <div style={{ fontSize: '0.8rem', opacity: 0.85, lineHeight: 1.5 }}>
                             {hasDeepSoul
@@ -258,6 +259,7 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                         </div>
                     </div>
                     <ChevronRight size={20} style={{ opacity: 0.7, flexShrink: 0 }} />
+                    <Tooltip text={hasDeepSoul ? "딥 소울 매칭 결과를 확인합니다." : "가치관 기반 정밀 매칭을 위해 검사를 시작합니다."} position="bottom" />
                 </motion.div>
 
                 {/* Recommendation Section with Filters */}
@@ -269,6 +271,25 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                         </span>
                     )}
                 </div>
+
+                {/* 데이터 부재 시 안내 */}
+                {displayedUsers.length === 0 && (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', background: 'var(--surface)', borderRadius: '24px', border: '1.5px dashed var(--glass-border)', marginBottom: '30px' }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🌱</div>
+                        <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: '6px' }}>새로운 인연을 찾는 중이에요</div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                            아직 조건에 맞는 추천 리스트가 생성되지 않았습니다.<br/>
+                            프로필을 더 자세히 작성하거나 잠시 후 다시 확인해주세요!
+                        </div>
+                        <motion.button 
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => window.location.reload()}
+                            style={{ marginTop: '16px', padding: '10px 20px', borderRadius: '100px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
+                        >
+                            로그 새로고침
+                        </motion.button>
+                    </div>
+                )}
 
                 {/* 동네 탭 선택 시 안내 배너 */}
                 {activeTab === 'friend' && (
@@ -293,22 +314,23 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                 {/* Category Tabs */}
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', overflowX: 'auto', paddingBottom: '5px' }}>
                     {categories.map((cat) => (
-                        <button
-                            key={cat.id}
-                            onClick={() => setActiveTab(cat.id)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                padding: '10px 20px', borderRadius: '25px',
-                                border: 'none', cursor: 'pointer',
-                                background: activeTab === cat.id ? 'var(--primary)' : 'var(--surface)',
-                                color: activeTab === cat.id ? 'white' : 'var(--text-muted)',
-                                fontWeight: 700, fontSize: '0.9rem',
-                                boxShadow: activeTab === cat.id ? '0 10px 20px rgba(139, 92, 246, 0.2)' : '0 2px 4px rgba(0,0,0,0.03)',
-                                whiteSpace: 'nowrap', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                            }}
-                        >
-                            {cat.icon} {cat.name}
-                        </button>
+                        <Tooltip key={cat.id} text={`${cat.name} 탭으로 필터링합니다.`}>
+                            <button
+                                onClick={() => setActiveTab(cat.id)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    padding: '10px 20px', borderRadius: '25px',
+                                    border: 'none', cursor: 'pointer',
+                                    background: activeTab === cat.id ? 'var(--primary)' : 'var(--surface)',
+                                    color: activeTab === cat.id ? 'white' : 'var(--text-muted)',
+                                    fontWeight: 700, fontSize: '0.9rem',
+                                    boxShadow: activeTab === cat.id ? '0 10px 20px rgba(139, 92, 246, 0.2)' : '0 2px 4px rgba(0,0,0,0.03)',
+                                    whiteSpace: 'nowrap', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                                }}
+                            >
+                                {cat.icon} {cat.name}
+                            </button>
+                        </Tooltip>
                     ))}
                 </div>
                 {/* User Cards */}
@@ -381,18 +403,20 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                                         )}
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => onSelectUser(user)}
-                                    style={{
-                                        background: 'white', color: 'var(--text)',
-                                        border: '1px solid var(--glass-border)', padding: '12px 24px', borderRadius: '16px',
-                                        fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                    }}
-                                >
-                                    프로필 보기
-                                </button>
+                                    <Tooltip text={`${user.name}님의 상세 프로필을 확인합니다.`} position="left">
+                                        <button
+                                            onClick={() => onSelectUser(user)}
+                                            style={{
+                                                background: 'white', color: 'var(--text)',
+                                                border: '1px solid var(--glass-border)', padding: '12px 24px', borderRadius: '16px',
+                                                fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                            }}
+                                        >
+                                            프로필 보기
+                                        </button>
+                                    </Tooltip>
                             </motion.div>
                         );
                     }) : (

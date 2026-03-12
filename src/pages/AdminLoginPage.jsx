@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, ArrowLeft, Lock, User, Loader } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import useAuthStore from '../store/authStore';
 
 const AdminLoginPage = ({ onAuthSuccess, onBack }) => {
     const [id, setId] = useState('');
@@ -13,8 +14,14 @@ const AdminLoginPage = ({ onAuthSuccess, onBack }) => {
         setLoading(true);
         // Simulate network delay
         setTimeout(() => {
-            if (id === 'admin' && password === 'lumini2026!') {
+            // 사용자 제보에 따른 lumin(i)2026! 유연성 처리
+            const isValidPassword = password === 'lumini2026!' || password === 'lumin2026!';
+            if (id === 'admin' && isValidPassword) {
                 toast.success('관리자 권한을 인증했습니다.', { icon: '🛡️' });
+                // 전역 상태에 관리자 권한 부여
+                if (typeof useAuthStore.getState === 'function') {
+                    useAuthStore.setState({ isAdmin: true, user: { id: 'admin-temp-id', email: 'admin@lumini.me' } });
+                }
                 onAuthSuccess();
             } else {
                 toast.error('관리자 정보가 일치하지 않습니다.');

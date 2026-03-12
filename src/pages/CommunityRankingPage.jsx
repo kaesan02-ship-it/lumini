@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, TrendingUp } from 'lucide-react';
+import { Trophy, TrendingUp, Sparkles } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
+import { supabase } from '../supabase/client';
+import { USE_MOCK_DATA } from '../config';
+import { useEffect } from 'react';
 
 const LEADERBOARD_DATA = {
     weekly: [
@@ -45,9 +48,63 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const [activeTab, setActiveTab] = useState('weekly');
     const [showGuide, setShowGuide] = useState(false);
     const [claimed, setClaimed] = useState(false);
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [mbtiStats, setMbtiStats] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const myRank = { rank: 12, score: 1340, streak: 3 };
-    const data = LEADERBOARD_DATA[activeTab];
+    useEffect(() => {
+        const fetchRankings = async () => {
+            setLoading(true);
+            try {
+                if (!USE_MOCK_DATA) {
+                    const { data: profiles, error } = await supabase
+                        .from('profiles')
+                        .select('username, mbti_type, apple_game_best_score')
+                        .order('apple_game_best_score', { ascending: false })
+                        .limit(20);
+
+                    if (!error && profiles) {
+                        const mapped = profiles.map((p, i) => ({
+                            rank: i + 1,
+                            name: p.username || '익명',
+                            mbti: p.mbti_type || '?',
+                            score: p.apple_game_best_score || 0,
+                            badge: i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
+                            streak: 1 // Default
+                        }));
+                        setLeaderboard(mapped);
+
+                        // MBTI별 간단 통계 계산
+                        const mbtiGroups = {};
+                        profiles.forEach(p => {
+                            if (!p.mbti_type) return;
+                            if (!mbtiGroups[p.mbti_type]) mbtiGroups[p.mbti_type] = { count: 0, total: 0 };
+                            mbtiGroups[p.mbti_type].count += 1;
+                            mbtiGroups[p.mbti_type].total += (p.apple_game_best_score || 0);
+                        });
+                        const stats = Object.entries(mbtiGroups).map(([type, val]) => ({
+                            mbti: type,
+                            avgScore: Math.round(val.total / val.count),
+                            emoji: '✨'
+                        })).sort((a, b) => b.avgScore - a.avgScore);
+                        setMbtiStats(stats);
+                    }
+                } else {
+                    // Fallback to mock for local testing
+                    setLeaderboard(LEADERBOARD_DATA.weekly);
+                    setMbtiStats(MBTI_LEADERBOARD);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRankings();
+    }, [activeTab]);
+
+    const myRank = { rank: '-', score: 0, streak: 1 };
+    const data = leaderboard;
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--background)', paddingBottom: '120px' }}>
@@ -112,52 +169,67 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
 
                 {/* Podium top 3 */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px', alignItems: 'end' }}>
-                    {[data[1], data[0], data[2]].map((user, i) => {
-                        const heights = ['80px', '108px', '68px'];
-                        const colors = ['#CBD5E1', '#F59E0B', '#CD7C2F'];
-                        return (
-                            <div key={user.rank} style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: i === 1 ? '2rem' : '1.5rem', marginBottom: '6px' }}>{user.badge}</div>
-                                <div style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '2px' }}>{user.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px' }}>{user.mbti}</div>
-                                <div style={{ background: colors[i], height: heights[i], borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '0.9rem' }}>
-                                    {user.score.toLocaleString()}
+                    {data.length >= 3 ? (
+                        [data[1], data[0], data[2]].map((user, i) => {
+                            const heights = ['80px', '108px', '68px'];
+                            const colors = ['#CBD5E1', '#F59E0B', '#CD7C2F'];
+                            return (
+                                <div key={user.rank} style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: i === 1 ? '2rem' : '1.5rem', marginBottom: '6px' }}>{user.badge}</div>
+                                    <div style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '2px' }}>{user.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px' }}>{user.mbti}</div>
+                                    <div style={{ background: colors[i], height: heights[i], borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '0.9rem' }}>
+                                        {user.score.toLocaleString()}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })
+                    ) : (
+                        <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '40px', background: 'var(--surface)', borderRadius: '20px', color: 'var(--text-muted)' }}>
+                            <Trophy size={40} style={{ marginBottom: '10px', opacity: 0.2 }} />
+                            <div>아직 랭킹 집계에 필요한 충분한<br />데이터가 모이지 않았습니다. 🌟</div>
+                        </div>
+                    )}
                 </div>
 
                 {/* 4위 이하 목록 */}
-                <div style={{ background: 'var(--surface)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--glass-border)', marginBottom: '28px' }}>
-                    {data.slice(3).map((user, i) => (
-                        <div key={user.rank} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', borderBottom: i < data.slice(3).length - 1 ? '1px solid var(--glass-border)' : 'none' }}>
-                            <div style={{ width: '28px', textAlign: 'center', fontWeight: 800, color: 'var(--text-muted)' }}>#{user.rank}</div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 800 }}>{user.name} <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{user.mbti}</span></div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>🔥 {user.streak}일 연속</div>
+                {data.length > 3 && (
+                    <div style={{ background: 'var(--surface)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--glass-border)', marginBottom: '28px' }}>
+                        {data.slice(3).map((user, i) => (
+                            <div key={user.rank} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', borderBottom: i < data.slice(3).length - 1 ? '1px solid var(--glass-border)' : 'none' }}>
+                                <div style={{ width: '28px', textAlign: 'center', fontWeight: 800, color: 'var(--text-muted)' }}>#{user.rank}</div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 800 }}>{user.name} <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{user.mbti}</span></div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>🔥 {user.streak}일 연속</div>
+                                </div>
+                                <div style={{ fontWeight: 800, color: 'var(--primary)' }}>{user.score.toLocaleString()}</div>
                             </div>
-                            <div style={{ fontWeight: 800, color: 'var(--primary)' }}>{user.score.toLocaleString()}</div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* MBTI 타입별 */}
                 <h3 style={{ fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <TrendingUp size={20} color="var(--primary)" /> 성향별 평균 활동 순위
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                    {MBTI_LEADERBOARD.map(m => (
-                        <div key={m.mbti} style={{
-                            background: m.mbti === (mbtiType || '') ? 'linear-gradient(135deg, var(--primary-faint), #F3E8FF)' : 'var(--surface)',
-                            border: m.mbti === (mbtiType || '') ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
-                            borderRadius: '14px', padding: '14px', textAlign: 'center',
-                        }}>
-                            <div style={{ fontSize: '1.4rem', marginBottom: '4px' }}>{m.emoji}</div>
-                            <div style={{ fontWeight: 900, color: 'var(--primary)' }}>{m.mbti}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px' }}>평균 {m.avgScore.toLocaleString()}점</div>
+                    {mbtiStats.length > 0 ? (
+                        mbtiStats.map(m => (
+                            <div key={m.mbti} style={{
+                                background: m.mbti === (mbtiType || '') ? 'linear-gradient(135deg, var(--primary-faint), #F3E8FF)' : 'var(--surface)',
+                                border: m.mbti === (mbtiType || '') ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
+                                borderRadius: '14px', padding: '14px', textAlign: 'center',
+                            }}>
+                                <div style={{ fontSize: '1.4rem', marginBottom: '4px' }}>{m.emoji}</div>
+                                <div style={{ fontWeight: 900, color: 'var(--primary)' }}>{m.mbti}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px' }}>평균 {m.avgScore.toLocaleString()}점</div>
+                            </div>
+                        ))
+                    ) : (
+                        <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                            충분한 데이터가 없습니다.
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
         </div>
