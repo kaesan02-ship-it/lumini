@@ -181,7 +181,7 @@ export const upsertProfile = async (profileData) => {
 export const getNearbyProfiles = async (limit = 10) => {
     if (USE_MOCK_DATA) return [...MOCK_USERS].reverse().slice(0, limit);
     try {
-        const { data, error } = await supabase.from('profiles').select('*, pet_data').order('created_at', { ascending: false }).limit(limit);
+        const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(limit);
         if (error) {
             console.error('getNearbyProfiles error:', error);
             return []; // 에러 시 빈 배열 반환하여 크래시 방지
