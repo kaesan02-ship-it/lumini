@@ -1,0 +1,25 @@
+
+D:\antigravity\lumini-app\src\App.jsx
+    2:10  error    'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                         no-unused-vars
+   44:10  error    'upsertProfile' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                  no-unused-vars
+   48:8   error    'useThemeStore' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                  no-unused-vars
+   65:21  error    'dailyCheckinBonus' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                     no-unused-vars
+  150:6   warning  React Hook useEffect has a missing dependency: 'step'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+  168:6   warning  React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array                       react-hooks/exhaustive-deps
+  181:10  error    'chatMessages' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                          no-unused-vars
+  220:11  error    'toggleFavorite' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                        no-unused-vars
+  220:27  error    'isFavorite' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                            no-unused-vars
+  254:6   warning  React Hook useEffect has a missing dependency: 'step'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+  266:8   warning  React Hook useEffect has a missing dependency: 'step'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+  313:6   warning  React Hook useCallback has missing dependencies: 'setMbtiType' and 'setUserData'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  315:9   error    'handleSendMessage' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                     no-unused-vars
+  455:30  error    'post' is defined but never used                                                                                                      no-unused-vars
+
+D:\antigravity\lumini-app\src\pages\AdminDashboardPage.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+D:\antigravity\lumini-app\src\pages\DeepSoulTestPage.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+✖ 16 problems (11 errors, 5 warnings)
+

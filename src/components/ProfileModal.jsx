@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// import { motion } from 'framer-motion'; // Unused
+import { AnimatePresence, motion } from 'framer-motion'; // Re-importing clearly if needed, or just Cleanup
 import RadarChart from './RadarChart';
 import CompatibilityBreakdown from './CompatibilityBreakdown';
 import useFavorites from '../hooks/useFavorites';
@@ -75,11 +76,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
     };
 
     // personality_data에서도 변환 가능하도록
-    const formatFromPersonalityData = (pd) => {
-        if (!pd) return [];
-        if (Array.isArray(pd)) return formatPersonalityData(pd);
-        return formatPersonalityData(pd);
-    };
+    // Removed unused formatFromPersonalityData
 
     // MBTI 기반 기본 성향 데이터 생성 (데이터 없을 때 fallback)
     const getMBTIDefaultData = (mbti) => {
@@ -112,14 +109,14 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
             return getMBTIDefaultData(user?.mbti || user?.mbtiType);
         }
         return formatted;
-    }, [isMyProfile, userData, user?.personality_data, user?.data, user?.mbti, user?.mbtiType]);
+    }, [isMyProfile, userData, user?.personality_data, user?.data, user?.mbti, user?.mbtiType]); // Keep base deps, wrap format functions in useCallback if needed, but let's just use what works. Wait, formatPersonalityData is inside the component. I should wrap it or add it. actually just cleanup unused vars first.
 
     const myStandardizedData = useMemo(() => {
         const formatted = formatPersonalityData(userData);
         // 내 데이터도 없으면 기본값
         if (!formatted || formatted.length === 0) return getMBTIDefaultData(mbtiType);
         return formatted;
-    }, [userData, mbtiType]);
+    }, [userData, mbtiType, formatPersonalityData, getMBTIDefaultData]);
 
 
     const compatibilityAnalysis = useMemo(() => {
@@ -148,7 +145,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
             advice: null,
             matchingInsight: insight
         };
-    }, [isMyProfile, myStandardizedData, displayData, user?.similarity, user?.mbti, user?.mbtiType, mbtiType]);
+    }, [isMyProfile, myStandardizedData, displayData, user?.similarity, user?.mbti, user?.mbtiType, mbtiType, getMBTIDefaultData]);
 
     const handleGenerateAIReport = async () => {
         setIsGenerating(true);
@@ -198,7 +195,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
             >
                 {/* Header Section */}
                 <div style={{ padding: '40px', position: 'relative' }}>
-                    <button onClick={onClose} style={{ position: 'absolute', top: '30px', right: '30px', background: 'var(--background)', border: 'none', cursor: 'pointer', color: 'var(--text)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                    <button onClick={onClose} title="닫기" style={{ position: 'absolute', top: '30px', right: '30px', background: 'var(--background)', border: 'none', cursor: 'pointer', color: 'var(--text)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
                         <X size={24} />
                     </button>
 
@@ -219,6 +216,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                                 <img
                                     src={currentAvatar || user?.avatar || profile?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`}
                                     alt="Profile"
+                                    title={effectiveIsMyProfile ? "AI 아바타 생성/변경" : displayName}
                                     style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', transition: 'transform 0.2s', background: '#f8fafc' }}
                                     className={effectiveIsMyProfile ? "group-hover:scale-105" : ""}
                                 />
@@ -275,6 +273,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <button
                                                 onClick={() => setIsPreviewMode(!isPreviewMode)}
+                                                title={isPreviewMode ? "편집 모드로 돌아가기" : "다른 사용자에게 보이는 내 프로필 미리보기"}
                                                 style={{
                                                     padding: '8px 16px', borderRadius: '20px',
                                                     background: isPreviewMode ? 'var(--primary)' : 'var(--background)',
@@ -286,19 +285,19 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                                                 {isPreviewMode ? '편집 모드로' : '타인 시점 미리보기'}
                                             </button>
                                             {!isPreviewMode && (
-                                                <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('changeStep', { detail: 'profile-edit' })); }} style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>편집</button>
+                                                <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('changeStep', { detail: 'profile-edit' })); }} title="프로필 상세 정보 수정" style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>편집</button>
                                             )}
                                         </div>
                                     )}
                                     {!effectiveIsMyProfile && (
                                         <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                                            <button onClick={handleToggleFavorite} style={{ padding: '8px 16px', borderRadius: '20px', background: isUserFavorited ? '#FEF2F2' : 'var(--background)', color: isUserFavorited ? '#EF4444' : 'var(--text)', border: `1.5px solid ${isUserFavorited ? '#FCA5A5' : 'var(--glass-border)'}`, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                                            <button onClick={handleToggleFavorite} title={isUserFavorited ? "관심 목록에서 제거" : "관심 목록에 추가"} style={{ padding: '8px 16px', borderRadius: '20px', background: isUserFavorited ? '#FEF2F2' : 'var(--background)', color: isUserFavorited ? '#EF4444' : 'var(--text)', border: `1.5px solid ${isUserFavorited ? '#FCA5A5' : 'var(--glass-border)'}`, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
                                                 <Heart size={16} fill={isUserFavorited ? "#EF4444" : "transparent"} /> {isUserFavorited ? '관심 해제' : '관심 표현'}
                                             </button>
-                                            <button onClick={() => onStartChat?.(user)} style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                                            <button onClick={() => onStartChat?.(user)} title="1:1 채팅 시작하기" style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
                                                 <MessageCircle size={16} /> 대화하기
                                             </button>
-                                            <button onClick={() => setShowGiftModal(true)} style={{ padding: '8px 16px', borderRadius: '20px', background: 'linear-gradient(135deg, #A855F7, #EC4899)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(236, 72, 153, 0.2)', transition: 'all 0.2s' }}>
+                                            <button onClick={() => setShowGiftModal(true)} title="크리스탈 선물 보내기" style={{ padding: '8px 16px', borderRadius: '20px', background: 'linear-gradient(135deg, #A855F7, #EC4899)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(236, 72, 153, 0.2)', transition: 'all 0.2s' }}>
                                                 <Gem size={16} fill="white" /> 선물하기
                                             </button>
                                         </div>
@@ -378,6 +377,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
+                                    title={`${LABELS[tab]} 탭 보기`}
                                     style={{
                                         padding: '14px 0', background: 'none', border: 'none',
                                         borderBottom: activeTab === tab ? '3px solid var(--primary)' : '3px solid transparent',
@@ -487,7 +487,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                                         <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🔮</div>
                                         <h3 style={{ marginBottom: '12px', fontWeight: 800 }}>지능형 매칭 분석</h3>
                                         <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>OpenAI GPT-4o가 성격 데이터를 정밀 분석하여<br />관계 조언과 성찰 포인트를 제공합니다.</p>
-                                        <button onClick={handleGenerateAIReport} className="primary" style={{ padding: '16px 40px', fontSize: '1.1rem' }}>분석 리포트 생성 (AI)</button>
+                                        <button onClick={handleGenerateAIReport} title="OpenAI 기반 AI 심리 분석 리포트 생성" className="primary" style={{ padding: '16px 40px', fontSize: '1.1rem' }}>분석 리포트 생성 (AI)</button>
                                     </div>
                                 ) : isGenerating ? (
                                     <div style={{ textAlign: 'center', padding: '80px' }}>
@@ -561,10 +561,10 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
                 {/* Sticky Footer for Actions */}
                 {!effectiveIsMyProfile && (
                     <div style={{ padding: '25px 40px', borderTop: '1px solid var(--glass-border)', background: 'var(--surface)', position: 'sticky', bottom: 0, display: 'flex', gap: '20px', zIndex: 100 }}>
-                        <button onClick={() => { onStartChat(user); onClose(); }} className="primary" style={{ flex: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 800 }}>
+                        <button onClick={() => { onStartChat(user); onClose(); }} title="1:1 채팅 시작하기" className="primary" style={{ flex: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 800 }}>
                             <MessageCircle size={22} /> 대화하기
                         </button>
-                        <button onClick={handleToggleFavorite} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', fontSize: '1.05rem', fontWeight: 800, background: isUserFavorited ? '#ef4444' : 'var(--surface)', color: isUserFavorited ? 'white' : '#ef4444', border: '2px solid #ef4444', borderRadius: '15px', cursor: 'pointer', transition: 'all 0.3s' }}>
+                        <button onClick={handleToggleFavorite} title={isUserFavorited ? "관심 목록에서 제거" : "관심 목록에 추가"} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', fontSize: '1.05rem', fontWeight: 800, background: isUserFavorited ? '#ef4444' : 'var(--surface)', color: isUserFavorited ? 'white' : '#ef4444', border: '2px solid #ef4444', borderRadius: '15px', cursor: 'pointer', transition: 'all 0.3s' }}>
                             <Heart size={22} fill={isUserFavorited ? 'white' : 'none'} /> {isUserFavorited ? '관심 해제' : '관심 등록'}
                         </button>
                     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
 import { DEEP_QUESTIONS, DEEP_CATEGORIES, TOTAL_DEEP_QUESTIONS } from '../data/deepQuestions';
 import { supabase } from '../supabase/client';

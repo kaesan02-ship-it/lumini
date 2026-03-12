@@ -4,12 +4,14 @@ import {
     Users, TrendingUp, ShieldCheck, UserPlus, 
     Search, Filter, ChevronRight, MoreVertical,
     Activity, Database, LogOut, Settings,
-    BarChart3, RefreshCcw, UserCircle, Tooltip as TooltipIcon,
+    BarChart3, RefreshCcw, UserCircle, 
     Moon, Sun, Bell, LayoutDashboard, UserCheck,
     Gem, Zap, HelpCircle, AlertCircle
 } from 'lucide-react';
 import { supabase } from '../supabase/client';
+import Badge from '../components/Badge';
 import ProfileModal from '../components/ProfileModal';
+import Tooltip from '../components/Tooltip';
 
 const AdminDashboardPage = () => {
     const [members, setMembers] = useState([]);
@@ -34,7 +36,7 @@ const AdminDashboardPage = () => {
         try {
             const { data: membersData, error } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('id, username, mbti_type, bio, created_at')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -175,18 +177,21 @@ const AdminDashboardPage = () => {
                         
                         <div className="h-8 w-px bg-slate-200 mx-1"></div>
                         
-                        <button className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all relative">
-                            <Bell size={22} />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-                        </button>
+                        <Tooltip text="중요한 알림을 확인합니다.">
+                            <button className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all relative">
+                                <Bell size={22} />
+                                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                            </button>
+                        </Tooltip>
                         
-                        <button 
-                            onClick={fetchData}
-                            className={`p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all ${isRefreshing ? 'animate-spin text-primary' : ''}`}
-                            title="데이터 수동 갱신"
-                        >
-                            <RefreshCcw size={22} />
-                        </button>
+                        <Tooltip text="데이터를 최신 상태로 수동 갱신합니다.">
+                            <button 
+                                onClick={fetchData}
+                                className={`p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all ${isRefreshing ? 'animate-spin text-primary' : ''}`}
+                            >
+                                <RefreshCcw size={22} />
+                            </button>
+                        </Tooltip>
                     </div>
                 </header>
 
@@ -232,7 +237,9 @@ const AdminDashboardPage = () => {
                                             <p className="text-slate-400 text-sm font-bold">커뮤니티 내 성향 분포 분석</p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <button className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-100 transition-all border border-slate-100">보고서 내보내기</button>
+                                            <Tooltip text="현재 데이터를 CSV 또는 PDF로 내보냅니다.">
+                                                <button className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-100 transition-all border border-slate-100">보고서 내보내기</button>
+                                            </Tooltip>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-16 gap-3">
@@ -283,14 +290,18 @@ const AdminDashboardPage = () => {
                                         />
                                     </div>
                                     <div className="flex items-center gap-4 w-full xl:w-auto">
-                                        <button className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-8 py-5 bg-white text-slate-600 rounded-[2rem] text-sm font-black border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">
-                                            <Filter size={20} />
-                                            Advanced Filter
-                                        </button>
-                                        <button className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-10 py-5 bg-slate-900 text-white rounded-[2rem] text-sm font-black shadow-xl shadow-slate-200 hover:-translate-y-1 transition-all active:translate-y-0">
-                                            <UserPlus size={20} />
-                                            Invite Member
-                                        </button>
+                                        <Tooltip text="검색 조건을 상세하게 설정합니다.">
+                                            <button className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-8 py-5 bg-white text-slate-600 rounded-[2rem] text-sm font-black border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">
+                                                <Filter size={20} />
+                                                Advanced Filter
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip text="새로운 멤버를 서비스에 초대합니다.">
+                                            <button className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-10 py-5 bg-slate-900 text-white rounded-[2rem] text-sm font-black shadow-xl shadow-slate-200 hover:-translate-y-1 transition-all active:translate-y-0">
+                                                <UserPlus size={20} />
+                                                Invite Member
+                                            </button>
+                                        </Tooltip>
                                     </div>
                                 </div>
 
@@ -335,36 +346,37 @@ const AdminDashboardPage = () => {
                                                                     {m.mbti}
                                                                 </span>
                                                                 {m.deep_soul ? (
-                                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 scale-90 origin-left" title="Deep Soul Recorded">
-                                                                        <Gem size={12} className="fill-amber-500" />
-                                                                        <span className="text-[10px] font-black uppercase">Deep Soul</span>
-                                                                    </div>
+                                                                    <Tooltip text="Deep Soul Recorded" position="right">
+                                                                        <Badge variant="warning" size="sm" icon={Gem} className="opacity-90">
+                                                                            Deep Soul
+                                                                        </Badge>
+                                                                    </Tooltip>
                                                                 ) : (
-                                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-xl border border-slate-100 scale-90 origin-left opacity-50">
-                                                                        <HelpCircle size={12} />
-                                                                        <span className="text-[10px] font-black uppercase">No Data</span>
-                                                                    </div>
+                                                                    <Badge variant="default" size="sm" icon={HelpCircle} className="opacity-40">
+                                                                        No Data
+                                                                    </Badge>
                                                                 )}
                                                             </div>
                                                         </td>
                                                         <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-2 font-black text-[11px] uppercase tracking-wider text-slate-400">
-                                                                <div className={`w-2.5 h-2.5 rounded-full ${m.is_admin ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-                                                                {m.is_admin ? (
-                                                                    <span className="text-indigo-600">Admin</span>
-                                                                ) : (
-                                                                    <span>User</span>
-                                                                )}
-                                                            </div>
+                                                            <Badge 
+                                                                variant={m.is_admin ? 'indigo' : 'success'} 
+                                                                size="sm" 
+                                                                pulse={m.is_admin}
+                                                            >
+                                                                {m.is_admin ? 'Admin' : 'User'}
+                                                            </Badge>
                                                         </td>
                                                         <td className="px-10 py-6">
                                                             <div className="flex items-center justify-end gap-3">
-                                                                <button 
-                                                                    onClick={() => setSelectedMember(m)}
-                                                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-[1.25rem] text-[11px] font-black uppercase tracking-widest hover:bg-primary hover:shadow-lg hover:shadow-primary/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
-                                                                >
-                                                                    View Profile
-                                                                </button>
+                                                                <Tooltip text="멤버의 프로필 정보를 상세히 확인합니다.">
+                                                                    <button 
+                                                                        onClick={() => setSelectedMember(m)}
+                                                                        className="px-6 py-2.5 bg-slate-900 text-white rounded-[1.25rem] text-[11px] font-black uppercase tracking-widest hover:bg-primary hover:shadow-lg hover:shadow-primary/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                                                    >
+                                                                        View Profile
+                                                                    </button>
+                                                                </Tooltip>
                                                             </div>
                                                         </td>
                                                     </tr>

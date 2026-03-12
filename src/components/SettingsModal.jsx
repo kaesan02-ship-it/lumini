@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, User, Settings, LogOut, ChevronRight, RefreshCcw, Moon, Sun, Heart, FileText, Brain, Shield } from 'lucide-react';
 import useThemeStore from '../store/themeStore';
+import Tooltip from './Tooltip';
 import useAuthStore from '../store/authStore';
 import { getSoulType } from '../data/soulTypes';
 
@@ -281,29 +282,31 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
             <Divider />
 
             {/* 다크모드 토글 */}
-            <div onClick={toggleTheme} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <div style={{ color: 'var(--text-muted)' }}>
-                        {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+            <Tooltip text="다크 모드와 라이트 모드를 전환합니다.">
+                <div onClick={toggleTheme} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <div style={{ color: 'var(--text-muted)' }}>
+                            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                        </div>
+                        <span style={{ color: 'var(--text)', fontWeight: 600 }}>
+                            {theme === 'dark' ? '다크 모드' : '라이트 모드'}
+                        </span>
                     </div>
-                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>
-                        {theme === 'dark' ? '다크 모드' : '라이트 모드'}
-                    </span>
+                    <div style={{
+                        width: '50px', height: '26px', borderRadius: '13px',
+                        background: theme === 'dark' ? 'var(--primary)' : '#e2e8f0',
+                        position: 'relative', transition: 'all 0.3s'
+                    }}>
+                        <motion.div
+                            animate={{ x: theme === 'dark' ? 24 : 0 }}
+                            style={{
+                                width: '22px', height: '22px', borderRadius: '50%',
+                                background: 'white', position: 'absolute', top: '2px', left: '2px'
+                            }}
+                        />
+                    </div>
                 </div>
-                <div style={{
-                    width: '50px', height: '26px', borderRadius: '13px',
-                    background: theme === 'dark' ? 'var(--primary)' : '#e2e8f0',
-                    position: 'relative', transition: 'all 0.3s'
-                }}>
-                    <motion.div
-                        animate={{ x: theme === 'dark' ? 24 : 0 }}
-                        style={{
-                            width: '22px', height: '22px', borderRadius: '50%',
-                            background: 'white', position: 'absolute', top: '2px', left: '2px'
-                        }}
-                    />
-                </div>
-            </div>
+            </Tooltip>
 
             <Divider />
 
@@ -339,53 +342,57 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
             <Divider />
 
             {/* 진단 초기화 */}
-            <div
-                onClick={() => {
-                    if (!confirmReset) {
-                        setConfirmReset(true);
-                        setTimeout(() => setConfirmReset(false), 15000);
-                        return;
-                    }
-                    onReset();
-                    setConfirmReset(false);
-                }}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '12px 0', borderRadius: '12px' }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <div style={{ color: '#f59e0b' }}><RefreshCcw size={18} /></div>
-                    <span style={{ color: confirmReset ? '#ef4444' : 'var(--text)', fontWeight: 600 }}>
-                        {confirmReset ? '모든 데이터 삭제 (클릭 시 실행)' : '진단 데이터 초기화'}
-                    </span>
+            <Tooltip text="저장된 모든 진단 데이터를 초기화하고 처음부터 다시 시작합니다.">
+                <div
+                    onClick={() => {
+                        if (!confirmReset) {
+                            setConfirmReset(true);
+                            setTimeout(() => setConfirmReset(false), 15000);
+                            return;
+                        }
+                        onReset();
+                        setConfirmReset(false);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '12px 0', borderRadius: '12px' }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <div style={{ color: '#f59e0b' }}><RefreshCcw size={18} /></div>
+                        <span style={{ color: confirmReset ? '#ef4444' : 'var(--text)', fontWeight: 600 }}>
+                            {confirmReset ? '모든 데이터 삭제 (클릭 시 실행)' : '진단 데이터 초기화'}
+                        </span>
+                    </div>
+                    <ChevronRight size={16} color="var(--text-muted)" />
                 </div>
-                <ChevronRight size={16} color="var(--text-muted)" />
-            </div>
+            </Tooltip>
 
-            <SettingItem
-                icon={<LogOut size={18} color="#ef4444" />}
-                label={confirmLogout ? "정말 로그아웃 할까요?" : "로그아웃"}
-                sublabel={confirmLogout ? "한 번 더 클릭" : ""}
-                isDangerous
-                onClick={async () => {
-                    if (!confirmLogout) {
-                        setConfirmLogout(true);
-                        setTimeout(() => setConfirmLogout(false), 15000);
-                        return;
-                    }
-                    console.log('Logout button clicked');
-                    try {
-                        console.log('Calling signOut...');
-                        await signOut();
-                        console.log('signOut completed. Closing modal...');
-                        onClose();
-                        const baseUrl = import.meta.env.BASE_URL || '/lumini/';
-                        console.log('Redirecting to:', baseUrl);
-                        window.location.href = baseUrl;
-                    } catch (err) {
-                        console.error('Logout failed:', err);
-                        alert('로그아웃 중 오류가 발생했습니다.');
-                    }
-                }}
-            />
+            <Tooltip text="현재 계정에서 안전하게 로그아웃합니다.">
+                <SettingItem
+                    icon={<LogOut size={18} color="#ef4444" />}
+                    label={confirmLogout ? "정말 로그아웃 할까요?" : "로그아웃"}
+                    sublabel={confirmLogout ? "한 번 더 클릭" : ""}
+                    isDangerous
+                    onClick={async () => {
+                        if (!confirmLogout) {
+                            setConfirmLogout(true);
+                            setTimeout(() => setConfirmLogout(false), 15000);
+                            return;
+                        }
+                        console.log('Logout button clicked');
+                        try {
+                            console.log('Calling signOut...');
+                            await signOut();
+                            console.log('signOut completed. Closing modal...');
+                            onClose();
+                            const baseUrl = import.meta.env.BASE_URL || '/lumini/';
+                            console.log('Redirecting to:', baseUrl);
+                            window.location.href = baseUrl;
+                        } catch (err) {
+                            console.error('Logout failed:', err);
+                            alert('로그아웃 중 오류가 발생했습니다.');
+                        }
+                    }}
+                />
+            </Tooltip>
         </div>
     );
 

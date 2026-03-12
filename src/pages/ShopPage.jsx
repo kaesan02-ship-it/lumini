@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Gem, Crown, Star, Zap, Gift, Check, ChevronRight, ArrowLeft, Sparkles, Coffee, Heart, CreditCard, AlertCircle, X } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useAuthStore from '../store/authStore';
+import Tooltip from '../components/Tooltip';
 
 const CHARGE_PACKAGES = [
     { id: 'starter', crystals: 50, price: '₩1,000', bonus: 0, popular: false, label: '스타터' },
@@ -197,16 +198,20 @@ const ShopPage = ({ onBack }) => {
                 }}>
                     <div>
                         <div style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '5px' }}>보유 크리스탈</div>
-                        <div style={{ fontSize: '2.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Gem size={28} />
-                            {crystals.toLocaleString()}
-                        </div>
+                        <Tooltip text="상점 아이템 구매 및 프리미엄 구독에 사용되는 유료 재화입니다.">
+                            <div style={{ fontSize: '2.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px', cursor: 'help' }}>
+                                <Gem size={28} />
+                                {crystals.toLocaleString()}
+                            </div>
+                        </Tooltip>
                     </div>
                     {isPremium && (
-                        <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Crown size={16} />
-                            <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>프리미엄</span>
-                        </div>
+                        <Tooltip text="프리미엄 혜택이 적용 중입니다. 만료일을 확인하려면 클릭하세요.">
+                            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                <Crown size={16} />
+                                <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>프리미엄</span>
+                            </div>
+                        </Tooltip>
                     )}
                 </div>
             </div>
@@ -248,33 +253,34 @@ const ShopPage = ({ onBack }) => {
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                                 {CHARGE_PACKAGES.map(pkg => (
-                                    <motion.div
-                                        key={pkg.id}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => handleCharge(pkg)}
-                                        style={{
-                                            border: pkg.popular ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
-                                            borderRadius: '20px',
-                                            padding: '22px',
-                                            background: pkg.popular ? 'var(--primary-faint)' : 'var(--surface)',
-                                            cursor: 'pointer',
-                                            position: 'relative',
-                                            textAlign: 'center',
-                                        }}
-                                    >
-                                        {pkg.popular && (
-                                            <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: 'white', padding: '3px 14px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800, whiteSpace: 'nowrap' }}>인기</div>
-                                        )}
-                                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>💎</div>
-                                        <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '4px' }}>
-                                            {(pkg.crystals + pkg.bonus).toLocaleString()}
-                                        </div>
-                                        {pkg.bonus > 0 && (
-                                            <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, marginBottom: '8px' }}>+{pkg.bonus} 보너스!</div>
-                                        )}
-                                        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>{pkg.price}</div>
-                                    </motion.div>
+                                    <Tooltip key={pkg.id} text={`${pkg.crystals.toLocaleString()} 크리스탈을 충전합니다.`}>
+                                        <motion.div
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => handleCharge(pkg)}
+                                            style={{
+                                                border: pkg.popular ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
+                                                borderRadius: '20px',
+                                                padding: '22px',
+                                                background: pkg.popular ? 'var(--primary-faint)' : 'var(--surface)',
+                                                cursor: 'pointer',
+                                                position: 'relative',
+                                                textAlign: 'center',
+                                            }}
+                                        >
+                                            {pkg.popular && (
+                                                <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: 'white', padding: '3px 14px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800, whiteSpace: 'nowrap' }}>인기</div>
+                                            )}
+                                            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>💎</div>
+                                            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '4px' }}>
+                                                {(pkg.crystals + pkg.bonus).toLocaleString()}
+                                            </div>
+                                            {pkg.bonus > 0 && (
+                                                <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, marginBottom: '8px' }}>+{pkg.bonus} 보너스!</div>
+                                            )}
+                                            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>{pkg.price}</div>
+                                        </motion.div>
+                                    </Tooltip>
                                 ))}
                             </div>
 
@@ -362,46 +368,52 @@ const ShopPage = ({ onBack }) => {
                             </div>
                             <div style={{ display: 'grid', gap: '14px' }}>
                                 {ITEMS.filter(i => i.category !== 'partner').map(item => (
-                                    <motion.div key={item.id} whileHover={{ scale: 1.01 }} style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        background: 'var(--surface)', borderRadius: '18px', padding: '18px 22px',
-                                        border: '1px solid var(--glass-border)',
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <div style={{ fontSize: '2.2rem' }}>{item.emoji}</div>
-                                            <div>
-                                                <div style={{ fontWeight: 800, fontSize: '1rem' }}>{item.name}</div>
-                                                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '3px' }}>{item.desc}</div>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            {inventory[item.id] > 0 && (
-                                                <button
-                                                    onClick={() => handleUseItem(item)}
-                                                    style={{
-                                                        background: 'white', color: 'var(--primary)',
-                                                        border: '2px solid var(--primary)', borderRadius: '12px', padding: '10px 18px',
-                                                        fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem',
-                                                    }}
-                                                >
-                                                    사용하기 ({inventory[item.id]})
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => handleBuyItem(item)}
-                                                style={{
-                                                    background: crystals >= item.price ? 'var(--primary)' : '#e2e8f0',
-                                                    color: crystals >= item.price ? 'white' : '#94a3b8',
-                                                    border: 'none', borderRadius: '12px', padding: '10px 18px',
-                                                    fontWeight: 800, cursor: crystals >= item.price ? 'pointer' : 'default',
-                                                    display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-                                                    fontSize: '0.9rem',
-                                                }}
-                                            >
-                                                <Gem size={14} /> {item.name.includes('스킨') ? '스킨 구매' : `${item.price}💎`}
-                                            </button>
-                                        </div>
-                                    </motion.div>
+                                        <Tooltip key={item.id} text={`${item.name}: ${item.desc}`}>
+                                            <motion.div whileHover={{ scale: 1.01 }} style={{
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                background: 'var(--surface)', borderRadius: '18px', padding: '18px 22px',
+                                                border: '1px solid var(--glass-border)',
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                    <div style={{ fontSize: '2.2rem' }}>{item.emoji}</div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 800, fontSize: '1rem' }}>{item.name}</div>
+                                                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '3px' }}>{item.desc}</div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    {inventory[item.id] > 0 && (
+                                                        <Tooltip text="인벤토리에 보유 중인 아이템을 사용합니다.">
+                                                            <button
+                                                                onClick={() => handleUseItem(item)}
+                                                                style={{
+                                                                    background: 'white', color: 'var(--primary)',
+                                                                    border: '2px solid var(--primary)', borderRadius: '12px', padding: '10px 18px',
+                                                                    fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem',
+                                                                }}
+                                                            >
+                                                                사용하기 ({inventory[item.id]})
+                                                            </button>
+                                                        </Tooltip>
+                                                    )}
+                                                    <Tooltip text={crystals >= item.price ? "크리스탈로 아이템을 구매합니다." : "크리스탈이 부족합니다."}>
+                                                        <button
+                                                            onClick={() => handleBuyItem(item)}
+                                                            style={{
+                                                                background: crystals >= item.price ? 'var(--primary)' : '#e2e8f0',
+                                                                color: crystals >= item.price ? 'white' : '#94a3b8',
+                                                                border: 'none', borderRadius: '12px', padding: '10px 18px',
+                                                                fontWeight: 800, cursor: crystals >= item.price ? 'pointer' : 'default',
+                                                                display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+                                                                fontSize: '0.9rem',
+                                                            }}
+                                                        >
+                                                            <Gem size={14} /> {item.name.includes('스킨') ? '스킨 구매' : `${item.price}💎`}
+                                                        </button>
+                                                    </Tooltip>
+                                                </div>
+                                            </motion.div>
+                                        </Tooltip>
                                 ))}
                             </div>
                         </motion.div>

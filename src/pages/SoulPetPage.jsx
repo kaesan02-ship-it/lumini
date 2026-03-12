@@ -303,9 +303,11 @@ const SoulPetPage = ({ onBack, nearbyUsers }) => {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px 5%', marginBottom: '4px' }}>
                 {onBack && (
-                    <button onClick={onBack} style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <ArrowLeft size={20} />
-                    </button>
+                    <Tooltip text="이전 화면으로 돌아갑니다.">
+                        <button onClick={onBack} style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <ArrowLeft size={20} />
+                        </button>
+                    </Tooltip>
                 )}
                 <div style={{ flex: 1 }}>
                     {editingName ? (
@@ -319,10 +321,12 @@ const SoulPetPage = ({ onBack, nearbyUsers }) => {
                     ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <h1 style={{ fontSize: '1.3rem', fontWeight: 900, margin: 0 }}>🦦 {petData.name}</h1>
-                            <button onClick={() => { setNameInput(petData.name); setEditingName(true); }}
-                                style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '4px 8px', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-                                <Edit2 size={13} />
-                            </button>
+                            <Tooltip text="루미의 이름을 수정합니다.">
+                                <button onClick={() => { setNameInput(petData.name); setEditingName(true); }}
+                                    style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '4px 8px', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                                    <Edit2 size={13} />
+                                </button>
+                            </Tooltip>
                         </div>
                     )}
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>크리스탈로 꾸미고 키워보세요</p>
@@ -462,16 +466,20 @@ const SoulPetPage = ({ onBack, nearbyUsers }) => {
                                                 <div style={{ fontSize: '2rem', marginBottom: '6px' }}>{item.icon}</div>
                                                 <div style={{ fontSize: '0.7rem', fontWeight: 800, marginBottom: '5px', color: 'var(--text)' }}>{item.name}</div>
                                                 {owned ? (
-                                                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: equipped ? '#8B5CF6' : '#10B981', background: equipped ? '#8B5CF620' : '#10B98118', padding: '2px 7px', borderRadius: '100px' }}>
-                                                        {equipped ? '✓ 장착 중' : '장착하기'}
-                                                    </div>
+                                                    <Tooltip text={equipped ? "이미 장착 중인 아이템입니다." : "이 아이템을 장착합니다."}>
+                                                        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: equipped ? '#8B5CF6' : '#10B981', background: equipped ? '#8B5CF620' : '#10B98118', padding: '2px 7px', borderRadius: '100px' }}>
+                                                            {equipped ? '✓ 장착 중' : '장착하기'}
+                                                        </div>
+                                                    </Tooltip>
                                                 ) : (
-                                                    <motion.button
-                                                        whileTap={{ scale: 0.95 }}
-                                                        onClick={e => { e.stopPropagation(); handleBuy(item); }}
-                                                        style={{ fontSize: '0.7rem', fontWeight: 800, color: 'white', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', padding: '3px 10px', borderRadius: '100px', border: 'none', cursor: 'pointer' }}>
-                                                        {item.price}💎 구매
-                                                    </motion.button>
+                                                    <Tooltip text={`${item.price} 크리스탈로 구매합니다.`}>
+                                                        <motion.button
+                                                            whileTap={{ scale: 0.95 }}
+                                                            onClick={e => { e.stopPropagation(); handleBuy(item); }}
+                                                            style={{ fontSize: '0.7rem', fontWeight: 800, color: 'white', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', padding: '3px 10px', borderRadius: '100px', border: 'none', cursor: 'pointer' }}>
+                                                            {item.price}💎 구매
+                                                        </motion.button>
+                                                    </Tooltip>
                                                 )}
                                             </motion.div>
                                         );

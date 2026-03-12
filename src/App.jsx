@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Settings, Home, ClipboardList, Users, Heart, Brain, ShoppingBag, Target, Gem, BookOpen, ShieldCheck } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import ShopPage from './pages/ShopPage';
@@ -41,11 +41,11 @@ import AppleGamePage from './pages/AppleGamePage';
 
 // Supabase
 import { supabase } from './supabase/client';
-import { upsertProfile } from './supabase/queries';
+// import { upsertProfile } from './supabase/queries'; // Unused
 
 // Stores
 import useAuthStore from './store/authStore';
-import useThemeStore from './store/themeStore';
+// import useThemeStore from './store/themeStore'; // Unused
 import useUserStore from './store/userStore';
 
 // Components
@@ -62,9 +62,9 @@ import useFavorites from './hooks/useFavorites';
 function App() {
   const { user, session, setSession, loading: authLoading, isAdmin } = useAuthStore();
   const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
-  const { crystals, dailyCheckinBonus } = useCrystalStore();
+  const { crystals } = useCrystalStore();
 
-  const [step, setStep] = useState('auth');
+  const [step, setStep] = useState('welcome');
   const [showAdmin, setShowAdmin] = useState(() => sessionStorage.getItem('lumini_admin_open') === 'true');
   const [adminAuthenticated, setAdminAuthenticated] = useState(() => useAuthStore.getState().isAdmin);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -178,7 +178,7 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [nearbyUsers, setNearbyUsers] = useState([]);
-  const [chatMessages, setChatMessages] = useState([]); // For mock 1:1 chat if needed
+  // const [chatMessages, setChatMessages] = useState([]); // Unused // For mock 1:1 chat if needed
   const [chatInput, setChatInput] = useState('');
 
   const fetchNearbyUsers = useCallback(async () => {
@@ -312,13 +312,9 @@ function App() {
     setShowSettings(false);
   }, []);
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages(prev => [...prev, { sender: userName, text: chatInput }]);
-    setChatInput('');
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, { sender: '지후', text: '반가워요! 어떤 분야를 가장 좋아하시나요?' }]);
-    }, 1500);
+
+  const handleAuthSuccess = () => {
+    setStep('dashboard');
   };
 
   // Nearby users are now fetched in the initializeApp effect above

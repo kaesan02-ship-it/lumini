@@ -11,8 +11,21 @@ import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
 import { getSoulType } from '../data/soulTypes';
 import useCrystalStore from '../store/crystalStore';
 import useUserStore from '../store/userStore';
+import useAuthStore from '../store/authStore';
 import LumiMascot from '../components/LumiMascot';
 import Tooltip from '../components/Tooltip';
+
+// 문자열 ID를 숫자로 변환하는 헬퍼 함수
+const getStringSeed = (str) => {
+    if (!str) return 0;
+    if (typeof str === 'number') return str;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+};
 
 const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNavigate, userName }) => {
     const [activeTab, setActiveTab] = useState('all');
@@ -21,12 +34,22 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
     const streak = parseInt(localStorage.getItem('lumini_streak') || '0');
     const hasDeepSoul = !!(profile?.deep_soul || localStorage.getItem('lumini_deep_soul'));
     const isBoosted = isBoostActive();
+    const user = profile || {};
+    const seed = getStringSeed(user?.id);
     // 내 지역 (localStorage 우선 → mock default)
     const myDistrict = localStorage.getItem('lumini_user_district') || '서울 마포구';
     const completedChallenges = (() => {
-        const saved = localStorage.getItem('lumini_challenges_done');
-        const today = new Date().toDateString();
-        if (saved) { const p = JSON.parse(saved); return p.date === today ? p.ids.length : 0; }
+        try {
+            const userId = user?.id || 'guest';
+            const saved = localStorage.getItem(`lumini_challenges_done_${userId}`);
+            const today = new Date().toDateString();
+            if (saved) {
+                const p = JSON.parse(saved);
+                return (p && p.date === today && Array.isArray(p.ids)) ? p.ids.length : 0;
+            }
+        } catch (e) {
+            console.error('Failed to parse challenges:', e);
+        }
         return 0;
     })();
 
@@ -77,9 +100,11 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                     boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
                     border: '1.5px solid #f1f5f9'
                 }}>
-                    <div style={{ width: '80px', height: '80px', flexShrink: 0 }}>
-                        <LumiMascot size={80} personalityData={userData} />
-                    </div>
+                    <Tooltip text="루미니의 마스코트 루미가 당신을 반겨줍니다! 🦦">
+                        <div style={{ width: '80px', height: '80px', flexShrink: 0 }}>
+                            <LumiMascot size={80} personalityData={userData} />
+                        </div>
+                    </Tooltip>
                     <div style={{ position: 'relative', flex: 1 }}>
                         <div style={{
                             background: '#f8fafc',
@@ -211,22 +236,24 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                         </div>
                     </div>
                     {userData ? (
-                        <div style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <RadarChart
-                                data={[
-                                    { subject: '사교성', A: userData.E || 0, fullMark: 100 },
-                                    { subject: '창의성', A: Math.round((userData.O || 0) * 0.6 + (userData.E || 0) * 0.4), fullMark: 100 },
-                                    { subject: '공감력', A: Math.round((userData.A || 0) * 0.6 + (100 - (userData.N || 0)) * 0.4), fullMark: 100 },
-                                    { subject: '계획성', A: userData.C || 0, fullMark: 100 },
-                                    { subject: '자기주도', A: Math.round((userData.C || 0) * 0.55 + (userData.H || 50) * 0.45), fullMark: 100 },
-                                    { subject: '유연성', A: userData.O || 0, fullMark: 100 },
-                                    { subject: '따뜻함', A: userData.A || 0, fullMark: 100 },
-                                    { subject: '회복탄력', A: Math.round(100 - (userData.N || 0)), fullMark: 100 },
-                                    { subject: '신뢰도', A: userData.H || 50, fullMark: 100 },
-                                ]}
-                                size={300}
-                            />
-                        </div>
+                        <Tooltip text="AI가 분석한 나의 9가지 소울 성향 지표입니다." position="top">
+                            <div style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <RadarChart
+                                    data={[
+                                        { subject: '사교성', A: userData.E || 0, fullMark: 100 },
+                                        { subject: '창의성', A: Math.round((userData.O || 0) * 0.6 + (userData.E || 0) * 0.4), fullMark: 100 },
+                                        { subject: '공감력', A: Math.round((userData.A || 0) * 0.6 + (100 - (userData.N || 0)) * 0.4), fullMark: 100 },
+                                        { subject: '계획성', A: userData.C || 0, fullMark: 100 },
+                                        { subject: '자기주도', A: Math.round((userData.C || 0) * 0.55 + (userData.H || 50) * 0.45), fullMark: 100 },
+                                        { subject: '유연성', A: userData.O || 0, fullMark: 100 },
+                                        { subject: '따뜻함', A: userData.A || 0, fullMark: 100 },
+                                        { subject: '회복탄력', A: Math.round(100 - (userData.N || 0)), fullMark: 100 },
+                                        { subject: '신뢰도', A: userData.H || 50, fullMark: 100 },
+                                    ]}
+                                    size={300}
+                                />
+                            </div>
+                        </Tooltip>
                     ) : (
                         <ChartSkeleton />
                     )}
@@ -283,13 +310,15 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                             아직 조건에 맞는 추천 리스트가 생성되지 않았습니다.<br/>
                             프로필을 더 자세히 작성하거나 잠시 후 다시 확인해주세요!
                         </div>
-                        <motion.button 
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => window.location.reload()}
-                            style={{ marginTop: '16px', padding: '10px 20px', borderRadius: '100px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
-                        >
-                            로그 새로고침
-                        </motion.button>
+                        <Tooltip text="활동 로그 및 추천 리스트를 최신 상태로 갱신합니다.">
+                            <motion.button 
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => window.location.reload()}
+                                style={{ marginTop: '16px', padding: '10px 20px', borderRadius: '100px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
+                            >
+                                로그 새로고침
+                            </motion.button>
+                        </Tooltip>
                     </div>
                 )}
 
@@ -435,32 +464,36 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                 {/* 소울펫 루미 위젯 + 딥소울 요약 */}
                 <div style={{ marginBottom: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     {/* SoulPet 수달루미 위젯 */}
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => onNavigate?.('soul-pet')}
-                        style={{ padding: '18px', borderRadius: '18px', background: 'linear-gradient(135deg, #F0ABFC20, #E879F920)', border: '1.5px solid #C026D340', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
-                    >
-                        {(() => {
-                            const pet = (() => { try { return JSON.parse(localStorage.getItem('lumini_soul_pet') || '{}'); } catch { return {}; } })();
-                            return (
-                                <>
-                                    <div style={{ fontSize: '2rem' }}>🦦</div>
-                                    <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#A21CAF' }}>{pet.name || '루미'} <span style={{ fontSize: '0.72rem', background: '#C026D318', borderRadius: '100px', padding: '1px 7px' }}>Lv.{pet.level || 1}</span></div>
-                                    <div style={{ fontSize: '0.72rem', color: '#86198F', fontWeight: 600 }}>소울펫 돌보기 →</div>
-                                </>
-                            );
-                        })()}
-                    </motion.div>
+                    <Tooltip text="나의 소울 상태를 함께 나누는 반려동물 루미를 돌봅니다." position="top">
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            onClick={() => onNavigate?.('soul-pet')}
+                            style={{ padding: '18px', borderRadius: '18px', background: 'linear-gradient(135deg, #F0ABFC20, #E879F920)', border: '1.5px solid #C026D340', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
+                        >
+                            {(() => {
+                                const pet = (() => { try { return JSON.parse(localStorage.getItem('lumini_soul_pet') || '{}'); } catch { return {}; } })();
+                                return (
+                                    <>
+                                        <div style={{ fontSize: '2rem' }}>🦦</div>
+                                        <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#A21CAF' }}>{pet.name || '루미'} <span style={{ fontSize: '0.72rem', background: '#C026D318', borderRadius: '100px', padding: '1px 7px' }}>Lv.{pet.level || 1}</span></div>
+                                        <div style={{ fontSize: '0.72rem', color: '#86198F', fontWeight: 600 }}>소울펫 돌보기 →</div>
+                                    </>
+                                );
+                            })()}
+                        </motion.div>
+                    </Tooltip>
                     {/* 딥소울 요약 */}
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => onNavigate?.(hasDeepSoul ? 'deep-soul-result' : 'deep-soul-test')}
-                        style={{ padding: '18px', borderRadius: '18px', background: hasDeepSoul ? 'linear-gradient(135deg, #4F46E510, #7C3AED08)' : 'var(--surface)', border: `1.5px solid ${hasDeepSoul ? '#7C3AED30' : 'var(--glass-border)'}`, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
-                    >
-                        <div style={{ fontSize: '2rem' }}>{hasDeepSoul ? '💎' : '✨'}</div>
-                        <div style={{ fontWeight: 900, fontSize: '0.88rem', color: hasDeepSoul ? '#6366F1' : 'var(--text)' }}>딥 소울</div>
-                        <div style={{ fontSize: '0.72rem', color: hasDeepSoul ? '#8B5CF6' : 'var(--text-muted)', fontWeight: 600 }}>{hasDeepSoul ? '결과 보기 →' : '검사 시작 →'}</div>
-                    </motion.div>
+                    <Tooltip text="가치관 검사(딥 소울)를 통해 더 깊은 인연을 찾아보세요." position="top">
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            onClick={() => onNavigate?.(hasDeepSoul ? 'deep-soul-result' : 'deep-soul-test')}
+                            style={{ padding: '18px', borderRadius: '18px', background: hasDeepSoul ? 'linear-gradient(135deg, #4F46E510, #7C3AED08)' : 'var(--surface)', border: `1.5px solid ${hasDeepSoul ? '#7C3AED30' : 'var(--glass-border)'}`, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
+                        >
+                            <div style={{ fontSize: '2rem' }}>{hasDeepSoul ? '💎' : '✨'}</div>
+                            <div style={{ fontWeight: 900, fontSize: '0.88rem', color: hasDeepSoul ? '#6366F1' : 'var(--text)' }}>딥 소울</div>
+                            <div style={{ fontSize: '0.72rem', color: hasDeepSoul ? '#8B5CF6' : 'var(--text-muted)', fontWeight: 600 }}>{hasDeepSoul ? '결과 보기 →' : '검사 시작 →'}</div>
+                        </motion.div>
+                    </Tooltip>
                 </div>
 
                 {/* 딥 소울 매칭 예시 카드 */}
@@ -479,46 +512,48 @@ const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNaviga
                         ].map((u) => {
                             const matchUser = nearbyUsers?.find(nu => nu.id === u.userId) || { id: u.userId, name: u.name, mbti: u.mbti, similarity: u.soulScore };
                             return (
-                                <motion.div
-                                    key={u.name}
-                                    className="glass-card"
-                                    whileHover={{ scale: 1.01 }}
-                                    onClick={() => onSelectUser && onSelectUser(matchUser)}
-                                    style={{ padding: '18px 20px', background: 'var(--surface)', border: '1px solid var(--glass-border)', cursor: 'pointer' }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
-                                                {u.emoji}
-                                            </div>
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '2px' }}>
-                                                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>{u.name}</span>
-                                                    <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '100px', fontWeight: 800 }}>{u.mbti}</span>
-                                                    <span style={{ fontSize: '0.68rem', background: '#4F46E510', color: '#6366F1', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>💸 딥 완료</span>
+                                <Tooltip text="딥 소울 검사를 마친 추천 멤버입니다. 가치관이 얼마나 일치하는지 확인해보세요!" position="left">
+                                    <motion.div
+                                        key={u.name}
+                                        className="glass-card"
+                                        whileHover={{ scale: 1.01 }}
+                                        onClick={() => onSelectUser && onSelectUser(matchUser)}
+                                        style={{ padding: '18px 20px', background: 'var(--surface)', border: '1px solid var(--glass-border)', cursor: 'pointer' }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                                                    {u.emoji}
                                                 </div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📍 {u.district}</div>
+                                                <div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '2px' }}>
+                                                        <span style={{ fontWeight: 800, fontSize: '1rem' }}>{u.name}</span>
+                                                        <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '100px', fontWeight: 800 }}>{u.mbti}</span>
+                                                        <span style={{ fontSize: '0.68rem', background: '#4F46E510', color: '#6366F1', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>💸 딥 완료</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📍 {u.district}</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#6366F1' }}>{u.soulScore}%</div>
+                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>가치관 호환도</div>
                                             </div>
                                         </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#6366F1' }}>{u.soulScore}%</div>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>가치관 호환도</div>
+                                        {hasDeepSoul && (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                                {u.cats.map(c => (
+                                                    <div key={c.label} style={{ textAlign: 'center', padding: '6px 4px', borderRadius: '10px', background: 'var(--background)', border: '1px solid var(--glass-border)' }}>
+                                                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px', wordBreak: 'keep-all' }}>{c.label}</div>
+                                                        <div style={{ fontSize: '0.9rem', fontWeight: 900, color: c.score >= 80 ? '#6366F1' : c.score >= 65 ? '#10B981' : '#94A3B8' }}>{c.score}%</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div style={{ marginTop: '10px', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, textAlign: 'right' }}>
+                                            프로필 보기 →
                                         </div>
-                                    </div>
-                                    {hasDeepSoul && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                                            {u.cats.map(c => (
-                                                <div key={c.label} style={{ textAlign: 'center', padding: '6px 4px', borderRadius: '10px', background: 'var(--background)', border: '1px solid var(--glass-border)' }}>
-                                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px', wordBreak: 'keep-all' }}>{c.label}</div>
-                                                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: c.score >= 80 ? '#6366F1' : c.score >= 65 ? '#10B981' : '#94A3B8' }}>{c.score}%</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <div style={{ marginTop: '10px', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, textAlign: 'right' }}>
-                                        프로필 보기 →
-                                    </div>
-                                </motion.div>
+                                    </motion.div>
+                                </Tooltip>
                             );
                         })}
                     </div>

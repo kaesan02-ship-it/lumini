@@ -120,7 +120,7 @@ export const getProfile = async (userId) => {
         return newProfile;
     }
     try {
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        const { data, error } = await supabase.from('profiles').select('id, username, mbti_type, bio, personality_data, deep_soul, created_at').eq('id', userId).single();
         if (error) {
             console.error('Supabase getProfile error:', error);
             // 만약 유저를 찾지 못한 경우(가입 직후 등) 빈 프로필 반환 시도 또는 에러 전파
@@ -201,7 +201,7 @@ export const getNearbyProfiles = async (limit = 10) => {
         // pet_data 등 누락 가능성 있는 필드를 제외한 안전한 컬럼만 조회하거나, 에러 시 빈 배열 반환
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, username, age, mbti_type, gender, bio, user_character, created_at')
+            .select('id, username, mbti_type, bio, created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
             
@@ -232,7 +232,7 @@ export const toggleConnection = async (reqId, targetId, sim) => {
 
 export const getConnections = async (userId) => {
     if (USE_MOCK_DATA) return MOCK_USERS.filter(u => u.id !== 'mock-user-001').map(p => ({ profiles: p }));
-    const { data, error } = await supabase.from('connections').select('*, profiles!connections_target_id_fkey(*)').eq('requester_id', userId).order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('connections').select('*, profiles!connections_target_id_fkey(id, username, mbti_type, bio, created_at)').eq('requester_id', userId).order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
 };
@@ -266,7 +266,7 @@ export const getPosts = async (category = null) => {
         if (category) filtered = filtered.filter(p => p.category === category);
         return filtered;
     }
-    let query = supabase.from('posts').select('*, author:profiles(*)').order('created_at', { ascending: false });
+    let query = supabase.from('posts').select('*, author:profiles(id, username, mbti_type, bio, created_at)').order('created_at', { ascending: false });
     if (category) query = query.eq('category', category);
     const { data, error } = await query;
     if (error) throw error;
@@ -315,7 +315,7 @@ export const toggleLike = async (postId, userId) => {
 // --- [Comments] ---  **인메모리 CRUD**
 export const getComments = async (postId) => {
     if (USE_MOCK_DATA) return mockComments[postId] || [];
-    const { data, error } = await supabase.from('comments').select('*, author:profiles!comments_author_id_fkey(*)').eq('post_id', postId).order('created_at', { ascending: true });
+    const { data, error } = await supabase.from('comments').select('*, author:profiles!comments_author_id_fkey(id, username, mbti_type, bio, created_at)').eq('post_id', postId).order('created_at', { ascending: true });
     if (error) throw error;
     return data;
 };
@@ -343,7 +343,7 @@ export const getEvents = async (hiveId = null) => {
         if (hiveId) return mockEvents.filter(e => e.hive_id === hiveId);
         return [...mockEvents];
     }
-    let query = supabase.from('events').select('*, hives(name), creator:profiles!events_created_by_fkey(*)').order('event_date', { ascending: true });
+    let query = supabase.from('events').select('*, hives(name), creator:profiles!events_created_by_fkey(id, username, mbti_type, bio, created_at)').order('event_date', { ascending: true });
     if (hiveId) query = query.eq('hive_id', hiveId);
     const { data, error } = await query;
     if (error) throw error;
@@ -352,7 +352,7 @@ export const getEvents = async (hiveId = null) => {
 
 export const getEventDetail = async (eventId) => {
     if (USE_MOCK_DATA) return mockEvents.find(e => e.id === eventId) || mockEvents[0];
-    const { data, error } = await supabase.from('events').select('*, hives(name), creator:profiles!events_created_by_fkey(*)').eq('id', eventId).single();
+    const { data, error } = await supabase.from('events').select('*, hives(name), creator:profiles!events_created_by_fkey(id, username, mbti_type, bio, created_at)').eq('id', eventId).single();
     if (error) throw error;
     return data;
 };
@@ -391,7 +391,7 @@ export const toggleEventParticipation = async (eventId, userId) => {
 
 export const getEventParticipants = async (eventId) => {
     if (USE_MOCK_DATA) return MOCK_USERS.slice(0, 4).map(u => ({ profiles: u }));
-    const { data, error } = await supabase.from('event_participants').select('*, profiles(*)');
+    const { data, error } = await supabase.from('event_participants').select('*, profiles(id, username, mbti_type, bio, created_at)');
     if (error) throw error;
     return data;
 };

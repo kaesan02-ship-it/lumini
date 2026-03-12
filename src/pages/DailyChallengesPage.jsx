@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Target, CheckCircle, Lock, Gift, ChevronRight, Star, Zap, MessageCircle, Users, Edit3 } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useAuthStore from '../store/authStore';
+import Tooltip from '../components/Tooltip';
 
 // 챌린지 데이터 — 매일 업데이트되는 소울 챌린지
 const getDailyChallenges = () => {
@@ -260,28 +261,34 @@ const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
                                     {done ? (
                                         <CheckCircle size={24} color="#10b981" />
                                     ) : c.type === 'quiz' ? (
-                                        <button
-                                            onClick={() => setShowAnswerBox(true)}
-                                            style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
-                                        >
-                                            답하기
-                                        </button>
+                                        <Tooltip text="오늘의 소울 질문에 답변하고 크리스탈을 받으세요.">
+                                            <button
+                                                onClick={() => setShowAnswerBox(true)}
+                                                style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
+                                            >
+                                                답하기
+                                            </button>
+                                        </Tooltip>
                                     ) : c.type === 'auto' ? (
                                         <CheckCircle size={24} color="#10b981" />
                                     ) : c.navigateTo && onNavigate ? (
-                                        <button
-                                            onClick={() => { handleComplete(c.id, c.reward); onNavigate(c.navigateTo); }}
-                                            style={{ background: 'linear-gradient(135deg, var(--primary), #EC4899)', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                        >
-                                            이동하기 →
-                                        </button>
+                                        <Tooltip text="챌린지 수행을 위해 해당 페이지로 이동합니다.">
+                                            <button
+                                                onClick={() => { handleComplete(c.id, c.reward); onNavigate(c.navigateTo); }}
+                                                style={{ background: 'linear-gradient(135deg, var(--primary), #EC4899)', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            >
+                                                이동하기 →
+                                            </button>
+                                        </Tooltip>
                                     ) : (
-                                        <button
-                                            onClick={() => handleComplete(c.id, c.reward)}
-                                            style={{ background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', borderRadius: '10px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
-                                        >
-                                            완료
-                                        </button>
+                                        <Tooltip text="미션을 완료하고 보상을 받습니다.">
+                                            <button
+                                                onClick={() => handleComplete(c.id, c.reward)}
+                                                style={{ background: 'var(--primary-faint)', color: 'var(--primary)', border: 'none', borderRadius: '10px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
+                                            >
+                                                완료
+                                            </button>
+                                        </Tooltip>
                                     )}
                                 </div>
                             </motion.div>

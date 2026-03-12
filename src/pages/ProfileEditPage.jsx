@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Shield, Save, Tag, Sparkles } from 'lucide-react';
 import InterestTagsSelector from '../components/InterestTagsSelector';
+import Tooltip from '../components/Tooltip';
 
 // 서울 주요 구청 목록
 const SEOUL_GU = ['강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', '서초구', '성동구', '성북구', '송파구', '양천구', '영등포구', '용산구', '은평구', '종로구', '중구', '중랑구'];
@@ -59,26 +60,30 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, profileAvatar,
                                     alt="Profile"
                                     style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--surface)', boxShadow: '0 10px 30px var(--primary-glow)', background: '#f8fafc' }}
                                 />
-                                <button style={{
-                                    position: 'absolute', bottom: '0px', right: '0px',
-                                    background: 'var(--surface)', color: 'var(--text-muted)',
-                                    padding: '12px', borderRadius: '50%', border: '1px solid var(--glass-border)',
-                                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                    <Camera size={20} />
-                                </button>
+                                <Tooltip text="프로필 사진을 변경합니다.">
+                                    <button style={{
+                                        position: 'absolute', bottom: '0px', right: '0px',
+                                        background: 'var(--surface)', color: 'var(--text-muted)',
+                                        padding: '12px', borderRadius: '50%', border: '1px solid var(--glass-border)',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <Camera size={20} />
+                                    </button>
+                                </Tooltip>
                             </div>
-                            <button
-                                onClick={onBack}
-                                style={{
-                                    marginTop: '25px', padding: '10px 24px', borderRadius: '20px',
-                                    background: 'linear-gradient(135deg, #6366F1, #F43F5E)', color: 'white', border: 'none',
-                                    fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                                    boxShadow: '0 8px 20px rgba(99, 102, 241, 0.3)'
-                                }}
-                            >
-                                <Sparkles size={18} /> 프로필에서 AI 아바타 생성하기
-                            </button>
+                            <Tooltip text="AI를 사용하여 나만의 특별한 아바타를 생성합니다.">
+                                <button
+                                    onClick={onBack}
+                                    style={{
+                                        marginTop: '25px', padding: '10px 24px', borderRadius: '20px',
+                                        background: 'linear-gradient(135deg, #6366F1, #F43F5E)', color: 'white', border: 'none',
+                                        fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                        boxShadow: '0 8px 20px rgba(99, 102, 241, 0.3)'
+                                    }}
+                                >
+                                    <Sparkles size={18} /> 프로필에서 AI 아바타 생성하기
+                                </button>
+                            </Tooltip>
                         </div>
 
                         <div style={{ display: 'grid', gap: '25px' }}>
@@ -109,7 +114,7 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, profileAvatar,
 
                             {/* 지역 설정 */}
                             <div>
-                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <label style={{ marginBottom: '10px', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     📍 내 동네 설정 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>(구 단위까지 설정하면 동네 친구를 만날 수 있어요)</span>
                                 </label>
                                 <select
@@ -247,13 +252,15 @@ const ProfileEditPage = ({ userData, userName, mbtiType, profile, profileAvatar,
                 )}
 
                 <div style={{ marginTop: '40px', pt: '20px', borderTop: '1px solid var(--glass-border)', display: 'flex', gap: '15px' }}>
-                    <button
-                        onClick={handleSave}
-                        className="primary"
-                        style={{ flex: 1, padding: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                    >
-                        <Save size={20} /> 프로필 저장하기
-                    </button>
+                    <Tooltip text="변경된 프로필 정보를 저장합니다.">
+                        <button
+                            onClick={handleSave}
+                            className="primary"
+                            style={{ flex: 1, padding: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                        >
+                            <Save size={20} /> 프로필 저장하기
+                        </button>
+                    </Tooltip>
                 </div>
             </div>
         </div >

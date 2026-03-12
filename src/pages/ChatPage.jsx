@@ -4,6 +4,7 @@ import useAuthStore from '../store/authStore';
 import { useChat } from '../hooks/useChat';
 import { getIceBreakerQuestions } from '../lib/openaiClient';
 import { Sparkles, ArrowLeft, Phone, Video, MoreVertical, Send, Smile, RefreshCw } from 'lucide-react';
+import Tooltip from '../components/Tooltip';
 
 const CONVERSATION_PROMPTS = [
     { icon: '☕', text: '커피 한잔하며 대화나눌까요?' },
@@ -129,54 +130,60 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        style={{
-                            background: '#f8fafc',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '10px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Phone size={20} color="#4a5568" />
-                    </motion.button>
-                    <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        style={{
-                            background: '#f8fafc',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '10px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Video size={20} color="#4a5568" />
-                    </motion.button>
-                    <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        style={{
-                            background: '#f8fafc',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '10px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <MoreVertical size={20} color="#4a5568" />
-                    </motion.button>
+                    <Tooltip text="음성 통화를 시작합니다 (준비 중)">
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            style={{
+                                background: '#f8fafc',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '10px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Phone size={20} color="#4a5568" />
+                        </motion.button>
+                    </Tooltip>
+                    <Tooltip text="영상 통화를 시작합니다 (준비 중)">
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            style={{
+                                background: '#f8fafc',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '10px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Video size={20} color="#4a5568" />
+                        </motion.button>
+                    </Tooltip>
+                    <Tooltip text="더 보기">
+                        <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            style={{
+                                background: '#f8fafc',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '10px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <MoreVertical size={20} color="#4a5568" />
+                        </motion.button>
+                    </Tooltip>
                 </div>
             </div>
 
@@ -215,26 +222,28 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                     >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
                             <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>💡 대화를 시작해보세요</p>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={handleGetAiIcebreaker}
-                                style={{
-                                    background: 'linear-gradient(135deg, #FFD70030, #FFA50030)',
-                                    border: '1px solid #FFD700',
-                                    padding: '3px 10px',
-                                    borderRadius: '100px',
-                                    fontSize: '0.7rem',
-                                    color: '#B8860B',
-                                    fontWeight: 800,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <Sparkles size={11} /> AI 추천 질문
-                            </motion.button>
+                            <Tooltip text="AI가 두 분의 성향을 분석하여 최적의 대화 주제를 추천해줍니다.">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleGetAiIcebreaker}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #FFD70030, #FFA50030)',
+                                        border: '1px solid #FFD700',
+                                        padding: '3px 10px',
+                                        borderRadius: '100px',
+                                        fontSize: '0.7rem',
+                                        color: '#B8860B',
+                                        fontWeight: 800,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <Sparkles size={11} /> AI 추천 질문
+                                </motion.button>
+                            </Tooltip>
                         </div>
 
                         {isLoadingAi ? (
@@ -307,22 +316,24 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                 alignItems: 'center',
                 paddingBottom: 'max(10px, env(safe-area-inset-bottom))'
             }}>
-                <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    style={{
-                        background: '#f8fafc',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '10px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                >
-                    <Smile size={22} color="#4a5568" />
-                </motion.button>
+                <Tooltip text="이모지 선택">
+                    <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        style={{
+                            background: '#f8fafc',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '10px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <Smile size={22} color="#4a5568" />
+                    </motion.button>
+                </Tooltip>
 
                 <input
                     type="text"
@@ -343,29 +354,31 @@ const ChatPage = ({ chatUser, onBack, userName }) => {
                     onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                 />
 
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleSend}
-                    disabled={!inputText.trim()}
-                    style={{
-                        background: inputText.trim() ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#e2e8f0',
-                        border: 'none',
-                        cursor: inputText.trim() ? 'pointer' : 'not-allowed',
-                        padding: '12px 20px',
-                        borderRadius: '25px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.95rem'
-                    }}
-                >
-                    <Send size={18} />
-                    전송
-                </motion.button>
+                <Tooltip text={inputText.trim() ? "작성한 메시지를 전송합니다." : "메시지를 입력해주세요."}>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleSend}
+                        disabled={!inputText.trim()}
+                        style={{
+                            background: inputText.trim() ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#e2e8f0',
+                            border: 'none',
+                            cursor: inputText.trim() ? 'pointer' : 'not-allowed',
+                            padding: '12px 20px',
+                            borderRadius: '25px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '0.95rem'
+                        }}
+                    >
+                        <Send size={18} />
+                        전송
+                    </motion.button>
+                </Tooltip>
             </div>
         </div>
     );
