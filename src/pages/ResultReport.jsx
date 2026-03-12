@@ -6,6 +6,7 @@ import PersonalityExplanation from '../components/PersonalityExplanation';
 import { getSoulType, getAllSoulTypes } from '../data/soulTypes';
 import { getDeepSoulType, buildCatScores } from '../data/deepSoulTypes';
 import { DEEP_QUESTIONS } from '../data/deepQuestions';
+import useUserStore from '../store/userStore';
 import { ArrowRight, Share2, Download, Heart, Users, Sparkles, Star, Zap, Shield, Brain, Flame } from 'lucide-react';
 
 // 9개 지표 계산 함수
@@ -285,8 +286,11 @@ const DS_CAT_QUICK = [
 ];
 
 const DeepSoulSection = ({ onNavigate }) => {
-    const raw = localStorage.getItem('lumini_deep_soul');
-    const deepData = raw ? JSON.parse(raw) : null;
+    const { profile } = useUserStore();
+    const deepData = profile?.deep_soul || (() => {
+        const raw = localStorage.getItem('lumini_deep_soul');
+        return raw ? JSON.parse(raw) : null;
+    })();
 
     const catStats = React.useMemo(() => {
         if (!deepData) return [];

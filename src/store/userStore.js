@@ -29,6 +29,14 @@ const useUserStore = create(
                             mbtiType: profile.mbti_type || get().mbtiType,
                             userData: profile.personality_data || get().userData
                         });
+
+                        // DeepSoul 및 기타 중요 데이터 localStorage 동기화 (레거시 컴포넌트 호환용)
+                        if (profile.deep_soul) {
+                            localStorage.setItem('lumini_deep_soul', JSON.stringify(profile.deep_soul));
+                        }
+                        if (profile.username) {
+                            localStorage.setItem('lumini_user_name', profile.username);
+                        }
                     }
                 } catch (err) {
                     console.error('Failed to fetch profile:', err);
@@ -47,6 +55,12 @@ const useUserStore = create(
                         mbtiType: updated.mbti_type || get().mbtiType,
                         userData: updated.personality_data || get().userData
                     });
+
+                    // localStorage 동기화
+                    if (updated.deep_soul) {
+                        localStorage.setItem('lumini_deep_soul', JSON.stringify(updated.deep_soul));
+                    }
+                    
                     return updated;
                 } catch (err) {
                     console.error('Failed to update profile:', err);

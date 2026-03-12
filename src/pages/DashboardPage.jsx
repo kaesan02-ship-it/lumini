@@ -10,14 +10,16 @@ import { sortUsersByMatchingScore } from '../utils/matchingAlgorithm';
 import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
 import { getSoulType } from '../data/soulTypes';
 import useCrystalStore from '../store/crystalStore';
+import useUserStore from '../store/userStore';
 import LumiMascot from '../components/LumiMascot';
 import Tooltip from '../components/Tooltip';
 
 const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNavigate, userName }) => {
     const [activeTab, setActiveTab] = useState('all');
     const { crystals, isPremium, isBoostActive } = useCrystalStore();
+    const { profile } = useUserStore();
     const streak = parseInt(localStorage.getItem('lumini_streak') || '0');
-    const hasDeepSoul = !!localStorage.getItem('lumini_deep_soul');
+    const hasDeepSoul = !!(profile?.deep_soul || localStorage.getItem('lumini_deep_soul'));
     const isBoosted = isBoostActive();
     // 내 지역 (localStorage 우선 → mock default)
     const myDistrict = localStorage.getItem('lumini_user_district') || '서울 마포구';

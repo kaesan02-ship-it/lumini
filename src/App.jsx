@@ -590,8 +590,17 @@ function App() {
           {step === 'deep-soul-test' && (
             <DeepSoulTestPage
               onBack={() => setStep('dashboard')}
-              onComplete={(answers) => {
+              onComplete={async (answers) => {
                 localStorage.setItem('lumini_deep_soul', JSON.stringify(answers));
+                // Supabase DB 동기화
+                if (user) {
+                  try {
+                    await updateProfile(user.id, { deep_soul: answers });
+                    await fetchProfile(user.id);
+                  } catch (err) {
+                    console.error("DeepSoul sync failed:", err);
+                  }
+                }
                 setStep('dashboard');
               }}
             />

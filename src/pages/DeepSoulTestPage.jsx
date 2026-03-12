@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
 import { DEEP_QUESTIONS, DEEP_CATEGORIES, TOTAL_DEEP_QUESTIONS } from '../data/deepQuestions';
+import { supabase } from '../supabase/client';
 
 const SCALE_LABELS = ['전혀 그렇지 않음', '그렇지 않음', '보통', '그런 편', '매우 그러함'];
 
@@ -38,9 +39,26 @@ const DeepSoulTestPage = ({ onComplete, onBack }) => {
         }
     };
 
-    const handleComplete = () => {
+    const handleComplete = async () => {
         // localStorage에 저장
         localStorage.setItem('lumini_deep_soul', JSON.stringify(answers));
+        
+        // Supabase에 동기화 시도
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ deep_soul: answers })
+                    .eq('id', user.id);
+                
+                if (error) throw error;
+                console.log('Deep Soul synced to Supabase');
+            }
+        } catch (err) {
+            console.error('Deep Soul sync error:', err);
+        }
+
         onComplete?.(answers);
     };
 

@@ -141,9 +141,18 @@ export const updateProfile = async (userId, updates) => {
         MOCK_PROFILE_STORE[userId] = updated;
         return updated;
     }
-    const { data, error } = await supabase.from('profiles').upsert({ id: userId, ...updates }, { onConflict: 'id' }).select().single();
-    if (error) throw error;
-    return data;
+    try {
+        const { data, error } = await supabase.from('profiles').upsert({ id: userId, ...updates }, { onConflict: 'id' }).select().single();
+        if (error) {
+            console.error('updateProfile error:', error);
+            // 특정 컬럼 에러일 경우 해당 필드 제외 후 재시도 로직 등을 고려할 수 있으나, 우선 로깅 후 에러 던짐
+            throw error;
+        }
+        return data;
+    } catch (err) {
+        console.error('updateProfile exception:', err);
+        throw err;
+    }
 };
 
 export const upsertProfile = async (profileData) => {
@@ -164,27 +173,41 @@ export const upsertProfile = async (profileData) => {
         return updatedProfile;
     }
     
-    const { data, error } = await supabase
-        .from('profiles')
-        .upsert({
-            ...profileData,
-            updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .upsert({
+                ...profileData,
+                updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
 
-    if (error) throw error;
-    return data;
+        if (error) {
+            console.error('upsertProfile error:', error);
+            throw error;
+        }
+        return data;
+    } catch (err) {
+        console.error('upsertProfile exception:', err);
+        throw err;
+    }
 };
 
 // --- [Social / Connections] ---
 export const getNearbyProfiles = async (limit = 10) => {
     if (USE_MOCK_DATA) return [...MOCK_USERS].reverse().slice(0, limit);
     try {
-        const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(limit);
+        // pet_data 등 누락 가능성 있는 필드를 제외한 안전한 컬럼만 조회하거나, 에러 시 빈 배열 반환
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, username, age, mbti_type, gender, bio, user_character, created_at')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+            
         if (error) {
             console.error('getNearbyProfiles error:', error);
-            return []; // 에러 시 빈 배열 반환하여 크래시 방지
+            return [];
         }
         return data || [];
     } catch (err) {

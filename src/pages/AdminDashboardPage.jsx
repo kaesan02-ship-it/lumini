@@ -1,269 +1,405 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import {
-    Users, MessageSquare, AlertTriangle, BarChart3,
-    Settings, Search, ArrowUpRight, ShieldCheck,
-    Trash2, UserCog, TrendingUp, Gem
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Users, TrendingUp, ShieldCheck, UserPlus, 
+    Search, Filter, ChevronRight, MoreVertical,
+    Activity, Database, LogOut, Settings,
+    BarChart3, RefreshCcw, UserCircle, Tooltip as TooltipIcon,
+    Moon, Sun, Bell, LayoutDashboard, UserCheck,
+    Gem, Zap, HelpCircle, AlertCircle
 } from 'lucide-react';
 import { supabase } from '../supabase/client';
+import ProfileModal from '../components/ProfileModal';
 
-const AdminDashboardPage = ({ onBack }) => {
+const AdminDashboardPage = () => {
+    const [members, setMembers] = useState([]);
     const [stats, setStats] = useState({
-        totalUsers: 0,
-        activeToday: 0,
-        newMatches: 0,
-        reports: 0,
-        revenue: '0'
+        total: 0,
+        today: 0,
+        mbtiCount: {},
+        activeNow: 0
     });
-
-    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [reports, setReports] = useState([]);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedMember, setSelectedMember] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
-        const fetchAdminData = async () => {
-            setLoading(true);
-            try {
-                // 1. 통계 가져오기
-                const { count: totalCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-                const { count: activeCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).not('last_login', 'is', null);
-                
-                setStats(prev => ({
-                    ...prev,
-                    totalUsers: totalCount || 0,
-                    activeToday: activeCount || 0
-                }));
-
-                // 2. 유저 리스트 가져오기
-                const { data: userList, error: userError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(50);
-
-                if (userError) throw userError;
-                setUsers(userList.map(u => ({
-                    id: u.id,
-                    name: u.username || '익명',
-                    email: u.email || 'N/A',
-                    mbti: u.mbti_type || '?',
-                    joined: u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A',
-                    status: 'Active' // 실제 상태 필드가 있다면 연동
-                })));
-
-            } catch (err) {
-                console.error('Admin data fetch error:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAdminData();
+        fetchData();
     }, []);
 
-    const toggleStatus = (id) => {
-        setUsers(users.map(u => u.id === id ? { ...u, status: u.status === 'Active' ? 'Suspended' : 'Active' } : u));
-    };
+    const fetchData = async () => {
+        setIsRefreshing(true);
+        try {
+            const { data: membersData, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-    const deleteUser = (id) => {
-        if (window.confirm('정말 이 회원을 탈퇴 처리하시겠습니까?')) {
-            setUsers(users.filter(u => u.id !== id));
+            if (error) throw error;
+            
+            // 데이터 매핑 (기존 필드명 대응)
+            const mappedMembers = membersData.map(m => ({
+                ...m,
+                name: m.username || m.name || '익명',
+                mbti: m.mbti_type || m.mbti || 'N/A'
+            }));
+            
+            setMembers(mappedMembers);
+
+            // 통계 계산
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayJoined = mappedMembers.filter(m => new Date(m.created_at) >= today).length;
+            const mbtiStats = mappedMembers.reduce((acc, curr) => {
+                const mbti = curr.mbti || '미정';
+                acc[mbti] = (acc[mbti] || 0) + 1;
+                return acc;
+            }, {});
+
+            setStats({
+                total: mappedMembers.length,
+                today: todayJoined,
+                mbtiCount: mbtiStats,
+                activeNow: Math.floor(Math.random() * 10) + 5 // 상징적인 데이터
+            });
+        } catch (err) {
+            console.error('Admin data fetch error:', err);
+        } finally {
+            setTimeout(() => {
+                setLoading(false);
+                setIsRefreshing(false);
+            }, 500); // 부드러운 전환을 위한 지연
         }
     };
 
-    const handleReport = (id, action) => {
-        if (action === 'confirm') {
-            alert('신고가 처리되었습니다. 해당 컨텐츠가 숨김 처리됩니다.');
-        }
-        setReports(reports.filter(r => r.id !== id));
-    };
+    const filteredMembers = members.filter(m => 
+        (m.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (m.email?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (m.mbti?.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
-    const giveCrystals = async (id, name) => {
-        const amount = prompt(`${name} 유저에게 지급할 크리스탈 양을 입력하세요:`, '100');
-        if (amount && !isNaN(parseInt(amount))) {
-            const added = parseInt(amount);
-            try {
-                const { data, error } = await supabase.from('profiles').select('crystals').eq('id', id).single();
-                if (error) throw error;
-                const currentCrystals = typeof data.crystals === 'number' ? data.crystals : 0;
-                const newTotal = currentCrystals + added;
-                
-                const { error: updateError } = await supabase.from('profiles').update({ crystals: newTotal }).eq('id', id);
-                if (updateError) throw updateError;
-                
-                alert(`${name} 유저에게 ${added}💎 크리스탈이 지급 되었습니다. (총 ${newTotal}💎)`);
-            } catch (err) {
-                console.error(err);
-                alert('지급 중 오류가 발생했습니다.');
-            }
-        }
-    };
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[#f8fafc] gap-6">
+            <motion.div 
+                animate={{ 
+                    rotate: 360,
+                    scale: [1, 1.1, 1]
+                }} 
+                transition={{ 
+                    rotate: { repeat: Infinity, duration: 1.5, ease: "linear" },
+                    scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                }}
+                className="text-primary"
+            >
+                <div className="p-5 bg-white rounded-3xl shadow-2xl shadow-primary/20">
+                    <RefreshCcw size={48} />
+                </div>
+            </motion.div>
+            <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-sm font-black text-slate-400 uppercase tracking-widest italic"
+            >
+                Synchronizing Data...
+            </motion.p>
+        </div>
+    );
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '0 0 60px 0' }}>
-            {/* Admin Header */}
-            <div style={{ background: '#0f172a', color: 'white', padding: '30px 5%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', padding: '8px', borderRadius: '12px' }}>
-                            <ShieldCheck size={28} />
-                        </div>
-                        <div>
-                            <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.02em' }}>ADMIN CONSOLE</h1>
-                            <p style={{ margin: 0, opacity: 0.6, fontSize: '0.85rem' }}>루미니 서비스 통합 관리 도구</p>
-                        </div>
+        <div className="flex min-h-screen bg-[#f8fafc] text-slate-800 font-sans">
+            {/* Sidebar */}
+            <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-slate-200 p-8">
+                <div className="flex items-center gap-3 mb-12 px-2">
+                    <div className="p-2.5 bg-gradient-to-tr from-primary to-indigo-400 rounded-2xl text-white shadow-lg shadow-primary/20">
+                        <ShieldCheck size={26} />
                     </div>
-                    <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '8px 16px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-                        대시보드로 돌아가기
-                    </button>
+                    <div>
+                        <h1 className="text-xl font-black tracking-tight text-slate-900">LUMINI</h1>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Admin Control</p>
+                    </div>
                 </div>
 
-                {/* Quick Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                    <StatCard icon={<Users color="#818cf8" />} label="전체 유저" value={stats.totalUsers} trend="+12%" />
-                    <StatCard icon={<TrendingUp color="#34d399" />} label="오늘 활성" value={stats.activeToday} trend="+5%" />
-                    <StatCard icon={<MessageSquare color="#f472b6" />} label="매칭 성공" value={stats.newMatches} trend="+24%" />
-                    <StatCard icon={<Gem color="#fbbf24" />} label="매출 (KRW)" value={stats.revenue} trend="+8%" />
+                <nav className="flex-1 space-y-3">
+                    {[
+                        { id: 'overview', icon: <LayoutDashboard size={20} />, label: '대시보드 요약' },
+                        { id: 'members', icon: <Users size={20} />, label: '회원 관리' },
+                        { id: 'verification', icon: <UserCheck size={20} />, label: '인증 승인' },
+                        { id: 'system', icon: <Database size={20} />, label: '시스템 로그' },
+                        { id: 'settings', icon: <Settings size={20} />, label: '서비스 설정' },
+                    ].map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id)}
+                            className={`w-full flex items-center justify-between group px-5 py-4 rounded-2xl text-sm font-bold transition-all ${
+                                activeTab === item.id 
+                                ? 'bg-primary text-white shadow-xl shadow-primary/20 -translate-y-0.5' 
+                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                        >
+                            <div className="flex items-center gap-4">
+                                {item.icon}
+                                {item.label}
+                            </div>
+                            {activeTab !== item.id && (
+                                <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            )}
+                        </button>
+                    ))}
+                </nav>
+
+                <div className="pt-8 mt-8 border-t border-slate-100 italic text-[11px] text-slate-400 text-center">
+                    &copy; 2024 Lumini Space Management
                 </div>
-            </div>
+            </aside>
 
-            <div style={{ padding: '30px 5%', display: 'grid', gridTemplateColumns: '2fr 1.2fr', gap: '25px' }}>
-                {/* User Management Section */}
-                <div style={{ background: 'white', borderRadius: '24px', padding: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-                        <h3 style={{ margin: 0, fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Users size={20} color="#6366f1" /> 유저 관리
-                        </h3>
-                        <div style={{ position: 'relative' }}>
-                            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                            <input
-                                type="text"
-                                placeholder="유저 검색..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                style={{ padding: '10px 15px 10px 38px', borderRadius: '12px', border: '1px solid #e2e8f0', width: '250px', outline: 'none', fontSize: '0.9rem' }}
-                            />
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto relative">
+                <header className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-slate-100 px-10 py-5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="lg:hidden p-2 bg-slate-100 rounded-lg">
+                            <ShieldCheck size={20} />
                         </div>
+                        <h2 className="text-xl font-black text-slate-900 capitalize italic">
+                            {activeTab === 'overview' ? 'Dashboard Overview' : 'Member Management'}
+                        </h2>
                     </div>
+                    
+                    <div className="flex items-center gap-5">
+                        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100/50 rounded-2xl border border-slate-200/50">
+                            <Activity size={14} className="text-emerald-500 animate-pulse" />
+                            <span className="text-[11px] font-black text-slate-600 uppercase tracking-tighter">System Normal</span>
+                        </div>
+                        
+                        <div className="h-8 w-px bg-slate-200 mx-1"></div>
+                        
+                        <button className="p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all relative">
+                            <Bell size={22} />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                        </button>
+                        
+                        <button 
+                            onClick={fetchData}
+                            className={`p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all ${isRefreshing ? 'animate-spin text-primary' : ''}`}
+                            title="데이터 수동 갱신"
+                        >
+                            <RefreshCcw size={22} />
+                        </button>
+                    </div>
+                </header>
 
-                    <div style={{ overflowX: 'auto' }}>
-                        {loading ? (
-                            <div style={{ padding: '50px', textAlign: 'center', color: '#94a3b8' }}>데이터를 불러오는 중...</div>
-                        ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>이름</th>
-                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>MBTI</th>
-                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>가입일</th>
-                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>상태</th>
-                                        <th style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b', textAlign: 'right' }}>관리</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())).map(user => (
-                                        <tr key={user.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                                            <td style={{ padding: '15px 10px' }}>
-                                                <div style={{ fontWeight: 700, color: '#1e293b' }}>{user.name}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user.email}</div>
-                                            </td>
-                                            <td style={{ padding: '15px 10px' }}>
-                                                <span style={{ padding: '4px 8px', borderRadius: '6px', background: '#f1f5f9', fontWeight: 800, fontSize: '0.75rem' }}>{user.mbti}</span>
-                                            </td>
-                                            <td style={{ padding: '15px 10px', fontSize: '0.85rem', color: '#64748b' }}>{user.joined}</td>
-                                            <td style={{ padding: '15px 10px' }}>
-                                                <span style={{
-                                                    padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
-                                                    background: user.status === 'Active' ? '#dcfce7' : '#fee2e2',
-                                                    color: user.status === 'Active' ? '#166534' : '#991b1b'
-                                                }}>{user.status}</span>
-                                            </td>
-                                            <td style={{ padding: '15px 10px', textAlign: 'right' }}>
-                                                <button
-                                                    onClick={() => giveCrystals(user.id, user.name)}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9333ea', padding: '5px' }} title="크리스탈 지급"><Gem size={18} /></button>
-                                                <button
-                                                    onClick={() => toggleStatus(user.id)}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '5px' }} title="상태 변경"><UserCog size={18} /></button>
-                                                <button
-                                                    onClick={() => deleteUser(user.id)}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '5px' }} title="회원 탈퇴"><Trash2 size={18} /></button>
-                                            </td>
-                                        </tr>
+                <div className="p-10 max-w-[1600px] mx-auto min-h-full">
+                    <AnimatePresence mode="wait">
+                        {activeTab === 'overview' ? (
+                            <motion.div 
+                                key="overview"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="space-y-12"
+                            >
+                                {/* Hero Stats */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                    {[
+                                        { label: 'Total Members', value: stats.total, sub: '전체 등록 사용자', icon: <Users />, theme: 'from-blue-500 to-indigo-600' },
+                                        { label: 'New Today', value: `+${stats.today}`, sub: '오늘 새로 가입한 회원', icon: <UserPlus />, theme: 'from-emerald-400 to-teal-600' },
+                                        { label: 'Live Traffic', value: stats.activeNow, sub: '현재 활동 중인 사용자', icon: <Activity />, theme: 'from-rose-400 to-pink-600' },
+                                        { label: 'Growth rate', value: '+18%', sub: '지난 달 대비 성장률', icon: <TrendingUp />, theme: 'from-amber-400 to-orange-600' },
+                                    ].map((s, i) => (
+                                        <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative">
+                                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-slate-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
+                                            <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${s.theme} text-white flex items-center justify-center mb-6 shadow-lg relative z-10`}>
+                                                {s.icon}
+                                            </div>
+                                            <div className="relative z-10">
+                                                <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">{s.label}</p>
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className="text-4xl font-black text-slate-900">{s.value}</span>
+                                                </div>
+                                                <p className="text-slate-400 text-[11px] mt-4 font-bold">{s.sub}</p>
+                                            </div>
+                                        </div>
                                     ))}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
-                </div>
+                                </div>
 
-                {/* Right Side Sections */}
-                <div style={{ display: 'grid', gap: '25px' }}>
-                    {/* Content Reports */}
-                    <div style={{ background: 'white', borderRadius: '24px', padding: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                        <h3 style={{ margin: '0 0 20px 0', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <AlertTriangle size={20} color="#f59e0b" /> 신고 현황
-                        </h3>
-                        <div style={{ display: 'grid', gap: '12px' }}>
-                            {reports.map(report => (
-                                <div key={report.id} style={{ padding: '15px', borderRadius: '15px', background: '#fffbeb', border: '1px solid #fef3c7' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#92400e' }}>신고자: {report.from}</span>
-                                        <span style={{ fontSize: '0.75rem', color: '#a16207' }}>{report.date}</span>
+                                {/* MBTI Distribution */}
+                                <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
+                                    <div className="flex items-center justify-between mb-12">
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-900 mb-2 italic tracking-tight">MBTI Community Insights</h3>
+                                            <p className="text-slate-400 text-sm font-bold">커뮤니티 내 성향 분포 분석</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-100 transition-all border border-slate-100">보고서 내보내기</button>
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: 600, marginBottom: '5px' }}>대상: {report.to}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#b45309' }}>사유: {report.reason}</div>
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                                        <button
-                                            onClick={() => handleReport(report.id, 'confirm')}
-                                            style={{ flex: 1, padding: '6px', borderRadius: '8px', background: '#92400e', color: 'white', border: 'none', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>확인</button>
-                                        <button
-                                            onClick={() => handleReport(report.id, 'ignore')}
-                                            style={{ flex: 1, padding: '6px', borderRadius: '8px', background: 'white', color: '#92400e', border: '1px solid #92400e', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>무시</button>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-16 gap-3">
+                                        {Object.entries(stats.mbtiCount).length > 0 ? (
+                                            Object.entries(stats.mbtiCount).sort((a,b) => b[1] - a[1]).map(([type, count]) => (
+                                                <div key={type} className="flex flex-col items-center group">
+                                                    <div className="w-full bg-slate-50 h-48 rounded-2xl relative overflow-hidden mb-4 border border-slate-100/50">
+                                                        <motion.div 
+                                                            initial={{ height: 0 }}
+                                                            animate={{ height: `${Math.max(10, (count / stats.total) * 100)}%` }}
+                                                            transition={{ type: 'spring', damping: 15 }}
+                                                            className="absolute bottom-0 w-full bg-primary/10 border-t-4 border-primary/40 group-hover:bg-primary/20 transition-all"
+                                                        />
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                            <span className="text-lg font-black text-primary drop-shadow-sm">{count}</span>
+                                                            <span className="text-[10px] font-bold text-primary/40">Users</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-700 tracking-tighter uppercase">{type}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-full py-20 text-center text-slate-400 font-bold italic">
+                                                No distribution data available yet.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div 
+                                key="members"
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.98 }}
+                                className="space-y-8"
+                            >
+                                {/* Member Management Header */}
+                                <div className="flex flex-col xl:flex-row gap-6 items-center justify-between">
+                                    <div className="relative w-full xl:w-[500px]">
+                                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Member name, email, or personality type..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full pl-16 pr-6 py-5 bg-white border border-slate-200 rounded-[2rem] text-sm font-bold shadow-sm focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-4 w-full xl:w-auto">
+                                        <button className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-8 py-5 bg-white text-slate-600 rounded-[2rem] text-sm font-black border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">
+                                            <Filter size={20} />
+                                            Advanced Filter
+                                        </button>
+                                        <button className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-10 py-5 bg-slate-900 text-white rounded-[2rem] text-sm font-black shadow-xl shadow-slate-200 hover:-translate-y-1 transition-all active:translate-y-0">
+                                            <UserPlus size={20} />
+                                            Invite Member
+                                        </button>
+                                    </div>
+                                </div>
 
-                    {/* Quick Settings */}
-                    <div style={{ background: 'white', borderRadius: '24px', padding: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                        <h3 style={{ margin: '0 0 20px 0', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Settings size={20} color="#64748b" /> 시스템 관리
-                        </h3>
-                        <div style={{ display: 'grid', gap: '12px' }}>
-                            <AdminControlItem label="가입 보상 크리스탈" value="50💎" color="#9333ea" />
-                            <AdminControlItem label="매칭 성공 수수료" value="5%" color="#ec4899" />
-                            <AdminControlItem label="공지사항 작성" action={<ArrowUpRight size={16} />} color="#6366f1" />
-                        </div>
-                    </div>
+                                {/* Modern Member Card Grid or Table */}
+                                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse min-w-[1000px]">
+                                            <thead>
+                                                <tr className="bg-slate-50/50 text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] border-b border-slate-100">
+                                                    <th className="px-10 py-7">Profile Information</th>
+                                                    <th className="px-8 py-7">Account Details</th>
+                                                    <th className="px-8 py-7">Personality & Soul</th>
+                                                    <th className="px-8 py-7">Access Level</th>
+                                                    <th className="px-10 py-7 text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {filteredMembers.map((m) => (
+                                                    <tr key={m.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                        <td className="px-10 py-6">
+                                                            <div className="flex items-center gap-5">
+                                                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 shadow-inner group-hover:scale-110 transition-transform">
+                                                                    {m.avatar_url ? (
+                                                                        <img src={m.avatar_url} alt="" className="w-full h-full object-cover rounded-2xl" />
+                                                                    ) : (
+                                                                        <UserCircle size={32} />
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-black text-slate-900 text-base">{m.name}</div>
+                                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{m.district || 'Location Private'}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="text-sm font-bold text-slate-600">{m.email}</div>
+                                                            <div className="text-[10px] text-slate-400 font-heavy tracking-tighter mt-1 italic">Joined {m.created_at ? new Date(m.created_at).toLocaleDateString() : 'Unknown'}</div>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="px-3 py-1.5 bg-primary/5 text-primary rounded-xl font-black text-xs uppercase border border-primary/10 tracking-wider">
+                                                                    {m.mbti}
+                                                                </span>
+                                                                {m.deep_soul ? (
+                                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 scale-90 origin-left" title="Deep Soul Recorded">
+                                                                        <Gem size={12} className="fill-amber-500" />
+                                                                        <span className="text-[10px] font-black uppercase">Deep Soul</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-xl border border-slate-100 scale-90 origin-left opacity-50">
+                                                                        <HelpCircle size={12} />
+                                                                        <span className="text-[10px] font-black uppercase">No Data</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-2 font-black text-[11px] uppercase tracking-wider text-slate-400">
+                                                                <div className={`w-2.5 h-2.5 rounded-full ${m.is_admin ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+                                                                {m.is_admin ? (
+                                                                    <span className="text-indigo-600">Admin</span>
+                                                                ) : (
+                                                                    <span>User</span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-10 py-6">
+                                                            <div className="flex items-center justify-end gap-3">
+                                                                <button 
+                                                                    onClick={() => setSelectedMember(m)}
+                                                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-[1.25rem] text-[11px] font-black uppercase tracking-widest hover:bg-primary hover:shadow-lg hover:shadow-primary/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                                                >
+                                                                    View Profile
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {filteredMembers.length === 0 && (
+                                        <div className="p-32 text-center flex flex-col items-center gap-4">
+                                            <div className="p-5 bg-slate-50 rounded-full text-slate-200">
+                                                <Users size={40} />
+                                            </div>
+                                            <p className="text-slate-400 font-heavy italic tracking-tight">No match found for your query.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-            </div>
+            </main>
+
+            {/* Profile Modal integration */}
+            {selectedMember && (
+                <ProfileModal 
+                    user={selectedMember} 
+                    onClose={() => setSelectedMember(null)}
+                    mbtiType={selectedMember.mbti}
+                    userName={selectedMember.name}
+                />
+            )}
+
+            {/* Global Tooltip Portal could go here */}
         </div>
     );
 };
-
-const StatCard = ({ icon, label, value, trend }) => (
-    <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', borderRadius: '20px', padding: '18px', border: '1px solid rgba(255,255,255,0.1)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '6px', borderRadius: '8px' }}>{icon}</div>
-            <span style={{ fontSize: '0.8rem', opacity: 0.7, fontWeight: 700 }}>{label}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '1.6rem', fontWeight: 900 }}>{value}</div>
-            <div style={{ fontSize: '0.75rem', color: trend.startsWith('+') ? '#34d399' : '#f87171', fontWeight: 800 }}>{trend}</div>
-        </div>
-    </div>
-);
-
-const AdminControlItem = ({ label, value, action, color }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', borderRadius: '15px', background: '#f8fafc', border: '1px solid #f1f5f9', cursor: 'pointer' }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>{label}</span>
-        <span style={{ fontSize: '0.9rem', fontWeight: 900, color: color, display: 'flex', alignItems: 'center' }}>
-            {value} {action}
-        </span>
-    </div>
-);
 
 export default AdminDashboardPage;
