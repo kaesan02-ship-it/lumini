@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Home, ClipboardList, Users, Heart, Brain, ShoppingBag, Target, Gem, BookOpen, ShieldCheck } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import ShopPage from './pages/ShopPage';
@@ -107,24 +107,25 @@ function App() {
     }
   }, []);
 
-    // 로그아웃 시 welcome으로 자동 이동
+    // 인증 상태에 따른 자동 페이지 이동
     useEffect(() => {
-        // 인증 로딩 중이거나 세션 초기화 중이면 리다이렉트 유예
         if (authLoading) return;
 
-        const currentSession = useAuthStore.getState().session;
-        const currentUser = useAuthStore.getState().user;
-
-        if (!currentUser && !currentSession && step !== 'welcome' && step !== 'auth') {
+        const isAuthenticated = !!(user || session);
+        // ─── 공용 경로 (Public Routes): 로그인 없이 접근 가능 ───
+        const isPublicRoute = ['welcome', 'auth', 'test', 'result', 'personality-test', 'deep-soul-test', 'deep-soul-result', 'result-report'].includes(step);
+        
+        // 비인증 사용자가 보호된 페이지 진입 시
+        if (!isAuthenticated && !isPublicRoute) {
             setStep('auth');
             setShowSettings(false);
             setShowMyProfile(false);
-        } else if ((currentUser || currentSession) && (step === 'welcome' || step === 'auth')) {
-            // 세션 복구 시 권한에 따라 대시보드 또는 어드민으로 이동
-            const isUserAdmin = currentUser?.email === 'admin@lumini.me' || currentUser?.user_metadata?.isAdmin;
-            setStep(isUserAdmin ? 'admin' : 'dashboard');
+        } 
+        // 인증된 사용자가 인증 페이지(웰컴/로그인)에 있을 시
+        else if (isAuthenticated && (step === 'welcome' || step === 'auth')) {
+            setStep(isAdmin ? 'admin' : 'dashboard');
         }
-    }, [user, session, authLoading, step]);
+    }, [user, session, authLoading, step, isAdmin]);
 
   // 브라우저 해시(#) 변경 감지 및 내비게이션 동기화
   useEffect(() => {
@@ -147,7 +148,7 @@ function App() {
     }
 
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, []); // 리스너는 한 번만 등록
 
   // step 상태 변화 시 URL 해시 업데이트
   useEffect(() => {
@@ -198,7 +199,7 @@ function App() {
             bio: p.bio || '',
             district: p.district || '',
             interests: p.interests || [],
-            similarity: 80 + Math.floor(Math.random() * 15),
+            similarity: 80 + ((p.id.charCodeAt(0) + p.id.charCodeAt(p.id.length - 1)) % 15),
             deep_soul: p.deep_soul || null,
             pet_data: p.pet_data || null,
             data: [
@@ -332,45 +333,55 @@ function App() {
         backdropFilter: 'blur(10px)', zIndex: 100,
         boxShadow: '0 2px 20px rgba(0,0,0,0.05)'
       }}>
-        <h1 className="title-gradient" style={{ fontSize: '1.6rem', cursor: 'pointer', fontWeight: 800 }} onClick={() => setStep('dashboard')}>
-          lumini
-        </h1>
+        <Tooltip text="대시보드로 돌아갑니다.">
+          <h1 className="title-gradient" style={{ fontSize: '1.6rem', cursor: 'pointer', fontWeight: 800 }} onClick={() => setStep('dashboard')}>
+            lumini
+          </h1>
+        </Tooltip>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {isAdmin && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setShowAdmin(true)}
-              style={{ background: '#0f172a', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <ShieldCheck size={14} /> 관리자
-            </motion.button>
+            <Tooltip text="관리자 대시보드를 엽니다.">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setShowAdmin(true)}
+                style={{ background: '#0f172a', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ShieldCheck size={14} /> 관리자
+              </motion.button>
+            </Tooltip>
           )}
           {/* Crystal HUD */}
           {step !== 'welcome' && step !== 'test' && step !== 'result' && (
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setStep('shop')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #F3E8FF, #E9D5FF)', padding: '7px 14px', borderRadius: '100px', border: '1px solid #9333EA20' }}
-            >
-              <Gem size={14} color="#9333EA" />
-              <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#9333EA' }}>{crystals}</span>
-            </motion.div>
+            <Tooltip text="상점으로 이동하여 크리스탈을 사용하세요.">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                onClick={() => setStep('shop')}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #F3E8FF, #E9D5FF)', padding: '7px 14px', borderRadius: '100px', border: '1px solid #9333EA20' }}
+              >
+                <Gem size={14} color="#9333EA" />
+                <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#9333EA' }}>{crystals}</span>
+              </motion.div>
+            </Tooltip>
           )}
-          <motion.div whileHover={{ scale: 1.1 }} onClick={() => setShowSettings(true)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '50%', background: '#f8fafc' }}>
-            <Settings size={22} color="var(--text-muted)" />
-          </motion.div>
-          <div
-            onClick={() => setShowMyProfile(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '6px 14px',
-              borderRadius: '30px', cursor: 'pointer', transition: 'all 0.2s'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
-            onMouseOut={(e) => e.currentTarget.style.background = '#f8fafc'}
-          >
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(45deg, var(--primary), var(--secondary))' }}></div>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{userName}</span>
-          </div>
+          <Tooltip text="설정을 변경하거나 로그아웃합니다.">
+            <motion.div whileHover={{ scale: 1.1 }} onClick={() => setShowSettings(true)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '50%', background: '#f8fafc' }}>
+              <Settings size={22} color="var(--text-muted)" />
+            </motion.div>
+          </Tooltip>
+          <Tooltip text="내 프로필 정보를 확인합니다.">
+            <div
+              onClick={() => setShowMyProfile(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '6px 14px',
+                borderRadius: '30px', cursor: 'pointer', transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+              onMouseOut={(e) => e.currentTarget.style.background = '#f8fafc'}
+            >
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(45deg, var(--primary), var(--secondary))' }}></div>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{userName}</span>
+            </div>
+          </Tooltip>
         </div>
       </nav>
       )}
@@ -619,7 +630,7 @@ function App() {
                 onBack={() => setShowAdmin(false)}
               />
             ) : (
-              isAdmin && ( // 실제 관리자 데이터 권한 확인은 여기서 수행
+              isAdmin && (
                 <motion.div
                   initial={{ opacity: 0, y: 100 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -637,11 +648,11 @@ function App() {
       {/* Bottom Navigation (Mobile Friendly) */}
       {user && step !== 'welcome' && step !== 'auth' && (
         <nav className="bottom-nav">
-          <Tooltip text="홈 화면으로 이동합니다."><NavItem active={step === 'dashboard'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} /></Tooltip>
+          <Tooltip text="홈 화면으로 이동합니다."><NavItem active={step === 'dashboard' || step === 'welcome'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} /></Tooltip>
           <Tooltip text="동네 소식과 커뮤니티 피드를 확인합니다."><NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} /></Tooltip>
           <Tooltip text="일일 과제를 수행하고 보상을 받으세요."><NavItem active={step === 'daily-challenges'} icon={<Target size={22} />} label="챌린지" onClick={() => setStep('daily-challenges')} /></Tooltip>
           <Tooltip text="다양한 소울 모임과 게임에 참여하세요."><NavItem active={['community', 'magazine', 'ranking', 'compatibility-game', 'groups', 'group-chat', 'weekly-report'].includes(step)} icon={<Users size={22} />} label="커뮤니티" onClick={() => setStep('community')} /></Tooltip>
-          <Tooltip text="성향 분석 및 통계 데이터를 확인합니다."><NavItem active={step.includes('insight') || step === 'growth' || step === 'stats'} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} /></Tooltip>
+          <Tooltip text="성향 분석 및 통계 데이터를 확인합니다."><NavItem active={['insights', 'ai-insights', 'stats', 'growth'].includes(step)} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} /></Tooltip>
           <Tooltip text="포인트를 아이템으로 교환합니다."><NavItem icon={<ShoppingBag size={24} />} label="상점" active={step === 'shop'} onClick={() => setStep('shop')} /></Tooltip>
         </nav>
       )}

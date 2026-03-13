@@ -4,6 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lumini | 당신을 위한 빛나는 인연</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -30,6 +33,15 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+  <script>
+    // ChunkLoadError (배포 후 구버전 캐시 문제) 발생 시 자동 새로고침
+    window.addEventListener('error', (e) => {
+      if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
+        console.warn('New version detected or chunk load error. Refreshing...');
+        window.location.reload();
+      }
+    }, true);
+  </script>
 </body>
 
 </html>
