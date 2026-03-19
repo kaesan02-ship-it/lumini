@@ -1,6 +1,9 @@
 // 환경 설정
 export const IS_DEVELOPMENT = import.meta.env.DEV;
-export const USE_MOCK_DATA = true;
+
+// Supabase 설정이 없거나 명시적으로 모크 모드일 때만 true
+const HAS_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true' || !HAS_SUPABASE;
 
 // API 설정
 export const API_URL = import.meta.env.VITE_API_URL || 'https://api.lumini.app';

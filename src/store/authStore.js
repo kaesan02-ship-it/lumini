@@ -28,8 +28,10 @@ const useAuthStore = create(
             },
 
             signIn: async (email, password) => {
+                const cleanEmail = email.trim().toLowerCase();
+                
                 if (USE_MOCK_DATA) {
-                    const account = DEMO_ACCOUNTS[email];
+                    const account = DEMO_ACCOUNTS[cleanEmail];
                     if (!account || account.password !== password) {
                         throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.\n(데모: demo@lumini.me / lumini123)');
                     }
@@ -44,16 +46,21 @@ const useAuthStore = create(
                     set({ user: mockUser, session: mockSession, loading: false, isAdmin: account.isAdmin });
                     return { user: mockUser, session: mockSession };
                 }
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) throw error;
+                const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+                if (error) {
+                    console.error('Login error:', error);
+                    throw error;
+                }
                 const isAdmin = data.user?.email === 'admin@lumini.me' || data.user?.user_metadata?.isAdmin === true;
                 set({ isAdmin, user: data.user, session: data.session });
                 return data;
             },
 
             signUp: async (email, password, metadata) => {
+                const cleanEmail = email.trim().toLowerCase();
+
                 if (USE_MOCK_DATA) {
-                    if (!email || !password || password.length < 6) {
+                    if (!cleanEmail || !password || password.length < 6) {
                         throw new Error('이메일과 6자 이상의 비밀번호를 입력해주세요.');
                     }
                     const mockUser = {
@@ -67,8 +74,15 @@ const useAuthStore = create(
                     set({ user: mockUser, session: mockSession, loading: false, isAdmin: false });
                     return { user: mockUser, session: mockSession, isNewUser: true };
                 }
-                const { data, error } = await supabase.auth.signUp({ email, password, options: { data: metadata } });
-                if (error) throw error;
+                const { data, error } = await supabase.auth.signUp({ 
+                    email: cleanEmail, 
+                    password, 
+                    options: { data: metadata } 
+                });
+                if (error) {
+                    console.error('Signup error:', error);
+                    throw error;
+                }
                 return data;
             },
 

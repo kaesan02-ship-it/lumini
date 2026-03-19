@@ -1,566 +1,95 @@
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import RadarChart from '../components/RadarChart';
-import {
-    Users, Heart, Gamepad2, Filter, Sparkles, MapPin,
-    ChevronRight, Gem, Target, Flame, ShieldCheck, Zap
-} from 'lucide-react';
-import IdentityBadge from '../components/IdentityBadge';
-import { sortUsersByMatchingScore } from '../utils/matchingAlgorithm';
-import { CardSkeleton, ChartSkeleton } from '../components/Skeleton';
-import { getSoulType } from '../data/soulTypes';
-import useCrystalStore from '../store/crystalStore';
+import React, { useState } from 'react';
 import useUserStore from '../store/userStore';
-import useAuthStore from '../store/authStore';
-import LumiMascot from '../components/LumiMascot';
-import Tooltip from '../components/Tooltip';
+import '../styles/Dashboard.css';
 
-// 문자열 ID를 숫자로 변환하는 헬퍼 함수
-const getStringSeed = (str) => {
-    if (!str) return 0;
-    if (typeof str === 'number') return str;
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash) + str.charCodeAt(i);
-        hash |= 0;
-    }
-    return Math.abs(hash);
-};
+// Hooks
+import { useDashboardData } from '../hooks/useDashboardData';
 
-const DashboardPage = ({ userData, mbtiType, nearbyUsers, onSelectUser, onNavigate, userName }) => {
-    const [activeTab, setActiveTab] = useState('all');
-    const { crystals, isPremium, isBoostActive } = useCrystalStore();
-    const { profile } = useUserStore();
-    const streak = parseInt(localStorage.getItem('lumini_streak') || '0');
-    const hasDeepSoul = !!(profile?.deep_soul || localStorage.getItem('lumini_deep_soul'));
-    const isBoosted = isBoostActive();
-    const user = profile || {};
-    const seed = getStringSeed(user?.id);
-    // 내 지역 (localStorage 우선 → mock default)
-    const myDistrict = localStorage.getItem('lumini_user_district') || '서울 마포구';
-    const completedChallenges = (() => {
-        try {
-            const userId = user?.id || 'guest';
-            const saved = localStorage.getItem(`lumini_challenges_done_${userId}`);
-            const today = new Date().toDateString();
-            if (saved) {
-                const p = JSON.parse(saved);
-                return (p && p.date === today && Array.isArray(p.ids)) ? p.ids.length : 0;
-            }
-        } catch (e) {
-            console.error('Failed to parse challenges:', e);
-        }
-        return 0;
-    })();
+// Components
+import LumiWelcomeSection from '../components/dashboard/LumiWelcomeSection';
+import QuickActionsGrid from '../components/dashboard/QuickActionsGrid';
+import SoulReportCard from '../components/dashboard/SoulReportCard';
+import DeepSoulBanner from '../components/dashboard/DeepSoulBanner';
+import NearbyUsersSection from '../components/dashboard/NearbyUsersSection';
+import SidebarWidgets from '../components/dashboard/SidebarWidgets';
+import UserDetailModal from '../components/UserDetailModal';
 
-    // 새로운 매칭 알고리즘 적용
-    const sortedUsers = useMemo(() => {
-        if (!userData || !nearbyUsers) return nearbyUsers || [];
-        return sortUsersByMatchingScore(nearbyUsers, userData);
-    }, [userData, nearbyUsers]);
+// Lucide Icons for tabs
+import { Users, MapPin, Sparkles } from 'lucide-react';
 
-    // 동네 친구 필터 — 같은 구(district)인 유저
-    const neighborUsers = useMemo(() => {
-        if (!myDistrict) return sortedUsers;
-        return sortedUsers.filter(u => u.district && u.district === myDistrict);
-    }, [sortedUsers, myDistrict]);
+const DashboardPage = ({ onNavigate, nearbyUsers, onSelectUser }) => {
+    const { userData, profile, userName } = useUserStore();
 
-    // 탭 기준 유저 목록 (상위 5명만 노출)
-    const displayedUsers = useMemo(() => {
-        const users = activeTab === 'friend' ? neighborUsers : sortedUsers;
-        return users.slice(0, 5);
-    }, [activeTab, sortedUsers, neighborUsers]);
+    const {
+        activeTab,
+        setActiveTab,
+        myDistrict,
+        completedChallenges,
+        streak,
+        hasDeepSoul,
+        neighborUsers,
+        displayedUsers
+    } = useDashboardData(userData, nearbyUsers, profile);
 
     const categories = [
-        { id: 'all', name: '전체', icon: <Filter size={16} /> },
-        { id: 'friend', name: `동네 친구 (${neighborUsers.length})`, icon: <MapPin size={16} /> },
-        { id: 'date', name: '운명의 연인', icon: <Heart size={16} /> },
-        { id: 'game', name: '게임 듀오', icon: <Gamepad2 size={16} /> },
+        { id: 'all', name: '전체 추천', icon: <Sparkles size={16} /> },
+        { id: 'friend', name: '우리 동네', icon: <MapPin size={16} /> },
+        { id: 'online', name: '접속 중', icon: <Users size={16} /> },
     ];
 
+    if (!profile) return null;
 
     return (
-        <motion.div
-            key="dashboard"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            style={{ display: 'grid', gridTemplateColumns: 'minmax(420px, 1fr) 1.5fr', gap: '40px', padding: '10px 0' }}
-        >
-            <div className="left-panel">
-                {/* 🦦 Lumi Mascot Welcome Message */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '20px',
-                    marginBottom: '30px',
-                    padding: '20px',
-                    background: 'white',
-                    borderRadius: '24px',
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-                    border: '1.5px solid #f1f5f9'
-                }}>
-                    <Tooltip text="루미니의 마스코트 루미가 당신을 반겨줍니다! 🦦">
-                        <div style={{ width: '80px', height: '80px', flexShrink: 0 }}>
-                            <LumiMascot size={80} personalityData={userData} />
-                        </div>
-                    </Tooltip>
-                    <div style={{ position: 'relative', flex: 1 }}>
-                        <div style={{
-                            background: '#f8fafc',
-                            padding: '15px 20px',
-                            borderRadius: '18px',
-                            fontSize: '0.95rem',
-                            fontWeight: 700,
-                            color: '#334155',
-                            lineHeight: 1.5,
-                            position: 'relative'
-                        }}>
-                            {userName}님, 반가워요! 🦦<br />
-                            오늘 루미니에서 <span style={{ color: '#7c3aed' }}>운명의 소울메이트</span>를 만날 확률이 무척 높아요!
-                            <div style={{
-                                position: 'absolute',
-                                left: '-10px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                width: 0,
-                                height: 0,
-                                borderTop: '10px solid transparent',
-                                borderBottom: '10px solid transparent',
-                                borderRight: '10px solid #f8fafc'
-                            }} />
-                        </div>
-                    </div>
-                </div>
-                {/* 💎 Crystal & Challenge Widget */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => onNavigate && onNavigate('apple-game')}
-                        style={{
-                            background: 'linear-gradient(135deg, #FF6B6B, #EE5253)',
-                            borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
-                            position: 'relative', overflow: 'hidden'
-                        }}
-                    >
-                        <Tooltip text="중독성 강한 숫자 퍼즐 게임!">
-                            <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>역대급 중독성 🔥</div>
-                            <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                🍎 사과 게임
-                            </div>
-                            <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>드래그로 10 만들기! 🏆</div>
-                        </Tooltip>
-                    </motion.div>
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => onNavigate && onNavigate('daily-challenges')}
-                        style={{
-                            background: 'linear-gradient(135deg, #F59E0B, #EF4444)',
-                            borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
-                        }}
-                    >
-                        <Tooltip text="매일 주어지는 미션을 완료하고 크리스탈을 받으세요.">
-                            <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>오늘의 챌린지</div>
-                            <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Target size={20} /> {completedChallenges}/3
-                            </div>
-                            <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>🔥 {streak}일 연속</div>
-                        </Tooltip>
-                    </motion.div>
-                    {!localStorage.getItem('lumini_value_game_completed') && (
-                        <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            onClick={() => onNavigate && onNavigate('value-game')}
-                            style={{
-                                background: 'linear-gradient(135deg, #06B6D4, #3B82F6)',
-                                borderRadius: '18px', padding: '18px', cursor: 'pointer', color: 'white',
-                                position: 'relative', overflow: 'hidden'
-                            }}
-                        >
-                            <Tooltip text="나의 핵심 가치관을 선택하고 더 잘 맞는 인연을 추천받으세요.">
-                                <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '6px' }}>가치관 밸런스</div>
-                                <div style={{ fontSize: '1.6rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Zap size={20} /> 시작하기
-                                </div>
-                                <div style={{ marginTop: '6px', fontSize: '0.72rem', opacity: 0.9 }}>
-                                    매칭 확률 UP 🚀
-                                </div>
-                            </Tooltip>
-                            <motion.div
-                                animate={{ x: [0, 100], opacity: [0, 0.5, 0] }}
-                                transition={{ repeat: Infinity, duration: 2 }}
-                                style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '100%', background: 'white', filter: 'blur(10px)', skewX: '-20deg' }}
-                            />
-                        </motion.div>
-                    )}
+        <div className="page-container" style={{ paddingBottom: '100px' }}>
+            <div className="dashboard-grid">
+                {/* 왼쪽 메인 컬렉션 */}
+                <div className="left-panel">
+                    <LumiWelcomeSection userName={profile?.name} userData={userData} />
+                    
+                    <QuickActionsGrid 
+                        onNavigate={onNavigate} 
+                        completedChallenges={completedChallenges} 
+                        streak={streak} 
+                    />
+
+                    <SoulReportCard 
+                        userData={userData} 
+                        mbtiType={profile?.mbti} 
+                        isBoosted={profile?.isBoosted} 
+                    />
+
+                    <DeepSoulBanner 
+                        hasDeepSoul={hasDeepSoul} 
+                        onNavigate={onNavigate} 
+                    />
+
+                    <NearbyUsersSection 
+                        displayedUsers={displayedUsers}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        categories={categories}
+                        neighborUsers={neighborUsers}
+                        myDistrict={myDistrict}
+                        onSelectUser={setSelectedUser}
+                        onNavigate={onNavigate}
+                    />
                 </div>
 
-                {/* My Stats Card */}
-                <div className="glass-card" style={{
-                    padding: '35px',
-                    marginBottom: '40px',
-                    background: isBoosted ? 'linear-gradient(135deg, #FFFDF0 0%, #FFFFFF 100%)' : 'var(--surface)',
-                    border: isBoosted ? '2px solid #FCD34D' : '1px solid var(--glass-border)',
-                    boxShadow: isBoosted ? '0 10px 25px rgba(245, 158, 11, 0.15)' : 'var(--shadow)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                }}>
-                    {isBoosted && (
-                        <div style={{
-                            position: 'absolute', top: '10px', right: '10px',
-                            background: '#F59E0B', color: 'white', padding: '4px 12px', borderRadius: '100px',
-                            fontSize: '0.7rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px'
-                        }}>
-                            <Flame size={12} /> 부스트 활성화 중
-                        </div>
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.4rem' }}>
-                            내 성향 리포트
-                        </h3>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{
-                                fontSize: '0.8rem', color: 'var(--primary)', background: 'var(--primary-faint)',
-                                padding: '4px 12px', borderRadius: '30px', fontWeight: 800,
-                                border: '1px solid var(--primary-glow)'
-                            }}>
-                                {mbtiType ? getSoulType(mbtiType).soulName : '분석 대기 중'}
-                            </div>
-                            <div style={{
-                                fontSize: '1rem', color: 'var(--text-muted)', background: 'var(--background)',
-                                padding: '6px 16px', borderRadius: '30px', fontWeight: 800,
-                                border: '1px solid var(--glass-border)'
-                            }}>
-                                {mbtiType || '?'}
-                            </div>
-                        </div>
-                    </div>
-                    {userData ? (
-                        <Tooltip text="AI가 분석한 나의 9가지 소울 성향 지표입니다." position="top">
-                            <div style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <RadarChart
-                                    data={[
-                                        { subject: '사교성', A: userData.E || 0, fullMark: 100 },
-                                        { subject: '창의성', A: Math.round((userData.O || 0) * 0.6 + (userData.E || 0) * 0.4), fullMark: 100 },
-                                        { subject: '공감력', A: Math.round((userData.A || 0) * 0.6 + (100 - (userData.N || 0)) * 0.4), fullMark: 100 },
-                                        { subject: '계획성', A: userData.C || 0, fullMark: 100 },
-                                        { subject: '자기주도', A: Math.round((userData.C || 0) * 0.55 + (userData.H || 50) * 0.45), fullMark: 100 },
-                                        { subject: '유연성', A: userData.O || 0, fullMark: 100 },
-                                        { subject: '따뜻함', A: userData.A || 0, fullMark: 100 },
-                                        { subject: '회복탄력', A: Math.round(100 - (userData.N || 0)), fullMark: 100 },
-                                        { subject: '신뢰도', A: userData.H || 50, fullMark: 100 },
-                                    ]}
-                                    size={300}
-                                />
-                            </div>
-                        </Tooltip>
-                    ) : (
-                        <ChartSkeleton />
-                    )}
-
-                </div>
-
-                {/* 💎 딥 소울 배너 */}
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => onNavigate && onNavigate(hasDeepSoul ? 'deep-soul-result' : 'deep-soul-test')}
-                    style={{
-                        marginBottom: '30px', padding: '20px 24px', borderRadius: '20px',
-                        background: hasDeepSoul
-                            ? 'linear-gradient(135deg, #4F46E5, #7C3AED)'
-                            : 'linear-gradient(135deg, #1E1B4B, #312E81)',
-                        color: 'white', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '16px',
-                        boxShadow: '0 8px 30px rgba(79,70,229,0.35)',
-                        position: 'relative', overflow: 'hidden'
-                    }}
-                >
-                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-                    <div style={{ fontSize: '2.2rem', flexShrink: 0 }}>{hasDeepSoul ? '💎' : '✨'}</div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>
-                            {hasDeepSoul ? '딥 소울 매칭 활성화됨' : '딥 소울 매칭 시작하기'}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', opacity: 0.85, lineHeight: 1.5 }}>
-                            {hasDeepSoul
-                                ? '가족관·연애관·가치관 기반 정밀 매칭 중 💜'
-                                : '가족관·연애 스타일·가치관까지 맞는 사람을 찾아드릴게요'}
-                        </div>
-                    </div>
-                    <ChevronRight size={20} style={{ opacity: 0.7, flexShrink: 0 }} />
-                    <Tooltip text={hasDeepSoul ? "딥 소울 매칭 결과를 확인합니다." : "가치관 기반 정밀 매칭을 위해 검사를 시작합니다."} position="bottom" />
-                </motion.div>
-
-                {/* Recommendation Section with Filters */}
-                <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <h3 style={{ fontWeight: 800, fontSize: '1.3rem' }}>오늘의 추천 인연 ✨</h3>
-                    {myDistrict && (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                            <MapPin size={12} color="var(--primary)" /> {myDistrict}
-                        </span>
-                    )}
-                </div>
-
-                {/* 데이터 부재 시 안내 */}
-                {displayedUsers.length === 0 && (
-                    <div style={{ padding: '40px 20px', textAlign: 'center', background: 'var(--surface)', borderRadius: '24px', border: '1.5px dashed var(--glass-border)', marginBottom: '30px' }}>
-                        <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🌱</div>
-                        <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: '6px' }}>새로운 인연을 찾는 중이에요</div>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                            아직 조건에 맞는 추천 리스트가 생성되지 않았습니다.<br/>
-                            프로필을 더 자세히 작성하거나 잠시 후 다시 확인해주세요!
-                        </div>
-                        <Tooltip text="활동 로그 및 추천 리스트를 최신 상태로 갱신합니다.">
-                            <motion.button 
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => window.location.reload()}
-                                style={{ marginTop: '16px', padding: '10px 20px', borderRadius: '100px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}
-                            >
-                                로그 새로고침
-                            </motion.button>
-                        </Tooltip>
-                    </div>
-                )}
-
-                {/* 동네 탭 선택 시 안내 배너 */}
-                {activeTab === 'friend' && (
-                    <div style={{
-                        marginBottom: '16px', padding: '12px 16px', borderRadius: '14px',
-                        background: neighborUsers.length > 0 ? 'linear-gradient(135deg, #EDE9FE, #F5F3FF)' : '#FEF9C3',
-                        border: `1.5px solid ${neighborUsers.length > 0 ? '#8B5CF620' : '#FCD34D50'}`,
-                        display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', fontWeight: 600
-                    }}>
-                        <span style={{ fontSize: '1.1rem' }}>{neighborUsers.length > 0 ? '📍' : '⚠️'}</span>
-                        {neighborUsers.length > 0
-                            ? <span style={{ color: '#6D28D9' }}><strong>{myDistrict}</strong> 근처 {neighborUsers.length}명이 있어요!</span>
-                            : <span style={{ color: '#92400E' }}>
-                                <strong>{myDistrict}</strong>에 아직 이웃이 없어요.{' '}
-                                <button onClick={() => onNavigate?.('profile-edit')} style={{ background: 'none', border: 'none', color: '#7C3AED', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>동네 변경하기</button>
-                            </span>
-                        }
-                    </div>
-                )}
-
-
-                {/* Category Tabs */}
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', overflowX: 'auto', paddingBottom: '5px' }}>
-                    {categories.map((cat) => (
-                        <Tooltip key={cat.id} text={`${cat.name} 탭으로 필터링합니다.`}>
-                            <button
-                                onClick={() => setActiveTab(cat.id)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    padding: '10px 20px', borderRadius: '25px',
-                                    border: 'none', cursor: 'pointer',
-                                    background: activeTab === cat.id ? 'var(--primary)' : 'var(--surface)',
-                                    color: activeTab === cat.id ? 'white' : 'var(--text-muted)',
-                                    fontWeight: 700, fontSize: '0.9rem',
-                                    boxShadow: activeTab === cat.id ? '0 10px 20px rgba(139, 92, 246, 0.2)' : '0 2px 4px rgba(0,0,0,0.03)',
-                                    whiteSpace: 'nowrap', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                                }}
-                            >
-                                {cat.icon} {cat.name}
-                            </button>
-                        </Tooltip>
-                    ))}
-                </div>
-                {/* User Cards */}
-                <div style={{ display: 'grid', gap: '20px' }}>
-                    {displayedUsers.length > 0 ? displayedUsers.slice(0, 5).map((user, index) => {
-                        const userSoul = getSoulType(user.mbti);
-                        return (
-                            <motion.div
-                                key={user.id}
-                                whileHover={{ scale: 1.02 }}
-                                className="glass-card"
-                                style={{
-                                    padding: 'clamp(16px, 3vw, 24px)', display: 'flex', alignItems: 'center',
-                                    justifyContent: 'space-between', background: 'var(--surface)',
-                                    border: '1px solid var(--glass-border)',
-                                    flexWrap: 'wrap', gap: '12px'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1, minWidth: '200px' }}>
-                                    <motion.div
-                                        animate={{
-                                            boxShadow: user.id % 2 === 0 ? [
-                                                '0 0 0 0px rgba(99, 102, 241, 0)',
-                                                '0 0 0 10px rgba(99, 102, 241, 0.1)',
-                                                '0 0 0 0px rgba(99, 102, 241, 0)'
-                                            ] : 'none'
-                                        }}
-                                        transition={{ repeat: Infinity, duration: 2 }}
-                                        style={{
-                                            width: '60px', height: '60px', borderRadius: '20px',
-                                            background: `linear-gradient(135deg, ${userSoul.gradient[0]}, ${userSoul.gradient[1]})`,
-                                            border: '1px solid var(--glass-border)', boxShadow: '0 8px 16px rgba(0,0,0,0.05)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '1.8rem', flexShrink: 0, position: 'relative'
-                                        }}>
-                                        {userSoul.emoji}
-                                        {user.id % 2 === 0 && (
-                                            <div style={{
-                                                position: 'absolute', bottom: -2, right: -2,
-                                                width: '12px', height: '12px', borderRadius: '50%',
-                                                background: '#10B981', border: '2px solid white'
-                                            }} />
-                                        )}
-                                    </motion.div>
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                                            <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text)' }}>{user.name}</div>
-                                            <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '3px 10px', borderRadius: '100px', fontWeight: 800 }}>{userSoul.soulName}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
-                                            <Sparkles size={14} color="var(--primary)" />
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700 }}>매칭률 {user.similarity}%</div>
-                                        </div>
-                                        {/* 통합 배지 시스템 */}
-                                        <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                                            {user.game && <IdentityBadge type="GAME" label={user.game} size="sm" />}
-                                            {user.tier && <IdentityBadge type="TIER" label={user.tier} size="sm" />}
-                                            {user.id % 3 === 0 && <IdentityBadge type="VERIFIED" size="sm" />}
-                                            {user.similarity > 90 && <IdentityBadge type="HOT" size="sm" />}
-                                        </div>
-                                        {/* Bio 미리보기 */}
-                                        {user.bio ? (
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }}>
-                                                {user.deep_soul ? '💎' : user.emoji || '🌟'} {user.bio}
-                                            </div>
-                                        ) : (
-                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', opacity: 0.6 }}>
-                                                자기소개가 없어요 ✏️
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                    <Tooltip text={`${user.name}님의 상세 프로필을 확인합니다.`} position="left">
-                                        <button
-                                            onClick={() => onSelectUser(user)}
-                                            style={{
-                                                background: 'white', color: 'var(--text)',
-                                                border: '1px solid var(--glass-border)', padding: '12px 24px', borderRadius: '16px',
-                                                fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                            }}
-                                        >
-                                            프로필 보기
-                                        </button>
-                                    </Tooltip>
-                            </motion.div>
-                        );
-                    }) : (
-                        <>
-                            <CardSkeleton />
-                            <CardSkeleton />
-                            <CardSkeleton />
-                        </>
-                    )}
-                </div>
+                {/* 오른쪽 사이드바/위젯 */}
+                <SidebarWidgets 
+                    hasDeepSoul={hasDeepSoul} 
+                    nearbyUsers={nearbyUsers}
+                    onSelectUser={setSelectedUser}
+                    onNavigate={onNavigate}
+                />
             </div>
 
-            <div className="right-panel">
-                {/* 소울펫 루미 위젯 + 딥소울 요약 */}
-                <div style={{ marginBottom: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {/* SoulPet 수달루미 위젯 */}
-                    <Tooltip text="나의 소울 상태를 함께 나누는 반려동물 루미를 돌봅니다." position="top">
-                        <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            onClick={() => onNavigate?.('soul-pet')}
-                            style={{ padding: '18px', borderRadius: '18px', background: 'linear-gradient(135deg, #F0ABFC20, #E879F920)', border: '1.5px solid #C026D340', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
-                        >
-                            {(() => {
-                                const pet = (() => { try { return JSON.parse(localStorage.getItem('lumini_soul_pet') || '{}'); } catch { return {}; } })();
-                                return (
-                                    <>
-                                        <div style={{ fontSize: '2rem' }}>🦦</div>
-                                        <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#A21CAF' }}>{pet.name || '루미'} <span style={{ fontSize: '0.72rem', background: '#C026D318', borderRadius: '100px', padding: '1px 7px' }}>Lv.{pet.level || 1}</span></div>
-                                        <div style={{ fontSize: '0.72rem', color: '#86198F', fontWeight: 600 }}>소울펫 돌보기 →</div>
-                                    </>
-                                );
-                            })()}
-                        </motion.div>
-                    </Tooltip>
-                    {/* 딥소울 요약 */}
-                    <Tooltip text="가치관 검사(딥 소울)를 통해 더 깊은 인연을 찾아보세요." position="top">
-                        <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            onClick={() => onNavigate?.(hasDeepSoul ? 'deep-soul-result' : 'deep-soul-test')}
-                            style={{ padding: '18px', borderRadius: '18px', background: hasDeepSoul ? 'linear-gradient(135deg, #4F46E510, #7C3AED08)' : 'var(--surface)', border: `1.5px solid ${hasDeepSoul ? '#7C3AED30' : 'var(--glass-border)'}`, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
-                        >
-                            <div style={{ fontSize: '2rem' }}>{hasDeepSoul ? '💎' : '✨'}</div>
-                            <div style={{ fontWeight: 900, fontSize: '0.88rem', color: hasDeepSoul ? '#6366F1' : 'var(--text)' }}>딥 소울</div>
-                            <div style={{ fontSize: '0.72rem', color: hasDeepSoul ? '#8B5CF6' : 'var(--text-muted)', fontWeight: 600 }}>{hasDeepSoul ? '결과 보기 →' : '검사 시작 →'}</div>
-                        </motion.div>
-                    </Tooltip>
-                </div>
-
-                {/* 딥 소울 매칭 예시 카드 */}
-                <div style={{ marginBottom: '32px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-                        <h3 style={{ fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            💸 딥 소울 매칭 예시
-                        </h3>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>딥 소울 완료 멤버</span>
-                    </div>
-                    <div style={{ display: 'grid', gap: '14px' }}>
-                        {[
-                            { name: '김민수', mbti: 'INTJ', soulScore: 83, cats: [{ label: '💑 연애', score: 88 }, { label: '🌿 라이프', score: 79 }, { label: '🏠 가족관', score: 91 }, { label: '🌍 가치관', score: 75 }], district: '서울 마포구', emoji: '♟️', userId: 'u2' },
-                            { name: '박서연', mbti: 'ENTP', soulScore: 71, cats: [{ label: '💑 연애', score: 60 }, { label: '🌿 라이프', score: 73 }, { label: '🏠 가족관', score: 58 }, { label: '🌍 가치관', score: 82 }], district: '서울 강남구', emoji: '🎨', userId: 'u4' },
-                            { name: '최도현', mbti: 'INFP', soulScore: 78, cats: [{ label: '💑 연애', score: 82 }, { label: '🌿 라이프', score: 71 }, { label: '🏠 가족관', score: 88 }, { label: '🌍 가치관', score: 70 }], district: '서울 마포구', emoji: '🌙', userId: 'u5' },
-                        ].map((u) => {
-                            const matchUser = nearbyUsers?.find(nu => nu.id === u.userId) || { id: u.userId, name: u.name, mbti: u.mbti, similarity: u.soulScore };
-                            return (
-                                <Tooltip text="딥 소울 검사를 마친 추천 멤버입니다. 가치관이 얼마나 일치하는지 확인해보세요!" position="left">
-                                    <motion.div
-                                        key={u.name}
-                                        className="glass-card"
-                                        whileHover={{ scale: 1.01 }}
-                                        onClick={() => onSelectUser && onSelectUser(matchUser)}
-                                        style={{ padding: '18px 20px', background: 'var(--surface)', border: '1px solid var(--glass-border)', cursor: 'pointer' }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
-                                                    {u.emoji}
-                                                </div>
-                                                <div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '2px' }}>
-                                                        <span style={{ fontWeight: 800, fontSize: '1rem' }}>{u.name}</span>
-                                                        <span style={{ fontSize: '0.7rem', background: 'var(--primary-faint)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '100px', fontWeight: 800 }}>{u.mbti}</span>
-                                                        <span style={{ fontSize: '0.68rem', background: '#4F46E510', color: '#6366F1', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>💸 딥 완료</span>
-                                                    </div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📍 {u.district}</div>
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#6366F1' }}>{u.soulScore}%</div>
-                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>가치관 호환도</div>
-                                            </div>
-                                        </div>
-                                        {hasDeepSoul && (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                                                {u.cats.map(c => (
-                                                    <div key={c.label} style={{ textAlign: 'center', padding: '6px 4px', borderRadius: '10px', background: 'var(--background)', border: '1px solid var(--glass-border)' }}>
-                                                        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '2px', wordBreak: 'keep-all' }}>{c.label}</div>
-                                                        <div style={{ fontSize: '0.9rem', fontWeight: 900, color: c.score >= 80 ? '#6366F1' : c.score >= 65 ? '#10B981' : '#94A3B8' }}>{c.score}%</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <div style={{ marginTop: '10px', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, textAlign: 'right' }}>
-                                            프로필 보기 →
-                                        </div>
-                                    </motion.div>
-                                </Tooltip>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-
-        </motion.div>
+            {/* 유저 상세 모달 */}
+            <UserDetailModal 
+                user={selectedUser} 
+                onClose={() => setSelectedUser(null)} 
+            />
+        </div>
     );
 };
 
