@@ -132,7 +132,12 @@ function App() {
         if (authLoading) return;
 
         const isAuthenticated = !!(user || session);
-        const isPublicRoute = ['welcome', 'auth', 'test', 'result', 'personality-test', 'deep-soul-test', 'deep-soul-result', 'result-report'].includes(step);
+        const isPublicRoute = [
+          'welcome', 'auth', 'test', 'result', 'personality-test', 
+          'deep-soul-test', 'deep-soul-result', 'result-report',
+          'dashboard', 'feed', 'shop', 'daily-challenges', 'community', 'insights', 
+          'events', 'groups', 'ranking', 'growth', 'stats', 'ai-insights'
+        ].includes(step);
 
         // 비인증 사용자가 보호된 페이지 진입 시에만 auth로
         if (!isAuthenticated && !isPublicRoute) {
@@ -157,7 +162,7 @@ function App() {
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash.replace('#', '');
-            if (hash && hash !== step) {
+            if (hash) {
                 setStep(hash);
             }
         };
