@@ -18,8 +18,12 @@ const useUserStore = create(
             setProfile: (profileData) => set({ profile: profileData }),
 
             fetchProfile: async (userId) => {
-                if (!userId) return;
-                set({ loading: true });
+                if (!userId || get().loading) return;
+                
+                // 이미 프로필이 있고 ID가 같다면 굳이 다시 불러오지 않음 (최적화)
+                if (get().profile?.id === userId && get().profile?.username) return;
+
+                set({ loading: true, error: null });
                 try {
                     const profile = await getProfile(userId);
                     if (profile) {

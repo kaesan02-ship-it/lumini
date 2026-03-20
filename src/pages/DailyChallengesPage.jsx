@@ -334,7 +334,7 @@ const DailyChallengesPage = ({ onBack, mbtiType, onNavigate }) => {
 
                 {/* 소울 질문 히스토리 */}
                 {(() => {
-                    const history = (() => { try { return JSON.parse(localStorage.getItem('lumini_soul_history') || '[]'); } catch { return []; } })();
+                    const history = (() => { try { return JSON.parse(localStorage.getItem(soulHistoryKey) || '[]'); } catch { return []; } })();
                     if (history.length === 0) return null;
                     return (
                         <div style={{ background: 'var(--surface)', borderRadius: '20px', padding: '22px', marginBottom: '24px', border: '1px solid var(--glass-border)' }}>

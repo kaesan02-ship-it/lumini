@@ -132,31 +132,26 @@ function App() {
         if (authLoading) return;
 
         const isAuthenticated = !!(user || session);
-        // ─── 공용 경로 (Public Routes): 로그인 없이 접근 가능 ───
         const isPublicRoute = ['welcome', 'auth', 'test', 'result', 'personality-test', 'deep-soul-test', 'deep-soul-result', 'result-report'].includes(step);
 
-        // 현재 URL의 해시 확인
-        const currentHash = window.location.hash.replace('#', '');
-        
-        // 비인증 사용자가 보호된 페이지 진입 시
+        // 비인증 사용자가 보호된 페이지 진입 시에만 auth로
         if (!isAuthenticated && !isPublicRoute) {
             setStep('auth');
-            setShowSettings(false);
-            setShowMyProfile(false);
+            return;
         } 
+        
         // 인증된 사용자가 'welcome'이나 'auth' 페이지에 위치한 경우에만 대시보드로 리다이렉트
-        else if (isAuthenticated && (step === 'welcome' || step === 'auth')) {
-            // URL 해시가 유효한 다른 곳을 가리키고 있다면 그곳으로 이동, 아니면 대시보드
+        if (isAuthenticated && (step === 'welcome' || step === 'auth')) {
+            const currentHash = window.location.hash.replace('#', '');
             const validHashes = ['dashboard', 'feed', 'events', 'magazine', 'ranking', 'groups', 'shop', 'stats', 'profile-edit', 'insights'];
+            
             if (currentHash && validHashes.includes(currentHash)) {
                 setStep(currentHash);
             } else {
                 setStep(isAdmin ? 'admin' : 'dashboard');
             }
         }
-        // 이미 유효한 페이지(예: feed)에 있는데 인증 정보가 업데이트되어 이 effect가 실행되는 경우, 
-        // step이 dashboard로 초기화되지 않도록 리다이렉트 로직을 엄격하게 제한함.
-    }, [user?.id, !!session, authLoading, isAdmin, step === 'welcome' || step === 'auth']);
+    }, [user?.id, session?.access_token, authLoading, isAdmin, (step === 'welcome' || step === 'auth')]);
 
     // 브라우저 해시(#) 변경 감지 및 내비게이션 동기화
     useEffect(() => {
@@ -192,13 +187,14 @@ function App() {
 
   // 유저가 로드되었을 때 필요한 정보(크리스탈, 프로필) 동기화
   useEffect(() => {
-    if (user && user.id) {
-       // 크리스탈 정보 가져오기
+    if (user?.id) {
+       // 이미 프로필이 있다면 중복 호출 방지 (userStore 가드가 처리하지만 여기서도 1차 방어)
+       if (!profile || profile.id !== user.id) {
+          fetchProfile(user.id);
+       }
        useCrystalStore.getState().fetchCrystalsFromDB(user.id);
-       // 프로필 정보 가져오기 (이름 등 반영을 위함)
-       fetchProfile(user.id);
     }
-  }, [user]);
+  }, [user?.id]); // user 객체 대신 id 사용
 
   const handleTutorialComplete = () => {
     localStorage.setItem('lumini_visited', 'true');
@@ -254,12 +250,16 @@ function App() {
   const { toggleFavorite, isFavorite } = useFavorites();
 
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        
+        if (!mounted) return;
+
         if (currentSession?.user) {
+          // 세션 정보를 authStore에 먼저 확실히 반영
+          useAuthStore.getState().setSession(currentSession);
           await fetchProfile(currentSession.user.id);
           await fetchNearbyUsers();
         } else if (import.meta.env.VITE_USE_MOCK_DATA) {
@@ -267,23 +267,27 @@ function App() {
         }
       } catch (err) {
         console.log('Auth init error:', err.message);
-      } finally {
-        useAuthStore.getState().setSession(session || null);
       }
     };
 
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      
       setSession(session);
       if (session?.user) {
+        // ID가 바뀐 경우에만 fetch 실행 (기존 fetchProfile 가드와 협력)
         fetchProfile(session.user.id);
         fetchNearbyUsers();
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [fetchNearbyUsers]); // fetchNearbyUsers는 user?.id 변경 시에만 업데이트됨
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []); // 의존성을 비워 초기 1회 및 이벤트 구독만 수행
 
   // Handle step based on data — 새로고침 시 검사 결과가 있으면 대시보드로 이동
     useEffect(() => {
@@ -653,6 +657,21 @@ function App() {
               onRetake={() => setStep('deep-soul-test')}
               onNavigate={setStep}
             />
+          )}
+          {step === 'insights' && (
+            <InsightsHubPage onNavigate={setStep} />
+          )}
+          {step === 'ai-insights' && (
+            <AIInsightsPage onBack={() => setStep('insights')} />
+          )}
+          {step === 'stats' && (
+            <StatsPage onBack={() => setStep('insights')} />
+          )}
+          {step === 'growth' && (
+            <SoulGrowthPage onBack={() => setStep('insights')} />
+          )}
+          {step === 'soul-pet' && (
+            <SoulPetPage onBack={() => setStep('dashboard')} />
           )}
         </AnimatePresence>
 

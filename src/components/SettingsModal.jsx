@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiType, userData, onNavigate }) => {
     const { signOut, user } = useAuthStore();
     const { updateProfile } = useUserStore();
+    const { theme, toggleTheme } = useThemeStore();
     const [activeSection, setActiveSection] = useState('main');
     const [confirmReset, setConfirmReset] = useState(false);
     const [confirmLogout, setConfirmLogout] = useState(false);
