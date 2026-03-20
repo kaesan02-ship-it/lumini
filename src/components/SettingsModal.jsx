@@ -4,14 +4,34 @@ import { X, Bell, User, Settings, LogOut, ChevronRight, RefreshCcw, Moon, Sun, H
 import useThemeStore from '../store/themeStore';
 import Tooltip from './Tooltip';
 import useAuthStore from '../store/authStore';
+import useUserStore from '../store/userStore';
 import { getSoulType } from '../data/soulTypes';
+import { toast } from 'react-hot-toast';
 
 const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiType, userData, onNavigate }) => {
-    const { theme, toggleTheme } = useThemeStore();
-    const { signOut } = useAuthStore();
+    const { signOut, user } = useAuthStore();
+    const { updateProfile } = useUserStore();
     const [activeSection, setActiveSection] = useState('main');
     const [confirmReset, setConfirmReset] = useState(false);
     const [confirmLogout, setConfirmLogout] = useState(false);
+    const [localName, setLocalName] = useState(userName);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // 이름 저장 처리
+    const handleSaveName = async () => {
+        if (!localName || localName === userName) return;
+        
+        setIsSaving(true);
+        try {
+            await updateProfile(user.id, { username: localName });
+            toast.success('이름이 변경되었습니다.');
+        } catch (error) {
+            console.error('Save failed:', error);
+            toast.error('저장에 실패했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -267,16 +287,31 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
             {/* 프로필 이름 */}
             <div className="setting-group">
                 <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>내 프로필 이름</label>
-                <input
-                    type="text"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    style={{
-                        width: '100%', padding: '12px', borderRadius: '10px',
-                        background: 'var(--background)', border: '1px solid var(--glass-border)',
-                        color: 'var(--text)', outline: 'none'
-                    }}
-                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                        type="text"
+                        value={localName}
+                        onChange={(e) => setLocalName(e.target.value)}
+                        placeholder="이름 입력"
+                        style={{
+                            flex: 1, padding: '12px', borderRadius: '10px',
+                            background: 'var(--background)', border: '1px solid var(--glass-border)',
+                            color: 'var(--text)', outline: 'none'
+                        }}
+                    />
+                    <button 
+                        onClick={handleSaveName}
+                        disabled={isSaving || localName === userName}
+                        style={{
+                            padding: '0 15px', borderRadius: '10px',
+                            background: localName !== userName ? 'var(--primary)' : 'var(--glass-border)',
+                            color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer',
+                            opacity: (isSaving || localName === userName) ? 0.6 : 1
+                        }}
+                    >
+                        {isSaving ? '...' : '저장'}
+                    </button>
+                </div>
             </div>
 
             <Divider />

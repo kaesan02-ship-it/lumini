@@ -99,6 +99,26 @@ function App() {
     };
   }, [profile]);
 
+  // Sync guest data to user profile on first login after test
+  useEffect(() => {
+    if (user && profile && !authLoading) {
+      const guestData = localStorage.getItem('lumini_guest_personality');
+      if (guestData && (!profile.personality_data || !profile.mbti_type)) {
+        try {
+          const { personality_data, mbti_type } = JSON.parse(guestData);
+          updateProfile(user.id, {
+            personality_data,
+            mbti_type
+          });
+          localStorage.removeItem('lumini_guest_personality');
+          console.log('Guest personality data synced to profile');
+        } catch (e) {
+          console.error('Failed to sync guest data:', e);
+        }
+      }
+    }
+  }, [user, profile, authLoading, updateProfile]);
+
   // Check first visit
   useEffect(() => {
     const hasVisited = localStorage.getItem('lumini_visited');
@@ -114,6 +134,9 @@ function App() {
         const isAuthenticated = !!(user || session);
         // ─── 공용 경로 (Public Routes): 로그인 없이 접근 가능 ───
         const isPublicRoute = ['welcome', 'auth', 'test', 'result', 'personality-test', 'deep-soul-test', 'deep-soul-result', 'result-report'].includes(step);
+
+        // 현재 URL의 해시 확인
+        const currentHash = window.location.hash.replace('#', '');
         
         // 비인증 사용자가 보호된 페이지 진입 시
         if (!isAuthenticated && !isPublicRoute) {
@@ -121,34 +144,40 @@ function App() {
             setShowSettings(false);
             setShowMyProfile(false);
         } 
-        // 인증된 사용자가 인증 페이지(웰컴/로그인)에 있을 시
+        // 인증된 사용자가 'welcome'이나 'auth' 페이지에 위치한 경우에만 대시보드로 리다이렉트
         else if (isAuthenticated && (step === 'welcome' || step === 'auth')) {
-            setStep(isAdmin ? 'admin' : 'dashboard');
+            // URL 해시가 welcome/auth가 아닌 다른 유효한 곳을 가리키고 있다면 그곳으로 이동
+            if (currentHash && currentHash !== 'welcome' && currentHash !== 'auth') {
+                setStep(currentHash);
+            } else {
+                setStep(isAdmin ? 'admin' : 'dashboard');
+            }
         }
     }, [user, session, authLoading, step, isAdmin]);
 
-  // 브라우저 해시(#) 변경 감지 및 내비게이션 동기화
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && hash !== step) {
-        setStep(hash);
-      }
-    };
+    // 브라우저 해시(#) 변경 감지 및 내비게이션 동기화
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash.replace('#', '');
+            if (hash && hash !== step) {
+                setStep(hash);
+            }
+        };
 
-    window.addEventListener('hashchange', handleHashChange);
-    
-    // 초기 로드 시 해시값 확인
-    const initialHash = window.location.hash.replace('#', '');
-    if (initialHash && initialHash !== step) {
-      setStep(initialHash);
-    } else {
-      // 해시가 없을 경우 현재 step으로 해시 설정
-      window.location.hash = step;
-    }
+        window.addEventListener('hashchange', handleHashChange);
+        
+        // 초기 로드 시 해시에 따른 step 설정
+        // (authLoading이 끝난 후 authGuard와 연계하여 정확한 페이지 유지 가능)
+        const initialHash = window.location.hash.replace('#', '');
+        if (initialHash) {
+            setStep(initialHash);
+        } else {
+            // 해시가 없을 경우 현재 step으로 해시 설정
+            window.location.hash = step;
+        }
 
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []); // 리스너는 한 번만 등록
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []); // 초기화 시 1회만 실행
 
   // step 상태 변화 시 URL 해시 업데이트
   useEffect(() => {
@@ -325,7 +354,7 @@ function App() {
       <Toaster position="top-center" reverseOrder={false} />
 
       {/* Top Navbar */}
-      {user && step !== 'welcome' && step !== 'auth' && (
+      {(user || userData) && step !== 'welcome' && step !== 'auth' && (
       <nav style={{
         position: 'fixed', top: 0, width: '100%',
         padding: '12px 20px', display: 'flex', justifyContent: 'space-between',
@@ -497,13 +526,14 @@ function App() {
                     await updateProfile(user.id, {
                       username: data.name,
                       bio: data.bio,
-                      avatar_url: profileAvatar, // DB 컬럼명에 맞춤
+                      avatar_url: profile?.avatar_url || profileAvatar, // 기존 아바타 우선 사용
                       interests: data.interests,
                       privacy_level: data.privacy,
                       district: data.district,
                       game: data.game,
                       tier: data.tier
                     });
+                    alert('프로필이 저장되었습니다.');
                   } catch (err) {
                     console.error(err);
                     alert('프로필 저장 중 오류가 발생했습니다.');
@@ -646,7 +676,7 @@ function App() {
       </main>
 
       {/* Bottom Navigation (Mobile Friendly) */}
-      {user && step !== 'welcome' && step !== 'auth' && (
+      {(user || userData) && step !== 'welcome' && step !== 'auth' && (
         <nav className="bottom-nav">
           <Tooltip text="홈 화면으로 이동합니다."><NavItem active={step === 'dashboard' || step === 'welcome'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} /></Tooltip>
           <Tooltip text="동네 소식과 커뮤니티 피드를 확인합니다."><NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} /></Tooltip>

@@ -7,15 +7,39 @@ import { supabase } from '../supabase/client';
 const SCALE_LABELS = ['전혀 그렇지 않음', '그렇지 않음', '보통', '그런 편', '매우 그러함'];
 
 const DeepSoulTestPage = ({ onComplete, onBack }) => {
-    const [currentIdx, setCurrentIdx] = useState(0);
-    const [answers, setAnswers] = useState({});
-    const [showIntro, setShowIntro] = useState(true);
+    const [currentIdx, setCurrentIdx] = useState(() => {
+        const saved = localStorage.getItem('lumini_deep_soul_progress');
+        if (saved) {
+            try {
+                const { currentIdx } = JSON.parse(saved);
+                return currentIdx || 0;
+            } catch (e) { return 0; }
+        }
+        return 0;
+    });
+    const [answers, setAnswers] = useState(() => {
+        const saved = localStorage.getItem('lumini_deep_soul_progress');
+        if (saved) {
+            try {
+                const { answers } = JSON.parse(saved);
+                return answers || {};
+            } catch (e) { return {}; }
+        }
+        return {};
+    });
+    const [showIntro, setShowIntro] = useState(() => {
+        const saved = localStorage.getItem('lumini_deep_soul_progress');
+        return !saved; // 데이터가 있으면 인트로 건너뛰기
+    });
     const [showResult, setShowResult] = useState(false);
     const [selectedValue, setSelectedValue] = useState(null);
 
-    const currentQ = DEEP_QUESTIONS[currentIdx];
-    const currentCat = DEEP_CATEGORIES.find(c => c.id === currentQ?.category);
-    const progress = Object.keys(answers).length / TOTAL_DEEP_QUESTIONS;
+    // 진행 상황 자동 저장
+    React.useEffect(() => {
+        if (Object.keys(answers).length > 0 || currentIdx > 0) {
+            localStorage.setItem('lumini_deep_soul_progress', JSON.stringify({ currentIdx, answers }));
+        }
+    }, [currentIdx, answers]);
 
     const handleAnswer = useCallback((val) => {
         setSelectedValue(val);

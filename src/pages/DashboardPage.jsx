@@ -19,6 +19,7 @@ import { Users, MapPin, Sparkles } from 'lucide-react';
 
 const DashboardPage = ({ onNavigate, nearbyUsers, onSelectUser }) => {
     const { userData, profile, userName } = useUserStore();
+    const [selectedUser, setSelectedUser] = useState(null);
 
     const {
         activeTab,
@@ -44,7 +45,7 @@ const DashboardPage = ({ onNavigate, nearbyUsers, onSelectUser }) => {
             <div className="dashboard-grid">
                 {/* 왼쪽 메인 컬렉션 */}
                 <div className="left-panel">
-                    <LumiWelcomeSection userName={profile?.name} userData={userData} />
+                    <LumiWelcomeSection userName={profile?.username || userName} userData={userData} />
                     
                     <QuickActionsGrid 
                         onNavigate={onNavigate} 

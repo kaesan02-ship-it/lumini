@@ -49,10 +49,38 @@ const answerOptions = [
 ];
 
 const PersonalityTest = ({ onComplete, onBack }) => {
-    const [currentStep, setCurrentStep] = useState(0);
-    const [scores, setScores] = useState({
-        EI: 0, SN: 0, TF: 0, JP: 0, H: 0, N: 0
+    const [currentStep, setCurrentStep] = useState(() => {
+        const saved = localStorage.getItem('lumini_test_progress');
+        if (saved) {
+            try {
+                const { currentStep } = JSON.parse(saved);
+                return currentStep || 0;
+            } catch (e) { return 0; }
+        }
+        return 0;
     });
+    const [scores, setScores] = useState(() => {
+        const saved = localStorage.getItem('lumini_test_progress');
+        if (saved) {
+            try {
+                const { scores } = JSON.parse(saved);
+                return scores || { EI: 0, SN: 0, TF: 0, JP: 0, H: 0, N: 0 };
+            } catch (e) { return { EI: 0, SN: 0, TF: 0, JP: 0, H: 0, N: 0 }; }
+        }
+        return { EI: 0, SN: 0, TF: 0, JP: 0, H: 0, N: 0 };
+    });
+
+    // 진행 상황 자동 저장
+    React.useEffect(() => {
+        if (currentStep > 0) {
+            localStorage.setItem('lumini_test_progress', JSON.stringify({ currentStep, scores }));
+        }
+    }, [currentStep, scores]);
+
+    // 완료 시 저장 데이터 삭제
+    const clearProgress = () => {
+        localStorage.removeItem('lumini_test_progress');
+    };
 
     const handleAnswer = useCallback((val) => {
         const q = questions[currentStep];
