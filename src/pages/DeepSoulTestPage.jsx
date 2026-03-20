@@ -235,6 +235,9 @@ const DeepSoulTestPage = ({ onComplete, onBack }) => {
             </div>
         );
     }
+    const currentQ = DEEP_QUESTIONS[currentIdx];
+    const currentCat = DEEP_CATEGORIES.find(c => c.id === currentQ.category);
+    const progress = (currentIdx + 1) / TOTAL_DEEP_QUESTIONS;
 
     // 질문 화면
     return (

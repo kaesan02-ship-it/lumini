@@ -35,6 +35,7 @@ const Tooltip = ({ children, text, position = 'top' }) => {
                             borderRadius: '8px',
                             whiteSpace: 'nowrap',
                             pointerEvents: 'none',
+                            userSelect: 'none',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                             backdropFilter: 'blur(4px)',
                             ...positions[position]

@@ -146,14 +146,17 @@ function App() {
         } 
         // 인증된 사용자가 'welcome'이나 'auth' 페이지에 위치한 경우에만 대시보드로 리다이렉트
         else if (isAuthenticated && (step === 'welcome' || step === 'auth')) {
-            // URL 해시가 welcome/auth가 아닌 다른 유효한 곳을 가리키고 있다면 그곳으로 이동
-            if (currentHash && currentHash !== 'welcome' && currentHash !== 'auth') {
+            // URL 해시가 유효한 다른 곳을 가리키고 있다면 그곳으로 이동, 아니면 대시보드
+            const validHashes = ['dashboard', 'feed', 'events', 'magazine', 'ranking', 'groups', 'shop', 'stats', 'profile-edit', 'insights'];
+            if (currentHash && validHashes.includes(currentHash)) {
                 setStep(currentHash);
             } else {
                 setStep(isAdmin ? 'admin' : 'dashboard');
             }
         }
-    }, [user, session, authLoading, step, isAdmin]);
+        // 이미 유효한 페이지(예: feed)에 있는데 인증 정보가 업데이트되어 이 effect가 실행되는 경우, 
+        // step이 dashboard로 초기화되지 않도록 리다이렉트 로직을 엄격하게 제한함.
+    }, [user?.id, !!session, authLoading, isAdmin, step === 'welcome' || step === 'auth']);
 
     // 브라우저 해시(#) 변경 감지 및 내비게이션 동기화
     useEffect(() => {
@@ -212,6 +215,7 @@ function App() {
   const [chatInput, setChatInput] = useState('');
 
   const fetchNearbyUsers = useCallback(async () => {
+    if (!user?.id && !import.meta.env.VITE_USE_MOCK_DATA) return;
     try {
       const profiles = await getNearbyProfiles(20);
       const currentUserId = user?.id || 'mock-user-001';
@@ -244,44 +248,42 @@ function App() {
     } catch (err) {
       console.error('Failed to load nearby users:', err);
     }
-  }, [user, setNearbyUsers]);
+  }, [user?.id]); // id만 의존성으로 사용
 
   // Favorites Hook
   const { toggleFavorite, isFavorite } = useFavorites();
 
   useEffect(() => {
-    const initializeApp = async () => {
+    const initializeAuth = async () => {
       try {
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(currentSession);
         
         if (currentSession?.user) {
           await fetchProfile(currentSession.user.id);
-          const isUserAdmin = currentSession.user.email === 'admin@lumini.me' || currentSession.user.user_metadata?.isAdmin;
-          if (step === 'welcome' || step === 'auth' || step === 'dashboard') {
-            setStep(isUserAdmin ? 'admin' : 'dashboard');
-          }
+          await fetchNearbyUsers();
+        } else if (import.meta.env.VITE_USE_MOCK_DATA) {
+          await fetchNearbyUsers();
         }
       } catch (err) {
-        console.log('Session init error or skipped (mock mode):', err.message);
+        console.log('Auth init error:', err.message);
+      } finally {
+        useAuthStore.getState().setSession(session || null);
       }
-
-      await fetchNearbyUsers();
     };
 
-    initializeApp();
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
         fetchProfile(session.user.id);
+        fetchNearbyUsers();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [setSession, fetchProfile, fetchNearbyUsers]);
+  }, [fetchNearbyUsers]); // fetchNearbyUsers는 user?.id 변경 시에만 업데이트됨
 
   // Handle step based on data — 새로고침 시 검사 결과가 있으면 대시보드로 이동
     useEffect(() => {
@@ -296,7 +298,10 @@ function App() {
     }, [userData, isAdmin]);
 
   useEffect(() => {
-    const handleStepChange = (e) => setStep(e.detail);
+    const handleStepChange = (e) => {
+      console.log('Step changing to:', e.detail);
+      setStep(e.detail);
+    };
     window.addEventListener('changeStep', handleStepChange);
     return () => window.removeEventListener('changeStep', handleStepChange);
   }, []);
