@@ -136,7 +136,17 @@ const AppRouter = ({
                         const isUserAdmin =
                             session?.user?.email === 'admin@lumini.me' ||
                             session?.user?.user_metadata?.isAdmin;
-                        navigate(isUserAdmin ? 'admin' : 'dashboard');
+                            
+                        if (isUserAdmin) {
+                            navigate('admin');
+                            return;
+                        }
+
+                        // 성향 검사를 완료했는지 store 상태를 직접 확인
+                        const { userData, mbtiType } = useUserStore.getState();
+                        const hasPersonalityData = !!userData && mbtiType && mbtiType !== '?';
+
+                        navigate(hasPersonalityData ? 'dashboard' : 'test');
                     }}
                 />
             )}

@@ -35,7 +35,7 @@ function App() {
     // Auth
     const { user, session, loading: authLoading, isAdmin, setSession } = useAuthStore();
     // User data
-    const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
+    const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile, loading: profileLoading } = useUserStore();
     // Favorites
     const { toggleFavorite, isFavorite } = useFavorites();
 
@@ -83,36 +83,52 @@ function App() {
     }, [step]);
 
     // ─── 인증 상태 → 페이지 가드 ─────────────────────────────────
-    // 핵심 로직: 로딩 완료 후 접근 권한 확인
+    // 핵심 로직: 로딩 완료 후 접근 권한 및 성향 테스트 완료 여부 확인
     useEffect(() => {
-        if (authLoading) return;
+        // 인증 상태나 프로필 데이터를 아직 불러오고 있다면 대기
+        if (authLoading || profileLoading) return;
 
         const isAuthenticated = !!(user || session);
+        const hasPersonalityData = !!userData && mbtiType && mbtiType !== '?';
 
-        // 비인증 사용자가 보호 경로 접근 시 → 로그인 페이지로
-        if (!isAuthenticated && PROTECTED_ROUTES.has(step)) {
-            setStep('auth');
+        // 1. 비인증 사용자 제어 (보호 라우트 접근 차단)
+        if (!isAuthenticated) {
+            if (PROTECTED_ROUTES.has(step)) {
+                setStep('auth');
+            }
             return;
         }
 
-        // 인증된 사용자가 welcome/auth 페이지에 있으면 → 대시보드로
-        if (isAuthenticated && (step === 'welcome' || step === 'auth')) {
-            setStep(isAdmin ? 'admin' : 'dashboard');
+        // 2. 인증된 사용자 접근 제어
+        if (isAdmin) {
+            // 관리자는 인증 화면이나 테스트 화면에 머물 필요가 없음
+            if (step === 'welcome' || step === 'auth' || step === 'test') {
+                setStep('admin');
+            }
+            return;
         }
-    }, [user, session, authLoading, isAdmin, step]);
+
+        // 일반 사용자
+        if (!hasPersonalityData) {
+            // 성향 데이터가 없는 경우, 테스트 관련 페이지가 아닌 곳에 접근하면 자동으로 test로 리다이렉트
+            const isTestPermittedRoute = ['test', 'result', 'deep-soul-test', 'deep-soul-result'].includes(step);
+            
+            if (!isTestPermittedRoute) {
+                setStep('test');
+            }
+        } else {
+            // 성향 데이터가 있는 경우, 초기 화면이나 테스트 화면 진입 시 최적 화면으로 빠른 이동
+            if (step === 'welcome' || step === 'auth' || step === 'test') {
+                setStep('dashboard');
+            }
+        }
+    }, [user, session, authLoading, profileLoading, isAdmin, step, userData, mbtiType]);
 
     // ─── 관리자 패널 세션스토리지 동기화 ─────────────────────────
     useEffect(() => {
         sessionStorage.setItem('lumini_admin_open', showAdmin);
         if (showAdmin) setAdminAuthenticated(isAdmin);
     }, [showAdmin, isAdmin]);
-
-    // ─── 테스트 결과 있으면 대시보드로 ────────────────────────────
-    useEffect(() => {
-        if (userData && (step === 'welcome' || step === 'test')) {
-            setStep(isAdmin ? 'admin' : 'dashboard');
-        }
-    }, [userData, isAdmin]);
 
     // ─── 튜토리얼 (첫 방문 대시보드 진입 시) ─────────────────────
     useEffect(() => {
