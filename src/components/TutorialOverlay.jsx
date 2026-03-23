@@ -45,7 +45,8 @@ const TutorialOverlay = ({ onComplete }) => {
                 backdropFilter: 'blur(10px)',
                 zIndex: 10000,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                padding: '30px', textAlign: 'center', color: 'white'
+                padding: '30px', textAlign: 'center', color: 'white',
+                pointerEvents: 'auto' // 전체 화면을 덮되 명시적으로 auto 설정
             }}
         >
             <AnimatePresence mode="wait">

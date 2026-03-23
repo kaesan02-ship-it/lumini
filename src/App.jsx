@@ -1,801 +1,296 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Home, ClipboardList, Users, Heart, Brain, ShoppingBag, Target, Gem, BookOpen, ShieldCheck } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
-import ShopPage from './pages/ShopPage';
-import DailyChallengesPage from './pages/DailyChallengesPage';
-import useCrystalStore from './store/crystalStore';
-import Tooltip from './components/Tooltip';
 
-// Pages
-import LandingPage from './pages/LandingPage';
-import PersonalityTest from './pages/PersonalityTest';
-import ResultReport from './pages/ResultReport';
-import DashboardPage from './pages/DashboardPage';
-import FavoritesPage from './pages/FavoritesPage';
-import ChatPage from './pages/ChatPage';
-import ProfileEditPage from './pages/ProfileEditPage';
-import EventsPage from './pages/EventsPage';
-import CreateEventPage from './pages/CreateEventPage';
-import EventDetailPage from './pages/EventDetailPage';
-import FeedPage from './pages/FeedPage';
-import CreatePostPage from './pages/CreatePostPage';
-import AuthPage from './pages/AuthPage';
-import InsightsHubPage from './pages/InsightsHubPage';
-import AIInsightsPage from './pages/AIInsightsPage';
-import SoulGrowthPage from './pages/SoulGrowthPage';
-import StatsPage from './pages/StatsPage';
-import SoulMagazinePage from './pages/SoulMagazinePage';
-import CommunityRankingPage from './pages/CommunityRankingPage';
-import CompatibilityGamePage from './pages/CompatibilityGamePage';
-import GroupsPage from './pages/GroupsPage';
-import GroupChatPage from './pages/GroupChatPage';
-import WeeklyReportPage from './pages/WeeklyReportPage';
-import DeepSoulTestPage from './pages/DeepSoulTestPage';
-import DeepSoulResultPage from './pages/DeepSoulResultPage';
-import SoulPetPage from './pages/SoulPetPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
-import AdminLoginPage from './pages/AdminLoginPage';
-import ValueGamePage from './pages/ValueGamePage';
-import AppleGamePage from './pages/AppleGamePage';
+// ─── 레이아웃 컴포넌트 ─────────────────────────────────────────────
+import TopNav from './components/layout/TopNav';
+import BottomNav from './components/layout/BottomNav';
 
-// Supabase
-import { supabase } from './supabase/client';
-// import { upsertProfile } from './supabase/queries'; // Unused
+// ─── 라우터 ────────────────────────────────────────────────────────
+import AppRouter, { PROTECTED_ROUTES } from './router/AppRouter';
 
-// Stores
-import useAuthStore from './store/authStore';
-// import useThemeStore from './store/themeStore'; // Unused
-import useUserStore from './store/userStore';
-
-// Components
+// ─── 모달 / 오버레이 ───────────────────────────────────────────────
 import ProfileModal from './components/ProfileModal';
 import SettingsModal from './components/SettingsModal';
 import TutorialOverlay from './components/TutorialOverlay';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminLoginPage from './pages/AdminLoginPage';
 
-// Supabase Queries
-import { getNearbyProfiles } from './supabase/queries';
+// ─── 스토어 ────────────────────────────────────────────────────────
+import useAuthStore from './store/authStore';
+import useUserStore from './store/userStore';
 
-// Hooks
+// ─── 훅 ────────────────────────────────────────────────────────────
+import useAppInit from './hooks/useAppInit';
 import useFavorites from './hooks/useFavorites';
 
+// ─── 유틸 ──────────────────────────────────────────────────────────
+import { USE_MOCK_DATA } from './config';
+
+// ─────────────────────────────────────────────────────────────────
+// App — 최상위 컴포넌트
+// 역할: 전역 상태 관리, 레이아웃 조합, 모달/오버레이 제어
+// ─────────────────────────────────────────────────────────────────
 function App() {
-  const { user, session, setSession, loading: authLoading, isAdmin } = useAuthStore();
-  const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
-  const { crystals } = useCrystalStore();
+    // Auth
+    const { user, session, loading: authLoading, isAdmin, setSession } = useAuthStore();
+    // User data
+    const { userData, mbtiType, userName, profile, setUserData, setMbtiType, setUserName, fetchProfile, updateProfile } = useUserStore();
+    // Favorites
+    const { toggleFavorite, isFavorite } = useFavorites();
 
-  const [step, setStep] = useState('welcome');
-  const [showAdmin, setShowAdmin] = useState(() => sessionStorage.getItem('lumini_admin_open') === 'true');
-  const [adminAuthenticated, setAdminAuthenticated] = useState(() => useAuthStore.getState().isAdmin);
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [profileAvatar, setProfileAvatar] = useState(localStorage.getItem('lumini_profile_avatar') || null);
-
-  useEffect(() => {
-    sessionStorage.setItem('lumini_admin_open', showAdmin);
-  }, [showAdmin]);
-
-  useEffect(() => {
-    setAdminAuthenticated(isAdmin);
-  }, [isAdmin]);
-
-  useEffect(() => {
-    const handleAvatarUpdate = (e) => {
-      const avatarUrl = e.detail;
-      setProfileAvatar(avatarUrl);
-      localStorage.setItem('lumini_profile_avatar', avatarUrl);
-
-      // 전역 상태(userStore)에도 즉시 반영하여 다른 페이지와 동기화
-      if (profile) {
-        useUserStore.getState().setProfile({
-          ...profile,
-          avatar: avatarUrl
-        });
-      }
+    // ─── URL 해시 기반 라우팅 ──────────────────────────────────────
+    const getInitialStep = () => {
+        const hash = window.location.hash.replace('#', '');
+        return hash || 'welcome';
     };
-    window.addEventListener('updateProfileAvatar', handleAvatarUpdate);
+    const [step, setStep] = useState(getInitialStep);
 
-    return () => {
-      window.removeEventListener('updateProfileAvatar', handleAvatarUpdate);
-    };
-  }, [profile]);
+    // ─── UI 상태 ──────────────────────────────────────────────────
+    const [nearbyUsers, setNearbyUsers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [showMyProfile, setShowMyProfile] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [activeChatUser, setActiveChatUser] = useState(null);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [selectedGroup, setSelectedGroup] = useState(null);
+    const [profileAvatar, setProfileAvatar] = useState(localStorage.getItem('lumini_profile_avatar') || null);
+    const [showTutorial, setShowTutorial] = useState(false);
 
-  // Sync guest data to user profile on first login after test
-  useEffect(() => {
-    if (user && profile && !authLoading) {
-      const guestData = localStorage.getItem('lumini_guest_personality');
-      if (guestData && (!profile.personality_data || !profile.mbti_type)) {
-        try {
-          const { personality_data, mbti_type } = JSON.parse(guestData);
-          updateProfile(user.id, {
-            personality_data,
-            mbti_type
-          });
-          localStorage.removeItem('lumini_guest_personality');
-          console.log('Guest personality data synced to profile');
-        } catch (e) {
-          console.error('Failed to sync guest data:', e);
+    // ─── 관리자 오버레이 ───────────────────────────────────────────
+    const [showAdmin, setShowAdmin] = useState(() => sessionStorage.getItem('lumini_admin_open') === 'true');
+    const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+
+    // ─── 앱 초기화 (세션 검증 + 인증 구독) ───────────────────────
+    const { fetchNearbyUsers } = useAppInit(setNearbyUsers);
+
+    // ─── URL 해시 양방향 동기화 ───────────────────────────────────
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash.replace('#', '');
+            if (hash) setStep(hash);
+        };
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    useEffect(() => {
+        const currentHash = window.location.hash.replace('#', '');
+        if (step && step !== currentHash) {
+            window.location.hash = step;
         }
-      }
-    }
-  }, [user, profile, authLoading, updateProfile]);
+        window.scrollTo(0, 0);
+    }, [step]);
 
-  // Check first visit
-  useEffect(() => {
-    const hasVisited = localStorage.getItem('lumini_visited');
-    if (!hasVisited) {
-      setShowTutorial(true);
-    }
-  }, []);
-
-    // 인증 상태에 따른 자동 페이지 이동
+    // ─── 인증 상태 → 페이지 가드 ─────────────────────────────────
+    // 핵심 로직: 로딩 완료 후 접근 권한 확인
     useEffect(() => {
         if (authLoading) return;
 
         const isAuthenticated = !!(user || session);
-        const isPublicRoute = [
-          'welcome', 'auth', 'test', 'result', 'personality-test', 
-          'deep-soul-test', 'deep-soul-result', 'result-report',
-          'dashboard', 'feed', 'shop', 'daily-challenges', 'community', 'insights', 
-          'events', 'groups', 'ranking', 'growth', 'stats', 'ai-insights'
-        ].includes(step);
 
-        // 비인증 사용자가 보호된 페이지 진입 시에만 auth로
-        if (!isAuthenticated && !isPublicRoute) {
+        // 비인증 사용자가 보호 경로 접근 시 → 로그인 페이지로
+        if (!isAuthenticated && PROTECTED_ROUTES.has(step)) {
             setStep('auth');
             return;
-        } 
-        
-        // 인증된 사용자가 'welcome'이나 'auth' 페이지에 위치한 경우에만 대시보드로 리다이렉트
+        }
+
+        // 인증된 사용자가 welcome/auth 페이지에 있으면 → 대시보드로
         if (isAuthenticated && (step === 'welcome' || step === 'auth')) {
-            const currentHash = window.location.hash.replace('#', '');
-            const validHashes = ['dashboard', 'feed', 'events', 'magazine', 'ranking', 'groups', 'shop', 'stats', 'profile-edit', 'insights'];
-            
-            if (currentHash && validHashes.includes(currentHash)) {
-                setStep(currentHash);
-            } else {
-                setStep(isAdmin ? 'admin' : 'dashboard');
-            }
+            setStep(isAdmin ? 'admin' : 'dashboard');
         }
-    }, [user?.id, session?.access_token, authLoading, isAdmin, (step === 'welcome' || step === 'auth')]);
+    }, [user, session, authLoading, isAdmin, step]);
 
-    // 브라우저 해시(#) 변경 감지 및 내비게이션 동기화
+    // ─── 관리자 패널 세션스토리지 동기화 ─────────────────────────
     useEffect(() => {
-        const handleHashChange = () => {
-            const hash = window.location.hash.replace('#', '');
-            if (hash) {
-                setStep(hash);
-            }
-        };
+        sessionStorage.setItem('lumini_admin_open', showAdmin);
+        if (showAdmin) setAdminAuthenticated(isAdmin);
+    }, [showAdmin, isAdmin]);
 
-        window.addEventListener('hashchange', handleHashChange);
-        
-        // 초기 로드 시 해시에 따른 step 설정
-        // (authLoading이 끝난 후 authGuard와 연계하여 정확한 페이지 유지 가능)
-        const initialHash = window.location.hash.replace('#', '');
-        if (initialHash) {
-            setStep(initialHash);
-        } else {
-            // 해시가 없을 경우 현재 step으로 해시 설정
-            window.location.hash = step;
-        }
-
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []); // 초기화 시 1회만 실행
-
-  // step 상태 변화 시 URL 해시 업데이트
-  useEffect(() => {
-    const currentHash = window.location.hash.replace('#', '');
-    if (step && step !== currentHash) {
-      window.location.hash = step;
-    }
-  }, [step]);
-
-  // 유저가 로드되었을 때 필요한 정보(크리스탈, 프로필) 동기화
-  useEffect(() => {
-    if (user?.id) {
-       // 이미 프로필이 있다면 중복 호출 방지 (userStore 가드가 처리하지만 여기서도 1차 방어)
-       if (!profile || profile.id !== user.id) {
-          fetchProfile(user.id);
-       }
-       useCrystalStore.getState().fetchCrystalsFromDB(user.id);
-    }
-  }, [user?.id]); // user 객체 대신 id 사용
-
-  const handleTutorialComplete = () => {
-    localStorage.setItem('lumini_visited', 'true');
-    setShowTutorial(false);
-  };
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showMyProfile, setShowMyProfile] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [activeChatUser, setActiveChatUser] = useState(null);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [nearbyUsers, setNearbyUsers] = useState([]);
-  // const [chatMessages, setChatMessages] = useState([]); // Unused // For mock 1:1 chat if needed
-  const [chatInput, setChatInput] = useState('');
-
-  const fetchNearbyUsers = useCallback(async () => {
-    if (!user?.id && !import.meta.env.VITE_USE_MOCK_DATA) return;
-    try {
-      const profiles = await getNearbyProfiles(20);
-      const currentUserId = user?.id || 'mock-user-001';
-      const mapped = profiles
-        .filter(p => p.id !== currentUserId)
-        .map(p => {
-          const pd = p.personality_data || {};
-          const O = pd.O || 0, C = pd.C || 0, E = pd.E || 0;
-          const A = pd.A || 0, N = pd.N || 0, H = pd.H || 50;
-          return {
-            id: p.id,
-            name: p.username || '익명',
-            mbti: p.mbti_type || 'Unknown',
-            bio: p.bio || '',
-            district: p.district || '',
-            interests: p.interests || [],
-            similarity: 80 + ((p.id.charCodeAt(0) + p.id.charCodeAt(p.id.length - 1)) % 15),
-            deep_soul: p.deep_soul || null,
-            pet_data: p.pet_data || null,
-            data: [
-              { subject: '사교성', A: Math.round(E), fullMark: 100 },
-              { subject: '창의성', A: Math.round(O * 0.6 + E * 0.4), fullMark: 100 },
-              { subject: '공감력', A: Math.round(A * 0.6 + (100 - N) * 0.4), fullMark: 100 },
-              { subject: '계획성', A: Math.round(C), fullMark: 100 },
-              { subject: '성실성', A: Math.round(pd.H || 50), fullMark: 100 },
-            ]
-          };
-        });
-      setNearbyUsers(mapped);
-    } catch (err) {
-      console.error('Failed to load nearby users:', err);
-    }
-  }, [user?.id]); // id만 의존성으로 사용
-
-  // Favorites Hook
-  const { toggleFavorite, isFavorite } = useFavorites();
-
-  useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        if (currentSession?.user) {
-          // 세션 정보를 authStore에 먼저 확실히 반영
-          useAuthStore.getState().setSession(currentSession);
-          await fetchProfile(currentSession.user.id);
-          await fetchNearbyUsers();
-        } else if (import.meta.env.VITE_USE_MOCK_DATA) {
-          await fetchNearbyUsers();
-        }
-      } catch (err) {
-        console.log('Auth init error:', err.message);
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      
-      setSession(session);
-      if (session?.user) {
-        // ID가 바뀐 경우에만 fetch 실행 (기존 fetchProfile 가드와 협력)
-        fetchProfile(session.user.id);
-        fetchNearbyUsers();
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []); // 의존성을 비워 초기 1회 및 이벤트 구독만 수행
-
-  // Handle step based on data — 새로고침 시 검사 결과가 있으면 대시보드로 이동
+    // ─── 테스트 결과 있으면 대시보드로 ────────────────────────────
     useEffect(() => {
         if (userData && (step === 'welcome' || step === 'test')) {
-            // 어드민인 경우 대시보드가 아닌 어드민으로 (예외처리)
-            if (isAdmin) {
-                setStep('admin');
-            } else {
-                setStep('dashboard');
-            }
+            setStep(isAdmin ? 'admin' : 'dashboard');
         }
     }, [userData, isAdmin]);
 
-  useEffect(() => {
-    const handleStepChange = (e) => {
-      console.log('Step changing to:', e.detail);
-      setStep(e.detail);
-    };
-    window.addEventListener('changeStep', handleStepChange);
-    return () => window.removeEventListener('changeStep', handleStepChange);
-  }, []);
+    // ─── 튜토리얼 (첫 방문 대시보드 진입 시) ─────────────────────
+    useEffect(() => {
+        if (!localStorage.getItem('lumini_visited') && step === 'dashboard') {
+            setShowTutorial(true);
+        }
+    }, [step]);
 
-  // 페이지 이동 시 스크롤 최상단 초기화
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [step]);
+    // ─── 아바타 업데이트 이벤트 (ProfileEditPage 업로드 후) ────────
+    useEffect(() => {
+        const handleAvatarUpdate = (e) => {
+            const avatarUrl = e.detail;
+            setProfileAvatar(avatarUrl);
+            localStorage.setItem('lumini_profile_avatar', avatarUrl);
+            if (profile) {
+                useUserStore.getState().setProfile({ ...profile, avatar: avatarUrl });
+            }
+        };
+        window.addEventListener('updateProfileAvatar', handleAvatarUpdate);
+        return () => window.removeEventListener('updateProfileAvatar', handleAvatarUpdate);
+    }, [profile]);
 
-  // --- [Handlers] ---
-  const handleTestComplete = async (data, type) => {
-    // Save raw personality object { O, C, E, A, N, H }
-    setUserData(data);
-    setMbtiType(type);
-
-    // Also update Supabase if logged in
-    if (user) {
-      try {
-        await updateProfile(user.id, {
-          personality_data: data,
-          mbti_type: type
-        });
-        // 갱신된 프로필 정보를 다시 가져와서 전역 상태 동기화
-        await fetchProfile(user.id);
-        // 주변 유저 목록도 새로고침 (매칭률 변화 가능성)
-        await fetchNearbyUsers();
-      } catch (err) {
-        console.error("Profile update failed (silently ignored in mock mode):", err);
-      }
-    }
-
-    localStorage.setItem('lumini_user_data', JSON.stringify(data));
-    localStorage.setItem('lumini_mbti_type', type);
-    setStep('result');
-  };
-
-  const resetData = useCallback(() => {
-    localStorage.removeItem('lumini_user_data');
-    localStorage.removeItem('lumini_mbti_type');
-    setUserData(null);
-    setMbtiType('?');
-    setStep('welcome');
-    setShowSettings(false);
-  }, []);
-
-
-  const handleAuthSuccess = () => {
-    setStep('dashboard');
-  };
-
-  // Nearby users are now fetched in the initializeApp effect above
-
-  return (
-    <div className="app-container" style={{ minHeight: '100vh' }}>
-      <Toaster position="top-center" reverseOrder={false} />
-
-      {/* Top Navbar */}
-      {(user || userData) && step !== 'welcome' && step !== 'auth' && (
-      <nav style={{
-        position: 'fixed', top: 0, width: '100%',
-        padding: '12px 20px', display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', background: 'rgba(255,255,255,0.9)',
-        backdropFilter: 'blur(10px)', zIndex: 100,
-        boxShadow: '0 2px 20px rgba(0,0,0,0.05)'
-      }}>
-        <Tooltip text="대시보드로 돌아갑니다.">
-          <h1 className="title-gradient" style={{ fontSize: '1.6rem', cursor: 'pointer', fontWeight: 800 }} onClick={() => setStep('dashboard')}>
-            lumini
-          </h1>
-        </Tooltip>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {isAdmin && (
-            <Tooltip text="관리자 대시보드를 엽니다.">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                onClick={() => setShowAdmin(true)}
-                style={{ background: '#0f172a', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <ShieldCheck size={14} /> 관리자
-              </motion.button>
-            </Tooltip>
-          )}
-          {/* Crystal HUD */}
-          {step !== 'welcome' && step !== 'test' && step !== 'result' && (
-            <Tooltip text="상점으로 이동하여 크리스탈을 사용하세요.">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                onClick={() => setStep('shop')}
-                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #F3E8FF, #E9D5FF)', padding: '7px 14px', borderRadius: '100px', border: '1px solid #9333EA20' }}
-              >
-                <Gem size={14} color="#9333EA" />
-                <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#9333EA' }}>{crystals}</span>
-              </motion.div>
-            </Tooltip>
-          )}
-          <Tooltip text="설정을 변경하거나 로그아웃합니다.">
-            <motion.div whileHover={{ scale: 1.1 }} onClick={() => setShowSettings(true)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '50%', background: '#f8fafc' }}>
-              <Settings size={22} color="var(--text-muted)" />
-            </motion.div>
-          </Tooltip>
-          <Tooltip text="내 프로필 정보를 확인합니다.">
-            <div
-              onClick={() => setShowMyProfile(true)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '6px 14px',
-                borderRadius: '30px', cursor: 'pointer', transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
-              onMouseOut={(e) => e.currentTarget.style.background = '#f8fafc'}
-            >
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(45deg, var(--primary), var(--secondary))' }}></div>
-              <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{userName}</span>
-            </div>
-          </Tooltip>
-        </div>
-      </nav>
-      )}
-
-      {/* Main Content Area */}
-      <main style={{ padding: (step === 'welcome' || step === 'auth') ? '0' : '100px 5% 120px' }}>
-        <AnimatePresence mode="wait">
-          {step === 'welcome' && <LandingPage key="landing" onStart={() => setStep('auth')} onNavigateLogin={() => setStep('auth')} />}
-
-          {step === 'test' && (
-            <motion.div key="test" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ padding: '40px 0' }}>
-              <PersonalityTest onComplete={handleTestComplete} onBack={() => setStep(userData ? 'dashboard' : 'welcome')} />
-            </motion.div>
-          )}
-
-          {step === 'result' && (
-            <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ padding: '40px 0' }}>
-              <ResultReport data={userData} mbtiType={mbtiType} onExplore={() => setStep('dashboard')} onNavigate={setStep} />
-            </motion.div>
-          )}
-
-          {step === 'dashboard' && (
-            <DashboardPage
-              userData={userData}
-              mbtiType={mbtiType}
-              nearbyUsers={nearbyUsers}
-              onSelectUser={setSelectedUser}
-              onNavigate={setStep}
-              userName={userName}
-            />
-          )}
-
-
-          {step === 'apple-game' && (
-            <AppleGamePage
-              userName={userName}
-              onBack={() => setStep('dashboard')}
-            />
-          )}
-
-          {step === 'favorites' && (
-            <FavoritesPage
-              onBack={() => setStep('dashboard')}
-              nearbyUsers={nearbyUsers}
-              onSelectUser={setSelectedUser}
-              onStartChat={(user) => {
-                setActiveChatUser(user);
-                setStep('chat');
-              }}
-            />
-          )}
-
-          {step === 'events' && (
-            <EventsPage
-              onBack={() => setStep('dashboard')}
-              onSelectEvent={(event) => {
-                setSelectedEvent(event);
-                setStep('event-detail');
-              }}
-              onCreateEvent={() => setStep('create-event')}
-            />
-          )}
-          {step === 'event-detail' && selectedEvent && (
-            <EventDetailPage
-              eventId={selectedEvent.id}
-              onBack={() => setStep('events')}
-            />
-          )}
-          {step === 'create-event' && (
-            <CreateEventPage
-              onBack={() => setStep('events')}
-              onSuccess={() => setStep('events')}
-            />
-          )}
-          {step === 'feed' && (
-            <FeedPage
-              onCreatePost={() => setStep('create-post')}
-              onSelectPost={(post) => {
-                // Future: setStep('post-detail')
-              }}
-            />
-          )}
-          {step === 'create-post' && (
-            <CreatePostPage
-              onBack={() => setStep('feed')}
-              onSuccess={() => setStep('feed')}
-            />
-          )}
-          {step === 'chat' && activeChatUser && (
-            <ChatPage
-              chatUser={activeChatUser}
-              onBack={() => {
-                setStep('dashboard');
-                setActiveChatUser(null);
-              }}
-              userName={userName}
-            />
-          )}
-          {step === 'profile-edit' && (
-            <ProfileEditPage
-              userData={userData}
-              userName={userName}
-              mbtiType={mbtiType}
-              profile={profile}
-              profileAvatar={profileAvatar}
-              onBack={() => {
-                setStep('dashboard');
-                setShowMyProfile(true);
-              }}
-              onSave={async (data) => {
-                if (user) {
-                  try {
-                    await updateProfile(user.id, {
-                      username: data.name,
-                      bio: data.bio,
-                      avatar_url: profile?.avatar_url || profileAvatar, // 기존 아바타 우선 사용
-                      interests: data.interests,
-                      privacy_level: data.privacy,
-                      district: data.district,
-                      game: data.game,
-                      tier: data.tier
-                    });
-                    alert('프로필이 저장되었습니다.');
-                  } catch (err) {
-                    console.error(err);
-                    alert('프로필 저장 중 오류가 발생했습니다.');
-                  }
-                } else {
-                  setUserName(data.name);
-                  if (data.district) {
-                    localStorage.setItem('lumini_user_district', data.district);
-                  }
-                  if (typeof useUserStore?.getState === 'function') {
-                    useUserStore.getState().setProfile({
-                      ...profile,
-                      avatar_url: profileAvatar,
-                      bio: data.bio,
-                      interests: data.interests,
-                      privacy_level: data.privacy,
-                      district: data.district,
-                      game: data.game,
-                      tier: data.tier
-                    });
-                  }
+    // ─── 게스트 테스트 데이터 → 로그인 후 자동 동기화 ────────────
+    useEffect(() => {
+        if (user && profile && !authLoading) {
+            const guestData = localStorage.getItem('lumini_guest_personality');
+            if (guestData && (!profile.personality_data || !profile.mbti_type)) {
+                try {
+                    const { personality_data, mbti_type } = JSON.parse(guestData);
+                    updateProfile(user.id, { personality_data, mbti_type });
+                    localStorage.removeItem('lumini_guest_personality');
+                } catch (e) {
+                    console.error('Failed to sync guest data:', e);
                 }
-              }}
-            />
-          )}
-          {step === 'auth' && (
-            <AuthPage 
-              onAuthSuccess={(session) => {
-                  const isUserAdmin = session?.user?.email === 'admin@lumini.me' || session?.user?.user_metadata?.isAdmin;
-                  setStep(isUserAdmin ? 'admin' : 'dashboard');
-              }} 
-              onAdminClick={() => setShowAdmin(true)}
-            />
-          )}
-          {step === 'insights' && (
-            <InsightsHubPage onSelectCategory={(cat) => setStep(cat)} />
-          )}
-          {step === 'ai-insights' && (
-            <AIInsightsPage userData={userData} mbtiType={mbtiType} onNavigate={setStep} />
-          )}
-          {step === 'growth' && (
-            <SoulGrowthPage
-              onBack={() => setStep('insights')}
-              mbtiType={mbtiType}
-            />
-          )}
-          {step === 'stats' && (
-            <StatsPage />
-          )}
-          {step === 'shop' && (
-            <ShopPage onBack={() => setStep('dashboard')} />
-          )}
-          {step === 'soul-pet' && (
-            <SoulPetPage onBack={() => setStep('dashboard')} nearbyUsers={nearbyUsers} />
-          )}
-          {step === 'value-game' && (
-            <ValueGamePage onComplete={(answers) => {
-              console.log('Value Game Completed:', answers);
-              localStorage.setItem('lumini_value_game_completed', 'true');
-              setStep('dashboard');
-            }} />
-          )}
-          {step === 'daily-challenges' && (
-            <DailyChallengesPage
-              onBack={() => setStep('dashboard')}
-              mbtiType={mbtiType}
-              onNavigate={setStep}
-            />
-          )}
-          {step === 'magazine' && (
-            <SoulMagazinePage mbtiType={mbtiType} onBack={() => setStep('community')} />
-          )}
-          {step === 'ranking' && (
-            <CommunityRankingPage onBack={() => setStep('community')} mbtiType={mbtiType} />
-          )}
-          {step === 'compatibility-game' && (
-            <CompatibilityGamePage onBack={() => setStep('community')} myMbtiType={mbtiType} onNavigate={setStep} />
-          )}
-          {step === 'groups' && (
-            <GroupsPage onSelectGroup={(g) => { setSelectedGroup(g); setStep('group-chat'); }} />
-          )}
-          {step === 'group-chat' && selectedGroup && (
-            <GroupChatPage group={selectedGroup} onBack={() => setStep('groups')} />
-          )}
-          {step === 'community' && (
-            <CommunityHubPage onNavigate={setStep} />
-          )}
-          {step === 'weekly-report' && (
-            <WeeklyReportPage onBack={() => setStep('community')} onNavigate={setStep} />
-          )}
-          {step === 'deep-soul-test' && (
-            <DeepSoulTestPage
-              onBack={() => setStep('dashboard')}
-              onComplete={async (answers) => {
-                localStorage.setItem('lumini_deep_soul', JSON.stringify(answers));
-                // Supabase DB 동기화
-                if (user) {
-                  try {
-                    await updateProfile(user.id, { deep_soul: answers });
-                    await fetchProfile(user.id);
-                  } catch (err) {
-                    console.error("DeepSoul sync failed:", err);
-                  }
-                }
-                setStep('dashboard');
-              }}
-            />
-          )}
-          {step === 'deep-soul-result' && (
-            <DeepSoulResultPage
-              onBack={() => setStep('dashboard')}
-              onRetake={() => setStep('deep-soul-test')}
-              onNavigate={setStep}
-            />
-          )}
-          {step === 'insights' && (
-            <InsightsHubPage onNavigate={setStep} />
-          )}
-          {step === 'ai-insights' && (
-            <AIInsightsPage onBack={() => setStep('insights')} />
-          )}
-          {step === 'stats' && (
-            <StatsPage onBack={() => setStep('insights')} />
-          )}
-          {step === 'growth' && (
-            <SoulGrowthPage onBack={() => setStep('insights')} />
-          )}
-          {step === 'soul-pet' && (
-            <SoulPetPage onBack={() => setStep('dashboard')} />
-          )}
-        </AnimatePresence>
+            }
+        }
+    }, [user, profile, authLoading]);
 
-        {/* Global Admin Overlay */}
-        <AnimatePresence>
-          {showAdmin && (
-            !adminAuthenticated ? (
-              <AdminLoginPage
-                onAuthSuccess={() => setAdminAuthenticated(true)}
-                onBack={() => setShowAdmin(false)}
-              />
-            ) : (
-              isAdmin && (
-                <motion.div
-                  initial={{ opacity: 0, y: 100 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 100 }}
-                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, background: 'white', overflowY: 'auto' }}
-                >
-                  <AdminDashboardPage onBack={() => setShowAdmin(false)} />
-                </motion.div>
-              )
-            )
-          )}
-        </AnimatePresence>
-      </main>
+    // ─── changeStep 전역 이벤트 ────────────────────────────────────
+    useEffect(() => {
+        const handleStepChange = (e) => setStep(e.detail);
+        window.addEventListener('changeStep', handleStepChange);
+        return () => window.removeEventListener('changeStep', handleStepChange);
+    }, []);
 
-      {/* Bottom Navigation (Mobile Friendly) */}
-      {(user || userData) && step !== 'welcome' && step !== 'auth' && (
-        <nav className="bottom-nav">
-          <Tooltip text="홈 화면으로 이동합니다."><NavItem active={step === 'dashboard' || step === 'welcome'} icon={<Home size={22} />} label="홈" onClick={() => setStep('dashboard')} /></Tooltip>
-          <Tooltip text="동네 소식과 커뮤니티 피드를 확인합니다."><NavItem active={step === 'feed'} icon={<ClipboardList size={22} />} label="피드" onClick={() => setStep('feed')} /></Tooltip>
-          <Tooltip text="일일 과제를 수행하고 보상을 받으세요."><NavItem active={step === 'daily-challenges'} icon={<Target size={22} />} label="챌린지" onClick={() => setStep('daily-challenges')} /></Tooltip>
-          <Tooltip text="다양한 소울 모임과 게임에 참여하세요."><NavItem active={['community', 'magazine', 'ranking', 'compatibility-game', 'groups', 'group-chat', 'weekly-report'].includes(step)} icon={<Users size={22} />} label="커뮤니티" onClick={() => setStep('community')} /></Tooltip>
-          <Tooltip text="성향 분석 및 통계 데이터를 확인합니다."><NavItem active={['insights', 'ai-insights', 'stats', 'growth'].includes(step)} icon={<Brain size={22} />} label="인사이트" onClick={() => setStep('insights')} /></Tooltip>
-          <Tooltip text="포인트를 아이템으로 교환합니다."><NavItem icon={<ShoppingBag size={24} />} label="상점" active={step === 'shop'} onClick={() => setStep('shop')} /></Tooltip>
-        </nav>
-      )}
+    // ─── 성격 테스트 완료 핸들러 ──────────────────────────────────
+    const handleTestComplete = useCallback(async (data, type) => {
+        setUserData(data);
+        setMbtiType(type);
+        if (user) {
+            try {
+                await updateProfile(user.id, { personality_data: data, mbti_type: type });
+                await fetchProfile(user.id);
+                await fetchNearbyUsers();
+            } catch (err) {
+                console.error('Profile update failed:', err);
+            }
+        }
+        localStorage.setItem('lumini_user_data', JSON.stringify(data));
+        localStorage.setItem('lumini_mbti_type', type);
+        setStep('result');
+    }, [user, updateProfile, fetchProfile, fetchNearbyUsers]);
 
-      {/* Modals */}
-      {(selectedUser || showMyProfile) && (
-        <ProfileModal
-          user={selectedUser}
-          onClose={() => {
-            setSelectedUser(null);
-            setShowMyProfile(false);
-          }}
-          userName={userName}
-          mbtiType={mbtiType}
-          userData={userData}
-          profile={profile}
-          onStartChat={(u) => {
-            setActiveChatUser(u);
-            setSelectedUser(null);
-            setShowMyProfile(false);
-            setStep('chat');
-          }}
-        />
-      )}
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        userName={userName}
-        setUserName={setUserName}
-        onReset={resetData}
-        mbtiType={mbtiType}
-        userData={userData}
-        onNavigate={(target) => { setShowSettings(false); setStep(target); }}
-      />
+    // ─── 데이터 리셋 (성격 테스트 재시작) ────────────────────────
+    const resetData = useCallback(() => {
+        localStorage.removeItem('lumini_user_data');
+        localStorage.removeItem('lumini_mbti_type');
+        setUserData(null);
+        setMbtiType('?');
+        setStep('welcome');
+        setShowSettings(false);
+    }, []);
 
-      {/* Tutorial Overlay */}
-      <AnimatePresence>
-        {showTutorial && (
-          <TutorialOverlay onComplete={handleTutorialComplete} />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+    // ─── 레이아웃 표시 여부 ───────────────────────────────────────
+    const isLoggedIn = !!(user || userData);
+    const isAuthPage = step === 'welcome' || step === 'auth';
+    const showNav = isLoggedIn && !isAuthPage;
 
-const NavItem = ({ icon, label, active, onClick }) => (
-  <div className={`nav-item ${active ? 'active' : ''}`} onClick={onClick} style={{ cursor: 'pointer' }}>
-    {icon}
-    <span style={{ fontSize: '0.75rem', marginTop: '4px', fontWeight: active ? 700 : 500 }}>{label}</span>
-  </div>
-);
+    return (
+        <div className="app-container" style={{ minHeight: '100vh' }}>
+            <Toaster position="top-center" reverseOrder={false} />
 
-const CommunityHubPage = ({ onNavigate }) => {
-  const cards = [
-    { step: 'magazine', emoji: '📖', title: '소울 매거진', desc: '성향별 큐레이션 아티클 · 북마크 저장', gradient: ['#F3E8FF', '#E9D5FF'], accent: '#9333EA' },
-    { step: 'compatibility-game', emoji: '💕', title: '소울 궁합 게임', desc: '6문제로 알아보는 나의 이상형 궁합 · +15💎', gradient: ['#FDF4FF', '#FAE8FF'], accent: '#D946EF' },
-    { step: 'ranking', emoji: '🏆', title: '소울 랭킹', desc: '주간/월간 활동 리더보드 · +30💎 보상', gradient: ['#FFF7ED', '#FED7AA'], accent: '#F59E0B' },
-    { step: 'groups', emoji: '💬', title: '소울 그룹', desc: '성향별 그룹 채팅 · 관심사 모임 참여', gradient: ['#EFF6FF', '#DBEAFE'], accent: '#3B82F6' },
-  ];
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--background)', paddingBottom: '120px' }}>
-      <div style={{ padding: '30px 5% 20px', background: 'linear-gradient(135deg, #6366F1, #EC4899)', color: 'white' }}>
-        <h1 style={{ margin: 0, fontWeight: 900, fontSize: '1.6rem' }}>🌟 커뮤니티</h1>
-        <p style={{ margin: '6px 0 0', opacity: 0.85, fontSize: '0.88rem' }}>함께하면 더 즐거운 소울 공간</p>
-      </div>
-      <div style={{ padding: '24px 5%', display: 'grid', gap: '14px' }}>
-        {cards.map(card => (
-          <motion.div key={card.step} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
-            onClick={() => onNavigate(card.step)}
-            style={{ background: `linear-gradient(135deg, ${card.gradient[0]}, ${card.gradient[1]})`, borderRadius: '22px', padding: '22px', cursor: 'pointer', border: `1px solid ${card.accent}20`, display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden' }}>
-            {card.badge && (
-              <div style={{ position: 'absolute', top: '12px', right: '12px', background: card.badge === 'NEW' ? '#10B981' : '#EF4444', color: 'white', fontSize: '0.65rem', fontWeight: 900, padding: '3px 8px', borderRadius: '100px' }}>{card.badge}</div>
+            {/* ─── 상단 네비게이션 ─────────────────────────────── */}
+            {showNav && (
+                <TopNav
+                    step={step}
+                    onNavigate={setStep}
+                    onOpenSettings={() => setShowSettings(true)}
+                    onOpenMyProfile={() => setShowMyProfile(true)}
+                    onOpenAdmin={() => setShowAdmin(true)}
+                />
             )}
-            <div style={{ fontSize: '2.2rem', flexShrink: 0 }}>{card.emoji}</div>
-            <div>
-              <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '3px', color: '#1E293B' }}>{card.title}</div>
-              <div style={{ fontSize: '0.82rem', color: '#475569' }}>{card.desc}</div>
-            </div>
-            <div style={{ marginLeft: 'auto', color: card.accent, flexShrink: 0, fontSize: '1.2rem' }}>›</div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-};
+
+            {/* ─── 메인 콘텐츠 ─────────────────────────────────── */}
+            <main style={{ padding: isAuthPage ? '0' : '100px 5% 120px' }}>
+                <AppRouter
+                    step={step}
+                    setStep={setStep}
+                    nearbyUsers={nearbyUsers}
+                    selectedUser={selectedUser}
+                    setSelectedUser={setSelectedUser}
+                    activeChatUser={activeChatUser}
+                    setActiveChatUser={setActiveChatUser}
+                    selectedEvent={selectedEvent}
+                    setSelectedEvent={setSelectedEvent}
+                    selectedGroup={selectedGroup}
+                    setSelectedGroup={setSelectedGroup}
+                    profileAvatar={profileAvatar}
+                    onTestComplete={handleTestComplete}
+                />
+
+                {/* ─── 관리자 오버레이 ──────────────────────────── */}
+                <AnimatePresence>
+                    {showAdmin && (
+                        !adminAuthenticated ? (
+                            <AdminLoginPage
+                                onAuthSuccess={() => setAdminAuthenticated(true)}
+                                onBack={() => setShowAdmin(false)}
+                            />
+                        ) : (
+                            isAdmin && (
+                                <div style={{
+                                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                    zIndex: 9000, background: 'white', overflowY: 'auto',
+                                }}>
+                                    <AdminDashboardPage onBack={() => setShowAdmin(false)} />
+                                </div>
+                            )
+                        )
+                    )}
+                </AnimatePresence>
+            </main>
+
+            {/* ─── 하단 네비게이션 ──────────────────────────────── */}
+            {showNav && <BottomNav step={step} onNavigate={setStep} />}
+
+            {/* ─── 전역 모달들 ─────────────────────────────────── */}
+            {(selectedUser || showMyProfile) && (
+                <ProfileModal
+                    user={selectedUser}
+                    onClose={() => { setSelectedUser(null); setShowMyProfile(false); }}
+                    userName={userName}
+                    mbtiType={mbtiType}
+                    userData={userData}
+                    profile={profile}
+                    onStartChat={(u) => {
+                        setActiveChatUser(u);
+                        setSelectedUser(null);
+                        setShowMyProfile(false);
+                        setStep('chat');
+                    }}
+                />
+            )}
+
+            <SettingsModal
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+                userName={userName}
+                setUserName={setUserName}
+                onReset={resetData}
+                mbtiType={mbtiType}
+                userData={userData}
+                onNavigate={(target) => { setShowSettings(false); setStep(target); }}
+            />
+
+            {/* ─── 튜토리얼 오버레이 ────────────────────────────── */}
+            <AnimatePresence>
+                {showTutorial && (
+                    <TutorialOverlay
+                        onComplete={() => {
+                            localStorage.setItem('lumini_visited', 'true');
+                            setShowTutorial(false);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
 
 export default App;

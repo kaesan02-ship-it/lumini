@@ -1,3 +1,6 @@
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Profiles table to store user personality and profile information
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
@@ -6,6 +9,10 @@ CREATE TABLE profiles (
   avatar_url TEXT,
   bio TEXT,
   interests TEXT[],
+  district TEXT,
+  game TEXT,
+  tier TEXT,
+  deep_soul JSONB,
   personality_data JSONB,
   privacy_level TEXT DEFAULT 'public',
   location GEOGRAPHY(POINT),
