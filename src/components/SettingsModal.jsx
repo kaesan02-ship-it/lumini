@@ -413,15 +413,15 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                             setTimeout(() => setConfirmLogout(false), 15000);
                             return;
                         }
-                        console.log('Logout button clicked');
                         try {
-                            console.log('Calling signOut...');
                             await signOut();
-                            console.log('signOut completed. Closing modal...');
                             onClose();
-                            const baseUrl = import.meta.env.BASE_URL || '/lumini/';
-                            console.log('Redirecting to:', baseUrl);
-                            window.location.href = baseUrl;
+                            // React 상태 기반 리다이렉트 — window.location 대신 onNavigate 사용
+                            if (typeof onNavigate === 'function') {
+                                onNavigate('welcome');
+                            } else {
+                                window.location.hash = 'welcome';
+                            }
                         } catch (err) {
                             console.error('Logout failed:', err);
                             alert('로그아웃 중 오류가 발생했습니다.');
