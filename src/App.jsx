@@ -151,21 +151,7 @@ function App() {
         return () => window.removeEventListener('updateProfileAvatar', handleAvatarUpdate);
     }, [profile]);
 
-    // ─── 게스트 테스트 데이터 → 로그인 후 자동 동기화 ────────────
-    useEffect(() => {
-        if (user && profile && !authLoading) {
-            const guestData = localStorage.getItem('lumini_guest_personality');
-            if (guestData && (!profile.personality_data || !profile.mbti_type)) {
-                try {
-                    const { personality_data, mbti_type } = JSON.parse(guestData);
-                    updateProfile(user.id, { personality_data, mbti_type });
-                    localStorage.removeItem('lumini_guest_personality');
-                } catch (e) {
-                    console.error('Failed to sync guest data:', e);
-                }
-            }
-        }
-    }, [user, profile, authLoading]);
+
 
     // ─── changeStep 전역 이벤트 ────────────────────────────────────
     useEffect(() => {

@@ -109,6 +109,31 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
                 const { user } = await signIn(email, password);
                 if (user) {
                     await fetchProfile(user.id);
+                    const userStore = useUserStore.getState();
+
+                    // 데모 계정 자동 더미 데이터 주입 (성향 검사 건너뛰기)
+                    if (email === 'demo@lumini.me' && (!userStore.userData || userStore.mbtiType === '?')) {
+                        await userStore.updateProfile(user.id, {
+                            personality_data: { O: 85, C: 45, E: 90, A: 75, N: 30, H: 95 },
+                            mbti_type: 'ENFP',
+                            deep_soul: { r1:3,r2:1,r3:2,r4:3,r5:1,r6:2,r7:3,r8:1, l1:2,l2:1,l3:3,l4:2,l5:1,l6:2,l7:3,l8:1, f1:3,f2:2,f3:1,f4:3,f5:2,f6:1,f7:3,f8:2, v1:3,v2:2,v3:1,v4:3,v5:2,v6:1,v7:3 },
+                            bio: '반가워요! 루미니 데모 계정입니다 ✨',
+                            username: '루미니 탐험가'
+                        });
+                    } else {
+                        // 일반 계정 로컬 게스트 데이터 동기화
+                        const guestData = localStorage.getItem('lumini_guest_personality');
+                        if (guestData && (!userStore.userData || userStore.mbtiType === '?')) {
+                            try {
+                                const { personality_data, mbti_type } = JSON.parse(guestData);
+                                await userStore.updateProfile(user.id, { personality_data, mbti_type });
+                                localStorage.removeItem('lumini_guest_personality');
+                                localStorage.removeItem('lumini_guest_test_date');
+                            } catch (e) {
+                                console.error('Failed to sync guest data:', e);
+                            }
+                        }
+                    }
                 }
                 toast.success('환영합니다! 👋');
                 onAuthSuccess();
@@ -117,6 +142,20 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
                 
                 if (result?.user) {
                     await fetchProfile(result.user.id);
+                    const userStore = useUserStore.getState();
+                    
+                    // 회원가입 직후 로컬 게스트 데이터 서버 동기화
+                    const guestData = localStorage.getItem('lumini_guest_personality');
+                    if (guestData && (!userStore.userData || userStore.mbtiType === '?')) {
+                        try {
+                            const { personality_data, mbti_type } = JSON.parse(guestData);
+                            await userStore.updateProfile(result.user.id, { personality_data, mbti_type });
+                            localStorage.removeItem('lumini_guest_personality');
+                            localStorage.removeItem('lumini_guest_test_date');
+                        } catch (e) {
+                            console.error('Failed to sync signup guest data:', e);
+                        }
+                    }
                 }
 
                 // Supabase 설정에 따라 가입 후 즉시 세션이 없을 수 있음 (이메일 인증 대기 등)
