@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getProfile, upsertProfile } from '../supabase/queries';
+import { getProfile, updateProfile } from '../supabase/queries';
 
 // ─────────────────────────────────────────────────────────────────────────
 // 🚨 중요: persist를 사용하지 않음
@@ -55,7 +55,11 @@ const useUserStore = create((set, get) => ({
 
     updateProfile: async (userId, data) => {
         try {
-            const updated = await upsertProfile({ id: userId, ...data });
+            const safeData = { ...data };
+            if (!get().profile?.username && !data.username) {
+                safeData.username = get().userName || `user_${userId.substring(0,6)}`;
+            }
+            const updated = await updateProfile(userId, safeData);
             set({
                 profile: updated,
                 userName: updated.username || get().userName,

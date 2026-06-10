@@ -68,7 +68,8 @@ const LandingPage = ({ onStart, onNavigateLogin }) => {
                     </div>
                     <button
                         className="primary"
-                        style={{ padding: '20px 80px', borderRadius: '40px', fontSize: '1.4rem', fontWeight: 700, boxShadow: '0 10px 25px rgba(139, 92, 246, 0.4)' }}
+                        title="루미니 성향 테스트 시작하기"
+                        style={{ padding: '20px 80px', borderRadius: '40px', fontSize: '1.4rem', fontWeight: 700, boxShadow: '0 10px 25px rgba(139, 92, 246, 0.4)', position: 'relative', zIndex: 10 }}
                         onClick={onStart}
                     >
                         성격 기반 매칭 시작하기
@@ -77,9 +78,10 @@ const LandingPage = ({ onStart, onNavigateLogin }) => {
                         <div style={{ marginTop: '20px' }}>
                             <button
                                 onClick={onNavigateLogin}
+                                title="등록된 계정으로 로그인 화면 이동"
                                 style={{
                                     background: 'transparent', border: 'none', color: 'var(--primary)',
-                                    fontWeight: 700, fontSize: '1rem', cursor: 'pointer', textDecoration: 'underline'
+                                    fontWeight: 700, fontSize: '1rem', cursor: 'pointer', textDecoration: 'underline', position: 'relative', zIndex: 10
                                 }}
                             >
                                 이미 계정이 있으신가요? 로그인

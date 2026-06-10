@@ -322,7 +322,8 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
                     </div>
 
                     <motion.button type="submit" disabled={loading} className="primary" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                        style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '1.05rem', fontWeight: 800, borderRadius: '14px' }}
+                        title={isLogin ? '계정에 접속하여 루미니 시작' : '새로운 계정 생성 후 루미니 시작'}
+                        style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '1.05rem', fontWeight: 800, borderRadius: '14px', zIndex: 10, position: 'relative' }}
                     >
                         {loading ? <Loader className="animate-spin" size={20} /> : (
                             <>{isLogin ? '로그인' : '회원가입'}<ArrowRight size={20} /></>
@@ -334,7 +335,9 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                         {isLogin ? '아직 회원이 아니신가요?' : '이미 계정이 있으신가요?'}
                         <button onClick={() => setIsLogin(!isLogin)}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, marginLeft: '8px', cursor: 'pointer' }}
+                            title={isLogin ? '회원가입 페이지로 이동' : '로그인 페이지로 이동'}
+                            type="button"
+                            style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, marginLeft: '8px', cursor: 'pointer', zIndex: 10, position: 'relative' }}
                         >{isLogin ? '회원가입' : '로그인'}</button>
                     </p>
                     

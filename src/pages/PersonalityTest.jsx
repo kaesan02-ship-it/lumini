@@ -136,12 +136,13 @@ const PersonalityTest = ({ onComplete, onBack }) => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <button
                             onClick={handleGoBack}
+                            title="이전 단계로 돌아가거나 시작 화면으로 나가기"
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '4px',
                                 background: 'transparent', border: 'none',
                                 color: 'var(--text-muted)', cursor: 'pointer',
                                 fontSize: '0.85rem', fontWeight: 600, padding: '4px 8px',
-                                borderRadius: '8px'
+                                borderRadius: '8px', zIndex: 10
                             }}
                         >
                             <ArrowLeft size={16} />
@@ -189,6 +190,7 @@ const PersonalityTest = ({ onComplete, onBack }) => {
                         {answerOptions.map((opt) => (
                             <button
                                 key={opt.label}
+                                title={`${opt.label} 옵션 선택하기`}
                                 className="answer-button"
                                 style={{
                                     background: 'var(--surface)',
