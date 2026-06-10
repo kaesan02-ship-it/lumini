@@ -33,6 +33,7 @@ import DailyChallengesPage from '../pages/DailyChallengesPage';
 import CommunityHubPage from '../pages/CommunityHubPage';
 import ValueGamePage from '../pages/ValueGamePage';
 import AppleGamePage from '../pages/AppleGamePage';
+import AgentHubPage from '../pages/AgentHubPage';
 
 // Stores
 import useAuthStore from '../store/authStore';
@@ -56,7 +57,7 @@ export const PUBLIC_ROUTES = new Set([
     'create-event', 'community', 'groups', 'group-chat',
     'ranking', 'magazine', 'compatibility-game', 'weekly-report',
     'insights', 'ai-insights', 'stats', 'growth',
-    'daily-challenges', 'apple-game',
+    'daily-challenges', 'apple-game', 'agent-hub',
 ]);
 
 /**
@@ -251,6 +252,10 @@ const AppRouter = ({
 
             {step === 'apple-game' && (
                 <AppleGamePage key="apple-game" onBack={() => navigate('dashboard')} />
+            )}
+
+            {step === 'agent-hub' && (
+                <AgentHubPage key="agent-hub" onBack={() => navigate('dashboard')} />
             )}
 
             {/* ── 보호 페이지 (로그인 필수) ────────────────────── */}
