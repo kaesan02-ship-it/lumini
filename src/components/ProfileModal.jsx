@@ -129,7 +129,7 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
         // 문장형 매칭 인사이트 추가
         const insight = generateMatchingInsight(myData, theirData, result?.overallScore || user?.similarity || 75);
 
-        if (result) return { ...result, matchingInsight: insight };
+        if (result) return { ...result, matchingInsight: insight, myData, theirData };
 
         // analyzeCompatibility가 null을 반환하면 유사도 기반 보였는 기본값 생성
         const similarity = user?.similarity ? Math.round(user.similarity) : 75;
@@ -143,7 +143,9 @@ const ProfileModal = ({ user, onClose, userData, mbtiType, userName, profile, on
             strengths: [],
             complementary: [],
             advice: null,
-            matchingInsight: insight
+            matchingInsight: insight,
+            myData,
+            theirData
         };
     }, [isMyProfile, myStandardizedData, displayData, user?.similarity, user?.mbti, user?.mbtiType, mbtiType, getMBTIDefaultData]);
 

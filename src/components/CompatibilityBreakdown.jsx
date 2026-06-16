@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Lightbulb, Heart, AlertCircle } from 'lucide-react';
+import RadarChart from './RadarChart';
 
 const CompatibilityBreakdown = ({ analysis }) => {
     if (!analysis) {
@@ -67,6 +68,36 @@ const CompatibilityBreakdown = ({ analysis }) => {
                                 #{trait}
                             </span>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* 나와 상대방의 9대 성향 비교 레이더 차트 (NEW) */}
+            {analysis && analysis.myData && analysis.theirData && (
+                <div style={{
+                    background: 'white',
+                    borderRadius: '24px',
+                    padding: '25px',
+                    marginBottom: '30px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                }}>
+                    <h4 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#1a202c', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px', alignSelf: 'flex-start' }}>
+                        <TrendingUp size={22} color="#8b5cf6" /> 소울 성향 주파수 비교 맵
+                    </h4>
+                    <RadarChart
+                        data={analysis.theirData}
+                        comparisonData={analysis.myData}
+                        nameA="상대방"
+                        nameB="나"
+                        size={280}
+                    />
+                    <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '12px', textAlign: 'center', fontWeight: 700, lineHeight: 1.5 }}>
+                        💡 <span style={{ color: '#ec4899' }}>분홍색 실선(상대방)</span>과 <span style={{ color: '#6366f1' }}>파란색 점선(나)</span>의 겹치는 지점을 비교해 보세요!<br />
+                        서로의 튀어나온 부분과 들어간 부분이 조화롭게 소울 주파수를 이룹니다.
                     </div>
                 </div>
             )}

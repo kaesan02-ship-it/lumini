@@ -2,6 +2,27 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shuffle, Check, X, Heart, Zap, Star, ArrowLeft } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
+import RadarChart from '../components/RadarChart';
+
+// MBTI 성향 스펙 디폴트 생성 헬퍼
+const getMBTIDefaultData = (mbti) => {
+    const type = (mbti || 'ISFJ').toUpperCase();
+    const E = type[0] === 'E' ? 75 : 35;
+    const N = type[1] === 'N' ? 72 : 45;
+    const F = type[2] === 'F' ? 78 : 40;
+    const J = type[3] === 'J' ? 72 : 55;
+    return [
+        { subject: '사교성', A: E, fullMark: 100 },
+        { subject: '창의성', A: Math.round(N * 0.6 + E * 0.4), fullMark: 100 },
+        { subject: '공감력', A: Math.round(F * 0.65 + 35 * 0.35), fullMark: 100 },
+        { subject: '계획성', A: J, fullMark: 100 },
+        { subject: '자기주도', A: Math.round(J * 0.55 + 50 * 0.45), fullMark: 100 },
+        { subject: '유연성', A: Math.round(N * 0.7 + (100 - J) * 0.3), fullMark: 100 },
+        { subject: '따뜻함', A: Math.round(F), fullMark: 100 },
+        { subject: '회복탄력', A: 65, fullMark: 100 },
+        { subject: '신뢰도', A: Math.round(J * 0.6 + 40 * 0.4), fullMark: 100 },
+    ];
+};
 
 const QUESTIONS = [
     { id: 1, q: '주말에 나는?', options: ['집에서 힐링 🏠', '밖에서 친구 만남 🎉'], mbtiKey: 'IE' },
@@ -38,6 +59,10 @@ const CompatibilityGamePage = ({ onBack, myMbtiType, onNavigate }) => {
     const [phase, setPhase] = useState(alreadyDoneToday ? 'done' : 'intro');
     const [savedPartnerType] = useState(() => localStorage.getItem('lumini_compatibility_partner') || '');
     const [savedScore] = useState(() => parseInt(localStorage.getItem('lumini_compatibility_score') || '0'));
+
+    const myChartData = useMemo(() => getMBTIDefaultData(myMbtiType || 'ISFJ'), [myMbtiType]);
+    const currentPartnerType = partnerType || savedPartnerType || 'ENFJ';
+    const partnerChartData = useMemo(() => getMBTIDefaultData(currentPartnerType), [currentPartnerType]);
 
     const [answers, setAnswers] = useState([]);
     const [current, setCurrent] = useState(0);
@@ -107,10 +132,19 @@ const CompatibilityGamePage = ({ onBack, myMbtiType, onNavigate }) => {
                                     궁합 게임은 하루에 한 번만 참여할 수 있어요.<br />내일 다시 도전해보세요! 💕
                                 </p>
                                 {savedPartnerType && (
-                                    <div style={{ background: 'var(--primary-faint)', borderRadius: '20px', padding: '20px', marginBottom: '20px' }}>
-                                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '8px' }}>오늘의 궁합 결과</div>
-                                        <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--primary)' }}>{savedScore}점</div>
-                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>상대 유형: {savedPartnerType}</div>
+                                    <div style={{ background: 'var(--primary-faint)', borderRadius: '24px', padding: '20px', marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '8px', alignSelf: 'flex-start' }}>오늘의 궁합 결과</div>
+                                        <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '4px' }}>{savedScore}점</div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '16px' }}>상대 유형: {savedPartnerType}</div>
+                                        <div style={{ background: 'white', borderRadius: '16px', padding: '16px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                            <RadarChart
+                                                data={partnerChartData}
+                                                comparisonData={myChartData}
+                                                nameA={`상대방 (${currentPartnerType})`}
+                                                nameB={`나 (${myMbtiType || 'ISFJ'})`}
+                                                size={220}
+                                            />
+                                        </div>
                                     </div>
                                 )}
                                 <motion.button whileHover={{ scale: 1.03 }} onClick={onBack}
@@ -216,6 +250,33 @@ const CompatibilityGamePage = ({ onBack, myMbtiType, onNavigate }) => {
                                         : `${partnerType} 타입과 당신은 서로 다른 시각으로 서로를 성장시켜줄 수 있어요. 의외의 강한 연결고리가 생길 수 있답니다!`
                                     }
                                 </p>
+                            </div>
+
+                            {/* 소울 성향 주파수 비교 오버랩 맵 (NEW) */}
+                            <div style={{
+                                background: 'white',
+                                borderRadius: '24px',
+                                padding: '24px 16px',
+                                marginBottom: '22px',
+                                border: '1px solid var(--glass-border)',
+                                boxShadow: 'var(--shadow)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center'
+                            }}>
+                                <h3 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}>
+                                    <Zap size={18} color="#8b5cf6" /> 소울 성향 주파수 비교 맵
+                                </h3>
+                                <RadarChart
+                                    data={partnerChartData}
+                                    comparisonData={myChartData}
+                                    nameA={`상대방 (${currentPartnerType})`}
+                                    nameB={`나 (${myMbtiType || 'ISFJ'})`}
+                                    size={260}
+                                />
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '12px', textAlign: 'center', fontWeight: 700, lineHeight: 1.4 }}>
+                                    💡 <span style={{ color: '#ec4899' }}>실선(상대방)</span>과 <span style={{ color: '#6366f1' }}>점선(나)</span>의 성향 그래프를 비교해 보세요.
+                                </div>
                             </div>
 
                             {/* Crystal Reward */}
