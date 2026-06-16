@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { getProfile, updateProfile } from '../supabase/queries';
+import { supabase } from '../supabase/client';
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // 🚨 중요: persist를 사용하지 않음
@@ -44,6 +46,39 @@ const useUserStore = create((set, get) => ({
                 if (profile.username) {
                     localStorage.setItem('lumini_user_name', profile.username);
                 }
+            } else {
+                // 실시간 데이터베이스(Supabase) 모드일 때 profiles 테이블에 데이터가 없는 경우 복구 시도
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const metadata = user.user_metadata || {};
+                    // 실명 정보가 있다면 그것을 우선 사용하며, 고유성을 위해 타임스탬프와 난수를 추가해 줍니다.
+                    let defaultUsername = metadata.username || metadata.name || '';
+                    if (!defaultUsername || defaultUsername === '사용자') {
+                        defaultUsername = `user_${userId.substring(0, 6)}_${Date.now().toString().slice(-4)}`;
+                    }
+
+                    console.log('DB에 프로필 정보가 없어 자동 복구 생성을 진행합니다. 생성할 닉네임:', defaultUsername);
+
+                    // 최소 정보로 프로필 생성 시도
+                    const newProfileData = {
+                        id: userId,
+                        username: defaultUsername,
+                        bio: '반가워요! 루미니에 오신 것을 환영합니다 ✨',
+                        mbti_type: '?',
+                        personality_data: null
+                    };
+
+                    const createdProfile = await updateProfile(userId, newProfileData);
+                    if (createdProfile) {
+                        set({
+                            profile: createdProfile,
+                            userName: createdProfile.username,
+                            mbtiType: '?',
+                            userData: null
+                        });
+                        localStorage.setItem('lumini_user_name', createdProfile.username);
+                    }
+                }
             }
         } catch (err) {
             console.error('Failed to fetch profile:', err);
@@ -57,7 +92,13 @@ const useUserStore = create((set, get) => ({
         try {
             const safeData = { ...data };
             if (!get().profile?.username && !data.username) {
-                safeData.username = get().userName || `user_${userId.substring(0,6)}`;
+                const currentName = get().userName;
+                if (!currentName || currentName === '사용자') {
+                    // 고유 닉네임을 생성하여 UNIQUE 제약 조건 오류를 방지함
+                    safeData.username = `user_${userId.substring(0, 6)}_${Date.now().toString().slice(-4)}`;
+                } else {
+                    safeData.username = currentName;
+                }
             }
             const updated = await updateProfile(userId, safeData);
             set({
