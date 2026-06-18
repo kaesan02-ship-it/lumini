@@ -29,6 +29,35 @@ const AppleGamePage = ({ onBack, userName }) => {
     const dailyCountKey = `apple_game_daily_count_${userId}`;
     const lastDateKey = `apple_game_last_date_${userId}`;
  
+    // 리더보드 데이터를 서버에서 새로 가져오는 함수
+    const fetchLeaderboard = useCallback(() => {
+        if (USE_MOCK_DATA) return;
+ 
+        supabase.from('apple_game_scores')
+            .select('score, created_at, profiles(username)')
+            .order('score', { ascending: false })
+            .limit(5)
+            .then(({ data, error }) => {
+                if (data && !error) {
+                    const mappedData = data.map(item => ({
+                        username: item.profiles?.username || '익명',
+                        apple_game_best_score: item.score
+                    }));
+                    setLeaderboard(mappedData);
+                } else {
+                    // 테이블 부재 시 profiles에서 단일 최고점 리스트 폴백 로드
+                    supabase.from('profiles')
+                        .select('username, apple_game_best_score')
+                        .gt('apple_game_best_score', 0)
+                        .order('apple_game_best_score', { ascending: false })
+                        .limit(5)
+                        .then(({ data: fallbackData, error: fallbackErr }) => {
+                            if (fallbackData && !fallbackErr) setLeaderboard(fallbackData);
+                        });
+                }
+            });
+    }, []);
+ 
     // Supabase에서 최고 기록 로드 및 리더보드 로드
     useEffect(() => {
         if (!USE_MOCK_DATA) {
@@ -41,33 +70,9 @@ const AppleGamePage = ({ onBack, userName }) => {
                         }
                     });
             }
- 
-            // Top 5 리더보드 쿼리 (듀얼 모드: apple_game_scores 우선, 에러 시 profiles 폴백)
-            supabase.from('apple_game_scores')
-                .select('score, created_at, profiles(username)')
-                .order('score', { ascending: false })
-                .limit(5)
-                .then(({ data, error }) => {
-                    if (data && !error) {
-                        const mappedData = data.map(item => ({
-                            username: item.profiles?.username || '익명',
-                            apple_game_best_score: item.score
-                        }));
-                        setLeaderboard(mappedData);
-                    } else {
-                        // 테이블 부재 시 profiles에서 단일 최고점 리스트 폴백 로드
-                        supabase.from('profiles')
-                            .select('username, apple_game_best_score')
-                            .gt('apple_game_best_score', 0)
-                            .order('apple_game_best_score', { ascending: false })
-                            .limit(5)
-                            .then(({ data: fallbackData, error: fallbackErr }) => {
-                                if (fallbackData && !fallbackErr) setLeaderboard(fallbackData);
-                            });
-                    }
-                });
+            fetchLeaderboard();
         }
-    }, [user, scoreKey]);
+    }, [user, scoreKey, fetchLeaderboard]);
  
     // Drag states
     const [selection, setSelection] = useState(null);
@@ -204,16 +209,21 @@ const AppleGamePage = ({ onBack, userName }) => {
                                     supabase.from('profiles').update({ apple_game_best_score: newBest }).eq('id', user.id)
                                         .then(({ error: profileErr }) => {
                                             if (profileErr) console.error('Failed to save fallback profile score:', profileErr);
+                                            else fetchLeaderboard(); // 랭킹 리로드
                                         });
                                 }
                             } else {
                                 console.log('누적 점수 기록이 apple_game_scores 테이블에 저장되었습니다.');
+                                fetchLeaderboard(); // 누적 저장 성공 시 랭킹 즉시 리로드!
                             }
                         });
                     
                     // 3. 만약 점수가 개인 최고점보다 높다면 profiles의 컬럼도 동기화 차원에서 업데이트 (안전장치)
                     if (score > prevBest) {
-                        supabase.from('profiles').update({ apple_game_best_score: newBest }).eq('id', user.id).then(() => {});
+                        supabase.from('profiles').update({ apple_game_best_score: newBest }).eq('id', user.id)
+                            .then(() => {
+                                fetchLeaderboard(); // 랭킹 리로드
+                            });
                     }
                 }
                 return newBest;
