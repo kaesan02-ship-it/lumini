@@ -516,7 +516,7 @@ const AppleGamePage = ({ onBack, userName }) => {
                                         key={cell.id}
                                         style={{
                                             aspectRatio: '1', 
-                                            borderRadius: '10px', // 단정하고 깔끔한 모서리 사각형
+                                            borderRadius: '50%', // 눈이 편안한 원형 동그라미 플랫 사과!
                                             background: cell.removed ? 'transparent' : '#fff8f8', // 입체감 없는 편안한 옅은 핑크 미색
                                             display: 'flex', 
                                             alignItems: 'center', 
