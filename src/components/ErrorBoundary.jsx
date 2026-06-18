@@ -10,9 +10,59 @@ class ErrorBoundary extends React.Component {
         return { hasError: true, error };
     }
 
+    componentDidMount() {
+        this.handleGlobalError = (event) => {
+            const errorMsg = event.message || '';
+            const errorStack = (event.error && event.error.stack) || '';
+            const isChunkError = errorMsg.includes('Failed to fetch dynamically imported module') || 
+                                 errorMsg.includes('ChunkLoadError') ||
+                                 errorStack.includes('Failed to fetch dynamically imported module') ||
+                                 errorStack.includes('ChunkLoadError');
+            
+            if (isChunkError) {
+                this.triggerAutoReload();
+            }
+        };
+
+        this.handleUnhandledRejection = (event) => {
+            const reasonMsg = (event.reason && event.reason.message) || '';
+            if (reasonMsg.includes('Failed to fetch dynamically imported module') || reasonMsg.includes('ChunkLoadError')) {
+                this.triggerAutoReload();
+            }
+        };
+
+        window.addEventListener('error', this.handleGlobalError, true);
+        window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+    }
+
+    componentWillUnmount() {
+        if (this.handleGlobalError) {
+            window.removeEventListener('error', this.handleGlobalError, true);
+        }
+        if (this.handleUnhandledRejection) {
+            window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+        }
+    }
+
+    triggerAutoReload() {
+        const AUTO_RELOAD_KEY = 'lumini_last_auto_reload';
+        const now = Date.now();
+        const lastReload = parseInt(localStorage.getItem(AUTO_RELOAD_KEY) || '0');
+
+        if (now - lastReload > 8000) { // 8초 간격으로 무한 루프 가드
+            localStorage.setItem(AUTO_RELOAD_KEY, now.toString());
+            console.warn('Chunk load error detected. Performing auto reload...');
+            window.location.reload();
+        }
+    }
+
     componentDidCatch(error, errorInfo) {
         console.error('Error caught by boundary:', error, errorInfo);
-        // TODO: Sentry 등 에러 트래킹 서비스에 보고
+        
+        const errorMsg = error?.message || error?.toString() || '';
+        if (errorMsg.includes('Failed to fetch dynamically imported module') || errorMsg.includes('ChunkLoadError')) {
+            this.triggerAutoReload();
+        }
     }
 
     render() {

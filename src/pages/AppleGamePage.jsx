@@ -508,18 +508,16 @@ const AppleGamePage = ({ onBack, userName }) => {
                                         key={cell.id}
                                         style={{
                                             aspectRatio: '1', 
-                                            borderRadius: '50%', // 사과 모양 완벽한 원형!
-                                            background: cell.removed 
-                                                ? 'transparent' 
-                                                : 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)', // 먹음직스러운 사과빛 그라데이션
+                                            borderRadius: '12px', // 초기 버전의 둥근 사각형 타일 복원!
+                                            background: cell.removed ? 'transparent' : 'white', // 흰색 배경 복원
                                             display: 'flex', 
                                             alignItems: 'center', 
                                             justifyContent: 'center',
-                                            fontSize: isMobileView ? '1.1rem' : '1.4rem', 
+                                            fontSize: isMobileView ? '0.95rem' : '1.15rem', // 숫자가 너무 크지 않게 적절히 조절!
                                             fontWeight: 900,
-                                            color: cell.removed ? 'transparent' : 'white', // 글씨는 흰색으로 더 선명하게!
-                                            border: cell.removed ? 'none' : '1px solid rgba(244, 63, 94, 0.2)',
-                                            boxShadow: cell.removed ? 'none' : '0 4px 8px rgba(244, 63, 94, 0.3)', // 사과의 은은한 입체적 그림자
+                                            color: cell.removed ? 'transparent' : '#334155', // 기존의 편안한 다크 그레이 색상 복원
+                                            border: cell.removed ? 'none' : '1px solid #e2e8f0', // 테두리 복원
+                                            boxShadow: cell.removed ? 'none' : '0 4px 6px rgba(0,0,0,0.04)', // 기존 부드러운 그림자 복원
                                             position: 'relative', 
                                             overflow: 'hidden',
                                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -529,15 +527,14 @@ const AppleGamePage = ({ onBack, userName }) => {
                                     >
                                         {!cell.removed && (
                                             <>
-                                                {/* Apple Highlights (사과의 입체적인 광택 효과) */}
+                                                {/* Apple Glow (Soft Red - 부드럽고 옅은 사과빛 광택 백그라운드) */}
                                                 <div style={{ 
                                                     position: 'absolute', 
-                                                    top: '10%', 
-                                                    left: '15%', 
-                                                    width: '35%', 
-                                                    height: '35%', 
-                                                    background: 'radial-gradient(circle, rgba(255,255,255,0.45) 0%, transparent 80%)', 
-                                                    borderRadius: '50%',
+                                                    top: 0, 
+                                                    left: 0, 
+                                                    width: '100%', 
+                                                    height: '100%', 
+                                                    background: 'radial-gradient(circle at 35% 35%, rgba(244, 63, 94, 0.15) 0%, transparent 80%)', 
                                                     zIndex: 0 
                                                 }}></div>
                                                 <span style={{ position: 'relative', zIndex: 1 }}>{cell.value}</span>
