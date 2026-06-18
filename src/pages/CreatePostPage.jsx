@@ -30,7 +30,7 @@ const CreatePostPage = ({ onBack, onSuccess, userName: propUserName }) => {
         || propUserName
         || user?.email?.split('@')[0]
         || '루미니 멤버';
-    const avatarLetter = displayName[0]?.toUpperCase() || 'L';
+    const avatarLetter = (typeof displayName === 'string' && displayName.length > 0 ? displayName[0] : 'L').toUpperCase();
     const avatarUrl = profile?.avatar_url || localStorage.getItem('lumini_profile_avatar');
 
     const handleImageSelect = (e) => {

@@ -195,7 +195,10 @@ const SOUL_TYPES = {
  * MBTI 유형으로 페르소나 정보를 조회합니다.
  */
 export const getSoulType = (mbtiType) => {
-    const type = mbtiType?.toUpperCase();
+    if (typeof mbtiType !== 'string') {
+        return SOUL_TYPES['INFP']; // 기본값
+    }
+    const type = mbtiType.toUpperCase();
     return SOUL_TYPES[type] || SOUL_TYPES['INFP']; // 기본값
 };
 
@@ -214,7 +217,8 @@ export const getAllSoulTypes = () => {
  */
 export const checkCompatibility = (myType, otherType) => {
     const my = getSoulType(myType);
-    const isHighCompat = my.compatibleTypes?.includes(otherType?.toUpperCase());
+    const otherUpper = typeof otherType === 'string' ? otherType.toUpperCase() : '';
+    const isHighCompat = my.compatibleTypes?.includes(otherUpper);
 
     return {
         level: isHighCompat ? 'high' : 'medium',

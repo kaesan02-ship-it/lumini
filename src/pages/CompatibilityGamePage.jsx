@@ -6,7 +6,7 @@ import RadarChart from '../components/RadarChart';
 
 // MBTI 성향 스펙 디폴트 생성 헬퍼
 const getMBTIDefaultData = (mbti) => {
-    const type = (mbti || 'ISFJ').toUpperCase();
+    const type = (typeof mbti === 'string' ? mbti : 'ISFJ').toUpperCase();
     const E = type[0] === 'E' ? 75 : 35;
     const N = type[1] === 'N' ? 72 : 45;
     const F = type[2] === 'F' ? 78 : 40;
