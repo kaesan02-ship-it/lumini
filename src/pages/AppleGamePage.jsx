@@ -246,6 +246,10 @@ const AppleGamePage = ({ onBack, userName }) => {
 
     const handleStart = (e) => {
         if (gameState !== 'playing') return;
+        // 모바일 터치 스크롤 간섭 방지
+        if (e.touches && e.cancelable) {
+            e.preventDefault();
+        }
         const pos = getPos(e);
         if (!pos) return;
         setIsDragging(true);
@@ -254,6 +258,10 @@ const AppleGamePage = ({ onBack, userName }) => {
 
     const handleMove = (e) => {
         if (!isDragging || !selection) return;
+        // 모바일 터치 드래그 시 화면 스크롤 방지
+        if (e.touches && e.cancelable) {
+            e.preventDefault();
+        }
         const pos = getPos(e);
         if (!pos) return;
         setSelection(prev => ({ ...prev, endX: pos.x, endY: pos.y }));
@@ -508,37 +516,25 @@ const AppleGamePage = ({ onBack, userName }) => {
                                         key={cell.id}
                                         style={{
                                             aspectRatio: '1', 
-                                            borderRadius: '12px', // 초기 버전의 둥근 사각형 타일 복원!
-                                            background: cell.removed ? 'transparent' : 'white', // 흰색 배경 복원
+                                            borderRadius: '10px', // 단정하고 깔끔한 모서리 사각형
+                                            background: cell.removed ? 'transparent' : '#fff8f8', // 입체감 없는 편안한 옅은 핑크 미색
                                             display: 'flex', 
                                             alignItems: 'center', 
                                             justifyContent: 'center',
-                                            fontSize: isMobileView ? '0.95rem' : '1.15rem', // 숫자가 너무 크지 않게 적절히 조절!
-                                            fontWeight: 900,
-                                            color: cell.removed ? 'transparent' : '#334155', // 기존의 편안한 다크 그레이 색상 복원
-                                            border: cell.removed ? 'none' : '1px solid #e2e8f0', // 테두리 복원
-                                            boxShadow: cell.removed ? 'none' : '0 4px 6px rgba(0,0,0,0.04)', // 기존 부드러운 그림자 복원
+                                            fontSize: isMobileView ? '0.9rem' : '1.1rem', // 숫자가 꽉 차지 않도록 아담하게 최적화!
+                                            fontWeight: 800,
+                                            color: cell.removed ? 'transparent' : '#e11d48', // 3D 느낌이 없는 깔끔한 플랫 사과색 숫자
+                                            border: cell.removed ? 'none' : '1px solid #ffe4e6', // 옅은 핑크 테두리
+                                            boxShadow: 'none', // 멀미를 유발할 수 있는 입체적 그림자 완전 제거 (Flat 2D!)
                                             position: 'relative', 
                                             overflow: 'hidden',
-                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            transition: 'all 0.15s ease',
                                             width: '100%',
                                             height: '100%'
                                         }}
                                     >
                                         {!cell.removed && (
-                                            <>
-                                                {/* Apple Glow (Soft Red - 부드럽고 옅은 사과빛 광택 백그라운드) */}
-                                                <div style={{ 
-                                                    position: 'absolute', 
-                                                    top: 0, 
-                                                    left: 0, 
-                                                    width: '100%', 
-                                                    height: '100%', 
-                                                    background: 'radial-gradient(circle at 35% 35%, rgba(244, 63, 94, 0.15) 0%, transparent 80%)', 
-                                                    zIndex: 0 
-                                                }}></div>
-                                                <span style={{ position: 'relative', zIndex: 1 }}>{cell.value}</span>
-                                            </>
+                                            <span style={{ position: 'relative', zIndex: 1 }}>{cell.value}</span>
                                         )}
                                     </div>
                                 ))}
