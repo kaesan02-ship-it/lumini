@@ -33,7 +33,6 @@ import DailyChallengesPage from '../pages/DailyChallengesPage';
 import CommunityHubPage from '../pages/CommunityHubPage';
 import ValueGamePage from '../pages/ValueGamePage';
 import AppleGamePage from '../pages/AppleGamePage';
-import AgentHubPage from '../pages/AgentHubPage';
 
 // Stores
 import useAuthStore from '../store/authStore';
@@ -57,7 +56,7 @@ export const PUBLIC_ROUTES = new Set([
     'create-event', 'community', 'groups', 'group-chat',
     'ranking', 'magazine', 'compatibility-game', 'weekly-report',
     'insights', 'ai-insights', 'stats', 'growth',
-    'daily-challenges', 'apple-game', 'agent-hub',
+    'daily-challenges', 'apple-game',
 ]);
 
 /**
@@ -94,9 +93,22 @@ const AppRouter = ({
     onTestComplete,
 }) => {
     const { user } = useAuthStore();
-    const { userData, mbtiType, profile, updateProfile, fetchProfile } = useUserStore();
+    const { userData, mbtiType, userName, profile, updateProfile, fetchProfile } = useUserStore();
 
     const navigate = (target) => setStep(target);
+
+    // 필수 상태 데이터 부재 시 적절한 상위 목록 페이지로 안전 리다이렉트
+    React.useEffect(() => {
+        if (step === 'event-detail' && !selectedEvent) {
+            navigate('events');
+        }
+        if (step === 'group-chat' && !selectedGroup) {
+            navigate('groups');
+        }
+        if (step === 'chat' && !activeChatUser) {
+            navigate('dashboard');
+        }
+    }, [step, selectedEvent, selectedGroup, activeChatUser]);
 
     return (
         <AnimatePresence mode="wait">
@@ -254,9 +266,7 @@ const AppRouter = ({
                 <AppleGamePage key="apple-game" onBack={() => navigate('dashboard')} />
             )}
 
-            {step === 'agent-hub' && (
-                <AgentHubPage key="agent-hub" onBack={() => navigate('dashboard')} />
-            )}
+
 
             {/* ── 보호 페이지 (로그인 필수) ────────────────────── */}
 
@@ -293,6 +303,7 @@ const AppRouter = ({
                 <ProfileEditPage
                     key="profile-edit"
                     userData={userData}
+                    userName={userName}
                     mbtiType={mbtiType}
                     profile={profile}
                     profileAvatar={profileAvatar}

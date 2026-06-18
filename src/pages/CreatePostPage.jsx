@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Sparkles, Image as ImageIcon, Hash, X } from 'lucide-react';
-import { createPost } from '../supabase/queries';
+import { createPost, uploadPostImage } from '../supabase/queries';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
 
@@ -55,7 +55,23 @@ const CreatePostPage = ({ onBack, onSuccess, userName: propUserName }) => {
         if (!content.trim() || !user) return;
         try {
             setLoading(true);
-            await createPost({ content, category, author_id: user.id });
+            
+            // 1. 선택된 이미지들이 있으면 Storage에 업로드
+            let uploadedUrls = [];
+            if (selectedImages.length > 0) {
+                const uploadPromises = selectedImages.map(img => 
+                    uploadPostImage(img.file, user.id)
+                );
+                uploadedUrls = await Promise.all(uploadPromises);
+            }
+            
+            // 2. 이미지 URL 목록이 있으면 본문 하단에 [IMAGES]: 형식으로 결합
+            let finalContent = content;
+            if (uploadedUrls.length > 0) {
+                finalContent = `${content}\n\n[IMAGES]:${uploadedUrls.join(',')}`;
+            }
+
+            await createPost({ content: finalContent, category, author_id: user.id });
             onSuccess();
         } catch (err) {
             console.error('Failed to create post:', err);

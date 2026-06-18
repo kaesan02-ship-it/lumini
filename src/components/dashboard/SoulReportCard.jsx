@@ -37,7 +37,7 @@ const SoulReportCard = ({ userData, mbtiType, isBoosted }) => {
             
             {userData ? (
                 <Tooltip text="AI가 분석한 나의 9가지 소울 성향 지표입니다." position="top">
-                    <div style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '100%', height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <RadarChart
                             data={[
                                 { subject: '사교성', A: userData.E || 0, fullMark: 100 },

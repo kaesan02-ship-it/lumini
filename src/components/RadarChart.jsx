@@ -63,9 +63,8 @@ const RadarChart = ({ data, comparisonData, size = 300, nameA, nameB }) => {
   const hasComparison = !!comparisonData;
 
   return (
-    <div style={{ width: '100%', height: size }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsRadarChart cx="50%" cy="50%" outerRadius="72%" data={chartData}>
+    <div style={{ width: '100%', height: size, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <RechartsRadarChart width={size} height={size} cx="50%" cy="50%" outerRadius="72%" data={chartData}>
           <defs>
             {/* A (상대방) — 소프트 로즈: 더 명확하고 짙게 */}
             <radialGradient id="fillA" cx="50%" cy="50%" r="50%">
@@ -91,7 +90,7 @@ const RadarChart = ({ data, comparisonData, size = 300, nameA, nameB }) => {
 
           <PolarAngleAxis
             dataKey="subject"
-            tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 700 }}
+            tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
             tickLine={false}
           />
           <PolarRadiusAxis
@@ -136,7 +135,6 @@ const RadarChart = ({ data, comparisonData, size = 300, nameA, nameB }) => {
             />
           )}
         </RechartsRadarChart>
-      </ResponsiveContainer>
     </div>
   );
 };

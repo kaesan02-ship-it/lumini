@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getProfile, updateProfile } from '../supabase/queries';
+import { getProfile, updateProfile, upsertProfile } from '../supabase/queries';
 import { supabase } from '../supabase/client';
 
 
@@ -51,9 +51,9 @@ const useUserStore = create((set, get) => ({
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
                     const metadata = user.user_metadata || {};
-                    // 실명 정보가 있다면 그것을 우선 사용하며, 고유성을 위해 타임스탬프와 난수를 추가해 줍니다.
+                    // 실명 정보가 있다면 그것을 우선 사용합니다.
                     let defaultUsername = metadata.username || metadata.name || '';
-                    if (!defaultUsername || defaultUsername === '사용자') {
+                    if (!defaultUsername) {
                         defaultUsername = `user_${userId.substring(0, 6)}_${Date.now().toString().slice(-4)}`;
                     }
 
@@ -68,7 +68,7 @@ const useUserStore = create((set, get) => ({
                         personality_data: null
                     };
 
-                    const createdProfile = await updateProfile(userId, newProfileData);
+                    const createdProfile = await upsertProfile(newProfileData);
                     if (createdProfile) {
                         set({
                             profile: createdProfile,
@@ -93,14 +93,14 @@ const useUserStore = create((set, get) => ({
             const safeData = { ...data };
             if (!get().profile?.username && !data.username) {
                 const currentName = get().userName;
-                if (!currentName || currentName === '사용자') {
+                if (!currentName) {
                     // 고유 닉네임을 생성하여 UNIQUE 제약 조건 오류를 방지함
                     safeData.username = `user_${userId.substring(0, 6)}_${Date.now().toString().slice(-4)}`;
                 } else {
                     safeData.username = currentName;
                 }
             }
-            const updated = await updateProfile(userId, safeData);
+            const updated = await upsertProfile({ id: userId, ...safeData });
             set({
                 profile: updated,
                 userName: updated.username || get().userName,

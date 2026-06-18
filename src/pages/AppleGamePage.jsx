@@ -23,11 +23,12 @@ const AppleGamePage = ({ onBack, userName }) => {
     const [dailyPlays, setDailyPlays] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
-
+    const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
+ 
     const FREE_PLAYS = 3;
     const dailyCountKey = `apple_game_daily_count_${userId}`;
     const lastDateKey = `apple_game_last_date_${userId}`;
-
+ 
     // Supabase에서 최고 기록 로드 및 리더보드 로드
     useEffect(() => {
         if (!USE_MOCK_DATA) {
@@ -40,10 +41,11 @@ const AppleGamePage = ({ onBack, userName }) => {
                         }
                     });
             }
-
+ 
             // Top 5 리더보드 쿼리
             supabase.from('profiles')
                 .select('username, apple_game_best_score')
+                .gt('apple_game_best_score', 0)
                 .order('apple_game_best_score', { ascending: false })
                 .limit(5)
                 .then(({ data, error }) => {
@@ -51,13 +53,13 @@ const AppleGamePage = ({ onBack, userName }) => {
                 });
         }
     }, [user, scoreKey]);
-
+ 
     // Drag states
     const [selection, setSelection] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const gridRef = useRef(null);
     const bgmRef = useRef(null);
-
+ 
     const initGrid = useCallback(() => {
         const newGrid = [];
         for (let r = 0; r < ROWS; r++) {
@@ -73,11 +75,11 @@ const AppleGamePage = ({ onBack, userName }) => {
         }
         setGrid(newGrid);
     }, []);
-
+ 
     useEffect(() => {
         const lastDate = localStorage.getItem(lastDateKey);
         const today = new Date().toDateString();
-
+ 
         if (lastDate !== today) {
             localStorage.setItem(lastDateKey, today);
             localStorage.setItem(dailyCountKey, '0');
@@ -87,14 +89,17 @@ const AppleGamePage = ({ onBack, userName }) => {
             setDailyPlays(count);
         }
     }, [userId]);
-
+ 
     // 모바일 리사이즈 시 그리드 스케일 반응형 조절
     useEffect(() => {
         const handleResize = () => {
-            const containerWidth = window.innerWidth * 0.96; // 96% of screen width
-            const maxWidth = 750; // 기본 pc 사이즈
+            const width = window.innerWidth;
+            setIsMobileView(width <= 768);
             
-            // 최대 1(원래 크기)까지만 커지도록 제한
+            // 모바일일 때는 화면폭에 맞춰서 그리드 크기를 축소시킴
+            const containerWidth = width * 0.96;
+            const maxWidth = width <= 768 ? 400 : 750;
+            
             setGridScale(Math.min(1, containerWidth / maxWidth));
         };
         handleResize(); // 초기화
@@ -103,21 +108,11 @@ const AppleGamePage = ({ onBack, userName }) => {
     }, []);
 
     const startGame = async () => {
-        if (dailyPlays >= FREE_PLAYS) {
-            const tickets = inventory['apple-ticket'] || 0;
-            if (tickets <= 0) {
-                if (window.confirm('무료 플레이 횟수를 모두 소모했습니다.\n상점에서 추가 플레이 코인을 구매하시겠습니까?')) {
-                    setGameState('shopping');
-                }
-                return;
-            }
-            useItem('apple-ticket');
-        } else {
-            const newCount = dailyPlays + 1;
-            setDailyPlays(newCount);
-            localStorage.setItem(dailyCountKey, newCount.toString());
-        }
-
+        // 무제한 무료 플레이 지원 (제한 및 코인 소모 해제)
+        const newCount = dailyPlays + 1;
+        setDailyPlays(newCount);
+        localStorage.setItem(dailyCountKey, newCount.toString());
+ 
         setScore(0);
         setTimeLeft(GAME_TIME);
         initGrid();
@@ -329,66 +324,66 @@ const AppleGamePage = ({ onBack, userName }) => {
 
             <div style={{
                 width: '100%', maxWidth: '1200px', display: 'grid',
-                gridTemplateColumns: '1fr 320px', gap: '40px', position: 'relative', zIndex: 10
+                gridTemplateColumns: isMobileView ? '1fr' : '1fr 320px', gap: isMobileView ? '20px' : '40px', position: 'relative', zIndex: 10
             }}>
                 {/* Board Container */}
                 <div style={{
                     background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(20px)',
-                    borderRadius: '40px', padding: '30px', border: '1px solid rgba(255, 255, 255, 1)',
+                    borderRadius: isMobileView ? '24px' : '40px', padding: isMobileView ? '15px' : '30px', border: '1px solid rgba(255, 255, 255, 1)',
                     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.05)', position: 'relative'
                 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(244, 63, 94, 0.1)', padding: '12px 25px', borderRadius: '20px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
-                                <Timer size={24} color="#f43f5e" />
-                                <span style={{ fontWeight: 900, color: '#f43f5e', fontSize: '1.8rem', fontFamily: "'Poppins', 'Nunito', sans-serif", letterSpacing: '-1px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? '10px' : '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(244, 63, 94, 0.1)', padding: isMobileView ? '8px 15px' : '12px 25px', borderRadius: '15px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
+                                <Timer size={isMobileView ? 18 : 24} color="#f43f5e" />
+                                <span style={{ fontWeight: 900, color: '#f43f5e', fontSize: isMobileView ? '1.2rem' : '1.8rem', fontFamily: "'Poppins', 'Nunito', sans-serif", letterSpacing: '-1px' }}>
                                     {timeLeft}초
                                 </span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(251, 191, 36, 0.1)', padding: '12px 25px', borderRadius: '20px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#d97706' }}>SCORE</div>
-                                <span style={{ fontWeight: 900, color: '#d97706', fontSize: '1.8rem' }}>{score.toLocaleString()}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(251, 191, 36, 0.1)', padding: isMobileView ? '8px 15px' : '12px 25px', borderRadius: '15px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+                                <div style={{ fontSize: isMobileView ? '0.8rem' : '1.1rem', fontWeight: 900, color: '#d97706' }}>SCORE</div>
+                                <span style={{ fontWeight: 900, color: '#d97706', fontSize: isMobileView ? '1.2rem' : '1.8rem' }}>{score.toLocaleString()}</span>
                             </div>
                         </div>
 
                         {gameState === 'playing' && (
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(99, 102, 241, 0.1)', padding: '0 15px', borderRadius: '15px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                                    <Sparkles size={18} color="#6366f1" />
-                                    <span style={{ fontWeight: 800, fontSize: '1rem', color: '#4f46e5' }}>x{inventory['apple-shuffle'] || 0}</span>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(99, 102, 241, 0.1)', padding: '0 10px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                                    <Sparkles size={14} color="#6366f1" />
+                                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#4f46e5' }}>x{inventory['apple-shuffle'] || 0}</span>
                                 </div>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleShuffle(); }}
-                                    style={{ padding: '12px 25px', background: 'white', borderRadius: '15px', border: '1px solid #e2e8f0', color: '#6366f1', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 10px rgba(99, 102, 241, 0.1)', transition: 'all 0.2s' }}
+                                    style={{ padding: isMobileView ? '6px 12px' : '12px 25px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', color: '#6366f1', fontSize: isMobileView ? '0.8rem' : '1rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 10px rgba(99, 102, 241, 0.1)', transition: 'all 0.2s' }}
                                 >
-                                    <RefreshCw size={18} /> SHUFFLE
+                                    <RefreshCw size={14} /> 셔플
                                 </button>
                             </div>
                         )}
                     </div>
 
-                    <div style={{ position: 'relative', background: '#f8fafc', borderRadius: '30px', padding: '15px', border: '1px solid #e2e8f0', boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.02)' }}>
+                    <div style={{ position: 'relative', background: '#f8fafc', borderRadius: '20px', padding: isMobileView ? '10px' : '15px', border: '1px solid #e2e8f0', boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
                         {gameState === 'ready' ? (
-                            <div style={{ height: '550px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ minHeight: isMobileView ? '300px' : '550px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0' }}>
                                 <motion.div
-                                    animate={{ y: [0, -15, 0], scale: [1, 1.05, 1] }}
+                                    animate={{ y: [0, -10, 0], scale: [1, 1.03, 1] }}
                                     transition={{ repeat: Infinity, duration: 2.5 }}
-                                    style={{ fontSize: '8rem', marginBottom: '20px', cursor: 'pointer', filter: 'drop-shadow(0 10px 20px rgba(244,63,94,0.2))' }}
+                                    style={{ fontSize: isMobileView ? '4.5rem' : '8rem', marginBottom: '10px', cursor: 'pointer', filter: 'drop-shadow(0 10px 20px rgba(244,63,94,0.2))' }}
                                     onClick={startGame}
                                 >
                                     🍎
                                 </motion.div>
-                                <h3 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '15px', color: '#334155' }}>사과 수확 준비 완료!</h3>
-                                <p style={{ color: '#64748b', fontSize: '1.1rem', marginBottom: '30px', fontWeight: 600 }}>합이 10이 되도록 사과를 드래그하세요 🦦</p>
-                                <div style={{ display: 'flex', gap: '20px' }}>
-                                    <button onClick={() => setGameState('shopping')} style={{ padding: '18px 35px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 800, borderRadius: '25px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                                        <ShoppingBag size={22} /> 상점 방문
+                                <h3 style={{ fontSize: isMobileView ? '1.5rem' : '2.5rem', fontWeight: 900, marginBottom: '10px', color: '#334155' }}>사과 수확 준비 완료!</h3>
+                                <p style={{ color: '#64748b', fontSize: isMobileView ? '0.85rem' : '1.1rem', marginBottom: '20px', fontWeight: 600, textAlign: 'center', padding: '0 10px' }}>합이 10이 되도록 사과를 드래그하세요 🦦</p>
+                                <div style={{ display: 'flex', flexDirection: isMobileView ? 'column' : 'row', gap: '12px', width: isMobileView ? '100%' : 'auto', maxWidth: '300px' }}>
+                                    <button onClick={() => setGameState('shopping')} style={{ padding: isMobileView ? '12px 20px' : '18px 35px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 800, borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: isMobileView ? '0.9rem' : '1.1rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', width: '100%' }}>
+                                        <ShoppingBag size={isMobileView ? 18 : 22} /> 상점 방문
                                     </button>
-                                    <button onClick={startGame} style={{ padding: '18px 50px', background: 'linear-gradient(135deg, #f43f5e 0%, #ec4899 100%)', border: 'none', color: 'white', fontWeight: 900, borderRadius: '25px', fontSize: '1.3rem', boxShadow: '0 10px 20px rgba(244, 63, 94, 0.3)', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                                        <Play fill="white" size={24} /> 게임 시작
+                                    <button onClick={startGame} style={{ padding: isMobileView ? '12px 25px' : '18px 50px', background: 'linear-gradient(135deg, #f43f5e 0%, #ec4899 100%)', border: 'none', color: 'white', fontWeight: 900, borderRadius: '15px', fontSize: isMobileView ? '1rem' : '1.3rem', boxShadow: '0 10px 20px rgba(244, 63, 94, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', width: '100%' }}>
+                                        <Play fill="white" size={isMobileView ? 18 : 24} /> 게임 시작
                                     </button>
                                 </div>
-                                <p style={{ marginTop: '30px', color: '#64748b', fontSize: '1rem', fontWeight: 600 }}>무료 플레이: <span style={{ color: '#f43f5e', fontWeight: 800 }}>남은 횟수 {Math.max(0, FREE_PLAYS - dailyPlays)}회</span> | 코인: <span style={{ color: '#ec4899', fontWeight: 800 }}>{inventory['apple-ticket'] || 0}개</span></p>
+                                <p style={{ marginTop: '20px', color: '#64748b', fontSize: isMobileView ? '0.8rem' : '1rem', fontWeight: 600 }}>무료 플레이: <span style={{ color: '#10B981', fontWeight: 800 }}>무제한 무료 🎮</span> | 보유 코인: <span style={{ color: '#ec4899', fontWeight: 800 }}>{inventory['apple-ticket'] || 0}개</span></p>
                             </div>
                         ) : gameState === 'shopping' ? (
                             <div style={{ height: '550px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>

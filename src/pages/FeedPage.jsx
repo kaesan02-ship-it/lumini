@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MessageSquare, Heart, Share2, MoreHorizontal, Loader, Filter, Search, Bookmark, Send, X } from 'lucide-react';
-import { getPosts, toggleLike, getComments, createComment } from '../supabase/queries';
+import { getPosts, toggleLike, getComments, createComment, updatePost, deletePost } from '../supabase/queries';
 import useAuthStore from '../store/authStore';
 
 const FeedPage = ({ onCreatePost, onSelectPost }) => {
@@ -128,7 +128,7 @@ const FeedPage = ({ onCreatePost, onSelectPost }) => {
                 ) : (
                     <div style={{ display: 'grid', gap: '20px' }}>
                         {posts.map((post, index) => (
-                            <PostCard key={post.id} post={post} user={user} index={index} />
+                            <PostCard key={post.id} post={post} user={user} index={index} onRefresh={fetchPosts} />
                         ))}
                     </div>
                 )}
@@ -137,7 +137,7 @@ const FeedPage = ({ onCreatePost, onSelectPost }) => {
     );
 };
 
-const PostCard = ({ post, user, index }) => {
+const PostCard = ({ post, user, index, onRefresh }) => {
     const [isLiking, setIsLiking] = useState(false);
     const [isLiked, setIsLiked] = useState(false); // Local state for immediate UI feedback
     const [likesCount, setLikesCount] = useState(0);
@@ -147,8 +147,27 @@ const PostCard = ({ post, user, index }) => {
     const [newComment, setNewComment] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-    // TODO: Initial sync with DB for likes and comments count
-    // For now, these are mock counts as we haven't implemented complexity in queries for count aggregation yet
+    // 수정 / 삭제 관련 상태
+    const [showMenu, setShowMenu] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    // 본문과 이미지 URL 분리 파싱
+    let displayContent = post.content || '';
+    let imageUrls = [];
+    const imagePattern = /\n\n\[IMAGES\]:(.+)$/;
+    const match = displayContent.match(imagePattern);
+    if (match) {
+        imageUrls = match[1].split(',').filter(Boolean);
+        displayContent = displayContent.replace(imagePattern, '');
+    }
+
+    const [editContent, setEditContent] = useState(displayContent);
+
+    // 본문 내용이 변경되었을 때 editContent 상태 초기화 (수정 도중 포스트가 리프레시될 수 있으므로)
+    useEffect(() => {
+        setEditContent(displayContent);
+    }, [displayContent]);
 
     const handleLike = async () => {
         if (!user) return;
@@ -207,6 +226,39 @@ const PostCard = ({ post, user, index }) => {
         }
     };
 
+    const handleUpdate = async () => {
+        if (!editContent.trim()) return;
+        try {
+            setIsUpdating(true);
+            
+            // 이미지 정보 보존
+            let finalContent = editContent;
+            if (imageUrls.length > 0) {
+                finalContent = `${editContent}\n\n[IMAGES]:${imageUrls.join(',')}`;
+            }
+
+            await updatePost(post.id, { content: finalContent });
+            setIsEditing(false);
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            console.error('Failed to update post:', err);
+            alert('게시글 수정 중 오류가 발생했습니다.');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm('정말 이 게시글을 삭제하시겠습니까?')) return;
+        try {
+            await deletePost(post.id);
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            console.error('Failed to delete post:', err);
+            alert('게시글 삭제 중 오류가 발생했습니다.');
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -246,7 +298,53 @@ const PostCard = ({ post, user, index }) => {
                         </div>
                     </div>
                 </div>
-                <MoreHorizontal size={20} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
+                
+                {/* 더보기 버튼 및 드롭다운 메뉴 */}
+                <div style={{ position: 'relative' }}>
+                    <MoreHorizontal 
+                        size={20} 
+                        color="var(--text-muted)" 
+                        style={{ cursor: 'pointer' }} 
+                        onClick={() => setShowMenu(p => !p)}
+                    />
+                    {showMenu && (
+                        <div style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '25px',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--glass-border)',
+                            borderRadius: '12px',
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+                            zIndex: 10,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            minWidth: '110px',
+                            overflow: 'hidden'
+                        }}>
+                            {user && user.id === post.author_id ? (
+                                <>
+                                    <button 
+                                        onClick={() => { setIsEditing(true); setShowMenu(false); }}
+                                        style={{ background: 'transparent', border: 'none', padding: '12px 16px', textAlign: 'left', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text)', fontWeight: 600, transition: 'background 0.2s' }}
+                                    >
+                                        수정하기
+                                    </button>
+                                    <button 
+                                        onClick={() => { handleDelete(); setShowMenu(false); }}
+                                        style={{ background: 'transparent', border: 'none', padding: '12px 16px', textAlign: 'left', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--error)', fontWeight: 600, borderTop: '1px solid var(--glass-border)', transition: 'background 0.2s' }}
+                                    >
+                                        삭제하기
+                                    </button>
+                                </>
+                            ) : (
+                                <div style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                    권한이 없습니다
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
@@ -257,9 +355,71 @@ const PostCard = ({ post, user, index }) => {
                 }}>
                     #{post.category === 'tip' ? '꿀팁' : post.category === 'experience' ? '경험담' : '질문'}
                 </span>
-                <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--text)', whiteSpace: 'pre-wrap', fontSize: '1rem' }}>
-                    {post.content}
-                </p>
+
+                {isEditing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '5px' }}>
+                        <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            style={{
+                                width: '100%', minHeight: '120px', padding: '14px',
+                                borderRadius: '12px', border: '1.5px solid var(--primary)',
+                                background: 'var(--background)', color: 'var(--text)',
+                                fontSize: '0.95rem', resize: 'vertical', outline: 'none',
+                                fontFamily: 'inherit', lineHeight: 1.6
+                            }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button 
+                                onClick={() => { setIsEditing(false); setEditContent(displayContent); }}
+                                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--glass-border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
+                            >
+                                취소
+                            </button>
+                            <button 
+                                onClick={handleUpdate}
+                                disabled={isUpdating || !editContent.trim()}
+                                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--primary)', color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, opacity: editContent.trim() ? 1 : 0.5 }}
+                            >
+                                {isUpdating ? '저장 중...' : '저장'}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--text)', whiteSpace: 'pre-wrap', fontSize: '1rem' }}>
+                            {displayContent}
+                        </p>
+                        
+                        {/* 이미지 갤러리 */}
+                        {imageUrls.length > 0 && (
+                            <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: imageUrls.length === 1 ? '1fr' : 'repeat(2, 1fr)', 
+                                gap: '8px', 
+                                marginTop: '14px',
+                                borderRadius: '16px',
+                                overflow: 'hidden'
+                            }}>
+                                {imageUrls.map((url, uIdx) => (
+                                    <img 
+                                        key={uIdx} 
+                                        src={url} 
+                                        alt="" 
+                                        style={{ 
+                                            width: '100%', 
+                                            height: imageUrls.length === 1 ? 'auto' : '180px', 
+                                            objectFit: 'cover',
+                                            maxHeight: '380px',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--glass-border)'
+                                        }} 
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
 
             <div style={{

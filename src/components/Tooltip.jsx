@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const Tooltip = ({ children, text, position = 'top' }) => {
+const Tooltip = ({ children, text, position = 'top', style = {} }) => {
     const [isVisible, setIsVisible] = useState(false);
 
     const positions = {
@@ -11,10 +11,16 @@ const Tooltip = ({ children, text, position = 'top' }) => {
         right: { left: '100%', top: '50%', transform: 'translateY(-50%) translateX(8px)' },
     };
 
+    const handleMouseEnter = () => {
+        // 모바일 및 터치 디바이스(pointer: coarse)에서는 툴팁을 띄우지 않음
+        if (window.matchMedia('(pointer: coarse)').matches) return;
+        setIsVisible(true);
+    };
+
     return (
         <div 
-            style={{ position: 'relative', display: 'inline-block' }}
-            onMouseEnter={() => setIsVisible(true)}
+            style={{ position: 'relative', display: 'inline-block', ...style }}
+            onMouseEnter={handleMouseEnter}
             onMouseLeave={() => setIsVisible(false)}
         >
             {children}

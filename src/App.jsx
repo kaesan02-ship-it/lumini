@@ -89,6 +89,10 @@ function App() {
         if (authLoading || profileLoading) return;
 
         const isAuthenticated = !!(user || session);
+        
+        // 인증은 되었으나 프로필 정보가 아직 로드되지 않은 찰나에는 리다이렉트 방지를 위해 대기
+        if (isAuthenticated && profile === null) return;
+
         const hasPersonalityData = !!userData && mbtiType && mbtiType !== '?';
 
         // 1. 비인증 사용자 제어 (보호 라우트 접근 차단)
@@ -162,6 +166,7 @@ function App() {
 
     // ─── 성격 테스트 완료 핸들러 ──────────────────────────────────
     const handleTestComplete = useCallback(async (data, type) => {
+        setStep('result');
         setUserData(data);
         setMbtiType(type);
         if (user) {
@@ -175,7 +180,6 @@ function App() {
         }
         localStorage.setItem('lumini_user_data', JSON.stringify(data));
         localStorage.setItem('lumini_mbti_type', type);
-        setStep('result');
     }, [user, updateProfile, fetchProfile, fetchNearbyUsers]);
 
     // ─── 데이터 리셋 (성격 테스트 재시작) ────────────────────────

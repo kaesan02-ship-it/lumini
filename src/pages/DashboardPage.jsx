@@ -12,14 +12,12 @@ import SoulReportCard from '../components/dashboard/SoulReportCard';
 import DeepSoulBanner from '../components/dashboard/DeepSoulBanner';
 import NearbyUsersSection from '../components/dashboard/NearbyUsersSection';
 import SidebarWidgets from '../components/dashboard/SidebarWidgets';
-import UserDetailModal from '../components/UserDetailModal';
 
 // Lucide Icons for tabs
 import { Users, MapPin, Sparkles } from 'lucide-react';
 
 const DashboardPage = ({ onNavigate, nearbyUsers, onSelectUser }) => {
     const { userData, profile, userName } = useUserStore();
-    const [selectedUser, setSelectedUser] = useState(null);
 
     const {
         activeTab,
@@ -55,7 +53,7 @@ const DashboardPage = ({ onNavigate, nearbyUsers, onSelectUser }) => {
 
                     <SoulReportCard 
                         userData={userData} 
-                        mbtiType={profile?.mbti} 
+                        mbtiType={profile?.mbti_type} 
                         isBoosted={profile?.isBoosted} 
                     />
 
@@ -71,7 +69,7 @@ const DashboardPage = ({ onNavigate, nearbyUsers, onSelectUser }) => {
                         categories={categories}
                         neighborUsers={neighborUsers}
                         myDistrict={myDistrict}
-                        onSelectUser={setSelectedUser}
+                        onSelectUser={onSelectUser}
                         onNavigate={onNavigate}
                     />
                 </div>
@@ -80,16 +78,12 @@ const DashboardPage = ({ onNavigate, nearbyUsers, onSelectUser }) => {
                 <SidebarWidgets 
                     hasDeepSoul={hasDeepSoul} 
                     nearbyUsers={nearbyUsers}
-                    onSelectUser={setSelectedUser}
+                    onSelectUser={onSelectUser}
                     onNavigate={onNavigate}
                 />
             </div>
 
-            {/* 유저 상세 모달 */}
-            <UserDetailModal 
-                user={selectedUser} 
-                onClose={() => setSelectedUser(null)} 
-            />
+
         </div>
     );
 };

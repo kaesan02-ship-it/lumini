@@ -50,6 +50,7 @@ const useAppInit = (setNearbyUsers) => {
                             80 +
                             ((p.id.charCodeAt(0) + p.id.charCodeAt(p.id.length - 1)) % 15),
                         deep_soul: p.deep_soul || null,
+                        personality_data: p.personality_data,
                         pet_data: p.pet_data || null,
                         data: [
                             { subject: '사교성', A: Math.round(E), fullMark: 100 },

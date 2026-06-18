@@ -178,13 +178,13 @@ const ResultReport = ({ data, mbtiType, onExplore, onNavigate }) => {
                             {soul.emoji}
                         </motion.div>
 
-                        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--text)', marginBottom: '8px' }}>
+                        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#1e293b', marginBottom: '8px' }}>
                             {soul.soulName}
                         </h1>
-                        <div style={{ display: 'inline-block', padding: '6px 16px', background: 'var(--primary-faint)', color: 'var(--primary)', borderRadius: '100px', fontWeight: 700, fontSize: '1rem', marginBottom: '20px' }}>
+                        <div style={{ display: 'inline-block', padding: '6px 16px', background: '#f5f3ff', color: '#7c3aed', borderRadius: '100px', fontWeight: 700, fontSize: '1rem', marginBottom: '20px' }}>
                             {soul.title}
                         </div>
-                        <p style={{ fontSize: '1rem', lineHeight: 1.8, color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto', wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: '1rem', lineHeight: 1.8, color: '#475569', maxWidth: '500px', margin: '0 auto', wordBreak: 'keep-all' }}>
                             {soul.desc}
                         </p>
 
@@ -206,20 +206,20 @@ const ResultReport = ({ data, mbtiType, onExplore, onNavigate }) => {
                             <div style={{ background: 'var(--background)', padding: '12px', borderRadius: '28px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                                 <RadarChart data={chartData} size={300} />
                             </div>
-                            <p style={{ marginTop: '12px', fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 700, textAlign: 'center' }}>
+                            <p style={{ marginTop: '12px', fontSize: '0.82rem', color: '#475569', fontWeight: 700, textAlign: 'center' }}>
                                 ✦ 9가지 성향 지표 맵
                             </p>
                         </div>
 
                         <div style={{ padding: '10px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '14px' }}>
-                            <h3 style={{ fontWeight: 800, color: 'var(--text)', marginBottom: '4px' }}>
+                            <h3 style={{ fontWeight: 800, color: '#1e293b', marginBottom: '4px' }}>
                                 ✨ 타고난 강점: {soul.trait}
                             </h3>
                             {chartData.slice(0, 6).map(stat => (
                                 <div key={stat.subject}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>{stat.subject}</span>
-                                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: stat.A >= 70 ? '#8B5CF6' : stat.A >= 50 ? '#10B981' : '#94A3B8' }}>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>{stat.subject}</span>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: stat.A >= 70 ? '#8B5CF6' : stat.A >= 50 ? '#10B981' : '#64748b' }}>
                                             {Math.round(stat.A)}
                                         </span>
                                     </div>
@@ -233,21 +233,23 @@ const ResultReport = ({ data, mbtiType, onExplore, onNavigate }) => {
 
                     {/* ===== 스토리 카드 3장 ===== */}
                     <div style={{ borderTop: '1px solid var(--glass-border)', padding: '30px' }}>
-                        <h3 style={{ fontWeight: 800, marginBottom: '16px', textAlign: 'center' }}>📖 나의 성향 스토리</h3>
+                        <h3 style={{ fontWeight: 800, marginBottom: '16px', textAlign: 'center', color: '#1e293b' }}>📖 나의 성향 스토리</h3>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'center' }}>
-                            {storyCards.map((_, i) => (
-                                <button key={i} onClick={() => setActiveStory(i)} style={{ flex: 1, padding: '12px', borderRadius: '16px', background: activeStory === i ? storyCards[i].bg : 'var(--background)', border: `1px solid ${activeStory === i ? storyCards[i].accent + '40' : 'var(--glass-border)'}`, color: activeStory === i ? storyCards[i].accent : 'var(--text-muted)', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ fontSize: '1.2rem' }}>{storyCards[i].icon}</span>
-                                    <span style={{ fontSize: '0.8rem' }}>{storyCards[i].title}</span>
+                            {storyCards.map((card, i) => (
+                                <button key={i} onClick={() => setActiveStory(i)} style={{ flex: 1, padding: '12px', borderRadius: '16px', background: activeStory === i ? (card?.bg || '#F5F3FF') : 'var(--background)', border: `1px solid ${activeStory === i ? (card?.accent || '#8B5CF6') + '40' : 'var(--glass-border)'}`, color: activeStory === i ? (card?.accent || '#8B5CF6') : 'var(--text-muted)', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>{card?.icon || '🌟'}</span>
+                                    <span style={{ fontSize: '0.8rem' }}>{card?.title || '성향 스토리'}</span>
                                 </button>
                             ))}
                         </div>
                         <AnimatePresence mode="wait">
-                            <motion.div key={activeStory} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ padding: '24px', background: storyCards[activeStory].bg, borderRadius: '20px', border: `1px solid ${storyCards[activeStory].accent}20` }}>
-                                <div style={{ fontSize: '1.05rem', lineHeight: 1.8, color: 'var(--text)', fontWeight: 600 }}>
-                                    {storyCards[activeStory].body}
-                                </div>
-                            </motion.div>
+                            {storyCards[activeStory] && (
+                                <motion.div key={activeStory} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ padding: '24px', background: storyCards[activeStory]?.bg || '#F5F3FF', borderRadius: '20px', border: `1px solid ${storyCards[activeStory]?.accent || '#8B5CF6'}20` }}>
+                                    <div style={{ fontSize: '1.05rem', lineHeight: 1.8, color: '#334155', fontWeight: 600 }}>
+                                        {storyCards[activeStory]?.body || '성향 분석 데이터가 존재하지 않습니다.'}
+                                    </div>
+                                </motion.div>
+                            )}
                         </AnimatePresence>
                     </div>
                 </div>

@@ -180,6 +180,8 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
             let msg = error.message || '인증에 실패했습니다.';
             if (msg.toLowerCase().includes('rate limit')) {
                 setShowRateLimitModal(true);
+            } else if (msg.toLowerCase().includes('confirm') || msg.toLowerCase().includes('not confirmed')) {
+                toast.error('가입하신 이메일함에서 인증 링크를 클릭해 주셔야 로그인이 가능합니다! 📧\n(기관/연구원 메일은 차단되거나 스팸함에 들어갈 수 있으니, 테스트 편의를 위해 Supabase에서 "Confirm email" 설정을 꺼주시는 것을 권장합니다.)', { duration: 8000 });
             } else {
                 toast.error(msg);
             }
@@ -253,20 +255,24 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
                 </div>
 
                 {/* 데모 계정 힌트 */}
-                {USE_MOCK_DATA && isLogin && (
+                {isLogin && (
                     <div style={{
                         background: 'linear-gradient(135deg, #EEF2FF, #FAF5FF)',
                         border: '1px solid #6366F130', borderRadius: '14px',
                         padding: '14px 18px', marginBottom: '24px', fontSize: '0.85rem'
                     }}>
                         <div style={{ fontWeight: 800, color: '#6366F1', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Sparkles size={14} /> 데모 계정으로 체험하기
+                            <Sparkles size={14} /> 데모 계정으로 빠른 체험하기
                         </div>
-                        <div style={{ color: '#4338CA' }}>
+                        <p style={{ color: '#4338CA', margin: '0 0 8px 0', fontSize: '0.8rem', lineHeight: 1.4, wordBreak: 'keep-all' }}>
+                            접속자가 많아 이메일 가입 횟수 제한(Rate Limit) 등의 오류가 발생할 경우 아래 공용 테스트 계정으로 즉시 로그인해 보세요! ✨
+                        </p>
+                        <div style={{ color: '#4338CA', fontFamily: 'monospace', fontWeight: 700, background: 'rgba(255,255,255,0.6)', padding: '6px 10px', borderRadius: '8px' }}>
                             📧 demo@lumini.me<br />
                             🔑 lumini123
                         </div>
                         <button
+                            type="button"
                             onClick={() => { setEmail('demo@lumini.me'); setPassword('lumini123'); }}
                             style={{
                                 marginTop: '8px', background: '#6366F1', color: 'white',

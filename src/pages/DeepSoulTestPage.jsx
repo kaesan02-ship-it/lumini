@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
 import { DEEP_QUESTIONS, DEEP_CATEGORIES, TOTAL_DEEP_QUESTIONS } from '../data/deepQuestions';
 import { supabase } from '../supabase/client';
@@ -34,6 +34,10 @@ const DeepSoulTestPage = ({ onComplete, onBack }) => {
     const [showResult, setShowResult] = useState(false);
     const [selectedValue, setSelectedValue] = useState(null);
 
+    const currentQ = DEEP_QUESTIONS[currentIdx] || DEEP_QUESTIONS[0] || {};
+    const currentCat = DEEP_CATEGORIES.find(c => c.id === currentQ?.category) || DEEP_CATEGORIES[0] || {};
+    const progress = Math.min((currentIdx + 1) / TOTAL_DEEP_QUESTIONS, 1);
+
     // 진행 상황 자동 저장
     React.useEffect(() => {
         if (Object.keys(answers).length > 0 || currentIdx > 0) {
@@ -63,28 +67,22 @@ const DeepSoulTestPage = ({ onComplete, onBack }) => {
         }
     };
 
-    const handleComplete = async () => {
+    const handleComplete = () => {
         // localStorage에 저장
         localStorage.setItem('lumini_deep_soul', JSON.stringify(answers));
-        
-        // Supabase에 동기화 시도
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { error } = await supabase
-                    .from('profiles')
-                    .update({ deep_soul: answers })
-                    .eq('id', user.id);
-                
-                if (error) throw error;
-                console.log('Deep Soul synced to Supabase');
-            }
-        } catch (err) {
-            console.error('Deep Soul sync error:', err);
-        }
+        // 임시 풀이 진행 데이터 파기 (다음 테스트 진입 시 무한 크래시 유발 방지)
+        localStorage.removeItem('lumini_deep_soul_progress');
 
         onComplete?.(answers);
     };
+
+    // 인덱스 안전가드 장치
+    React.useEffect(() => {
+        if (currentIdx >= TOTAL_DEEP_QUESTIONS || !currentQ) {
+            console.warn("Deep Soul index out of bounds. Restoring safely...");
+            setCurrentIdx(0);
+        }
+    }, [currentIdx, currentQ]);
 
     // 인트로 화면
     if (showIntro) {
@@ -235,9 +233,6 @@ const DeepSoulTestPage = ({ onComplete, onBack }) => {
             </div>
         );
     }
-    const currentQ = DEEP_QUESTIONS[currentIdx];
-    const currentCat = DEEP_CATEGORIES.find(c => c.id === currentQ.category);
-    const progress = (currentIdx + 1) / TOTAL_DEEP_QUESTIONS;
 
     // 질문 화면
     return (

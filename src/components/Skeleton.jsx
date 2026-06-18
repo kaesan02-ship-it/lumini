@@ -12,7 +12,7 @@ const Skeleton = ({ width = '100%', height = '20px', borderRadius = '8px', class
                 width,
                 height,
                 borderRadius,
-                background: 'linear-gradient(90deg, var(--glass-light) 25%, var(--glass-border) 50%, var(--glass-light) 75%)',
+                background: 'linear-gradient(90deg, var(--glass-border) 25%, var(--primary-glow) 50%, var(--glass-border) 75%)',
                 backgroundSize: '200% 100%',
                 ...style
             }}

@@ -44,32 +44,7 @@ const SidebarWidgets = ({ hasDeepSoul, nearbyUsers, onSelectUser, onNavigate }) 
                 </Tooltip>
             </div>
 
-            {/* AI 에이전트 협업 본부 바로가기 */}
-            <Tooltip text="기획, 개발, 테스트 AI 에이전트들이 열일하는 본부로 입장합니다!" position="top">
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => onNavigate?.('agent-hub')}
-                    className="widget-card"
-                    style={{
-                        background: 'linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(244, 114, 182, 0.1))',
-                        border: '1.5px solid rgba(167, 139, 250, 0.3)',
-                        padding: '14px',
-                        borderRadius: '20px',
-                        marginBottom: '20px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        boxShadow: '0 8px 32px 0 rgba(167, 139, 250, 0.05)'
-                    }}
-                >
-                    <div style={{ fontSize: '1.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🤖</div>
-                    <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontWeight: 900, fontSize: '0.85rem', color: '#a78bfa' }}>AI 에이전트 본부</div>
-                        <div style={{ fontSize: '0.68rem', color: '#f472b6', fontWeight: 700 }}>기획·개발·테스트 실시간 현황 →</div>
-                    </div>
-                </motion.div>
-            </Tooltip>
+
 
             {/* 딥 소울 매칭 예시 카드 */}
             <div>

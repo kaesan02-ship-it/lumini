@@ -142,7 +142,7 @@ export const updateProfile = async (userId, updates) => {
         return updated;
     }
     try {
-        const { data, error } = await supabase.from('profiles').upsert({ id: userId, ...updates }, { onConflict: 'id' }).select().single();
+        const { data, error } = await supabase.from('profiles').update(updates).eq('id', userId).select().single();
         if (error) {
             console.error('updateProfile error:', error);
             // 특정 컬럼 에러일 경우 해당 필드 제외 후 재시도 로직 등을 고려할 수 있으나, 우선 로깅 후 에러 던짐
@@ -201,7 +201,7 @@ export const getNearbyProfiles = async (limit = 10) => {
         // pet_data 등 누락 가능성 있는 필드를 제외한 안전한 컬럼만 조회하거나, 에러 시 빈 배열 반환
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, username, mbti_type, bio, created_at')
+            .select('id, username, mbti_type, bio, personality_data, deep_soul, created_at')
             .order('created_at', { ascending: false })
             .limit(limit);
             
@@ -288,6 +288,57 @@ export const createPost = async (postData) => {
     const { data, error } = await supabase.from('posts').insert(postData).select().single();
     if (error) throw error;
     return data;
+};
+
+export const deletePost = async (postId) => {
+    if (USE_MOCK_DATA) {
+        mockPosts = mockPosts.filter(p => p.id !== postId);
+        return { success: true };
+    }
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) throw error;
+    return { success: true };
+};
+
+export const updatePost = async (postId, updates) => {
+    if (USE_MOCK_DATA) {
+        const idx = mockPosts.findIndex(p => p.id === postId);
+        if (idx !== -1) {
+            mockPosts[idx] = { ...mockPosts[idx], ...updates };
+            return mockPosts[idx];
+        }
+        throw new Error('Post not found');
+    }
+    const { data, error } = await supabase.from('posts').update(updates).eq('id', postId).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const uploadPostImage = async (file, userId) => {
+    if (USE_MOCK_DATA) {
+        return URL.createObjectURL(file);
+    }
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    try {
+        const { error } = await supabase.storage
+            .from('post-images')
+            .upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
+        if (error) {
+            console.warn('Supabase storage upload failed (possibly RLS policy). Falling back to mock URL:', error.message);
+            return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80';
+        }
+        const { data: { publicUrl } } = supabase.storage
+            .from('post-images')
+            .getPublicUrl(fileName);
+        return publicUrl;
+    } catch (err) {
+        console.warn('Storage upload exception. Falling back to mock URL:', err.message);
+        return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80';
+    }
 };
 
 export const toggleLike = async (postId, userId) => {

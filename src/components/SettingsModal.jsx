@@ -129,7 +129,11 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                         </button>
 
                         <button
-                            onClick={() => { onClose(); onNavigate?.('test'); }}
+                            onClick={() => {
+                                localStorage.removeItem('lumini_test_progress');
+                                onClose();
+                                onNavigate?.('test');
+                            }}
                             style={{
                                 width: '100%', padding: '12px', borderRadius: '12px',
                                 background: 'var(--background)', border: '1px solid var(--glass-border)',

@@ -54,6 +54,9 @@ const PersonalityTest = ({ onComplete, onBack }) => {
         if (saved) {
             try {
                 const { currentStep } = JSON.parse(saved);
+                if (currentStep >= questions.length || currentStep < 0) {
+                    return 0;
+                }
                 return currentStep || 0;
             } catch (e) { return 0; }
         }
