@@ -12,21 +12,25 @@ import { ArrowRight, Share2, Download, Heart, Users, Sparkles, Star, Zap, Shield
 // 9개 지표 계산 함수
 const buildChartData = (data) => {
     if (!data) return [];
-    const O = data.O || 0, C = data.C || 0, E = data.E || 0;
-    const A = data.A || 0, N = data.N || 0, H = data.H || 50;
-    const creativity = Math.round((O * 0.6 + E * 0.4));
-    const selfDrive = Math.round((C * 0.55 + H * 0.45));
-    const empathy = Math.round((A * 0.6 + (100 - N) * 0.4));
+    const safeVal = (val) => {
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    };
+    const O = safeVal(data.O), C = safeVal(data.C), E = safeVal(data.E);
+    const A = safeVal(data.A), N = safeVal(data.N), H = safeVal(data.H || 50);
+    const creativity = Math.round((O * 0.6 + E * 0.4)) || 0;
+    const selfDrive = Math.round((C * 0.55 + H * 0.45)) || 0;
+    const empathy = Math.round((A * 0.6 + (100 - N) * 0.4)) || 0;
     return [
-        { subject: '사교성', A: Math.round(E), fullMark: 100 },
+        { subject: '사교성', A: Math.round(E) || 0, fullMark: 100 },
         { subject: '창의성', A: creativity, fullMark: 100 },
         { subject: '공감력', A: empathy, fullMark: 100 },
-        { subject: '계획성', A: Math.round(C), fullMark: 100 },
+        { subject: '계획성', A: Math.round(C) || 0, fullMark: 100 },
         { subject: '자기주도', A: selfDrive, fullMark: 100 },
-        { subject: '유연성', A: Math.round(O), fullMark: 100 },
-        { subject: '따뜻함', A: Math.round(A), fullMark: 100 },
-        { subject: '회복탄력', A: Math.round(100 - N), fullMark: 100 },
-        { subject: '신뢰도', A: Math.round(H), fullMark: 100 },
+        { subject: '유연성', A: Math.round(O) || 0, fullMark: 100 },
+        { subject: '따뜻함', A: Math.round(A) || 0, fullMark: 100 },
+        { subject: '회복탄력', A: Math.round(100 - N) || 0, fullMark: 100 },
+        { subject: '신뢰도', A: Math.round(H) || 0, fullMark: 100 },
     ];
 };
 

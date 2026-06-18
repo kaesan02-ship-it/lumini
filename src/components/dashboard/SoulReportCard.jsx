@@ -35,26 +35,41 @@ const SoulReportCard = ({ userData, mbtiType, isBoosted }) => {
                 </div>
             </div>
             
-            {userData ? (
-                <Tooltip text="AI가 분석한 나의 9가지 소울 성향 지표입니다." position="top">
-                    <div style={{ width: '100%', height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <RadarChart
-                            data={[
-                                { subject: '사교성', A: userData.E || 0, fullMark: 100 },
-                                { subject: '창의성', A: Math.round((userData.O || 0) * 0.6 + (userData.E || 0) * 0.4), fullMark: 100 },
-                                { subject: '공감력', A: Math.round((userData.A || 0) * 0.6 + (100 - (userData.N || 0)) * 0.4), fullMark: 100 },
-                                { subject: '계획성', A: userData.C || 0, fullMark: 100 },
-                                { subject: '자기주도', A: Math.round((userData.C || 0) * 0.55 + (userData.H || 50) * 0.45), fullMark: 100 },
-                                { subject: '유연성', A: userData.O || 0, fullMark: 100 },
-                                { subject: '따뜻함', A: userData.A || 0, fullMark: 100 },
-                                { subject: '회복탄력', A: Math.round(100 - (userData.N || 0)), fullMark: 100 },
-                                { subject: '신뢰도', A: userData.H || 50, fullMark: 100 },
-                            ]}
-                            size={300}
-                        />
-                    </div>
-                </Tooltip>
-            ) : (
+            {userData ? (() => {
+                const safeVal = (val) => {
+                    const num = Number(val);
+                    return isNaN(num) ? 0 : num;
+                };
+                const E = safeVal(userData.E);
+                const O = safeVal(userData.O);
+                const A = safeVal(userData.A);
+                const C = safeVal(userData.C);
+                const N = safeVal(userData.N);
+                const H = safeVal(userData.H || 50);
+
+                const chartData = [
+                    { subject: '사교성', A: E, fullMark: 100 },
+                    { subject: '창의성', A: Math.round(O * 0.6 + E * 0.4) || 0, fullMark: 100 },
+                    { subject: '공감력', A: Math.round(A * 0.6 + (100 - N) * 0.4) || 0, fullMark: 100 },
+                    { subject: '계획성', A: C, fullMark: 100 },
+                    { subject: '자기주도', A: Math.round(C * 0.55 + H * 0.45) || 0, fullMark: 100 },
+                    { subject: '유연성', A: O, fullMark: 100 },
+                    { subject: '따뜻함', A: A, fullMark: 100 },
+                    { subject: '회복탄력', A: Math.round(100 - N) || 0, fullMark: 100 },
+                    { subject: '신뢰도', A: H, fullMark: 100 },
+                ];
+
+                return (
+                    <Tooltip text="AI가 분석한 나의 9가지 소울 성향 지표입니다." position="top">
+                        <div style={{ width: '100%', height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <RadarChart
+                                data={chartData}
+                                size={300}
+                            />
+                        </div>
+                    </Tooltip>
+                );
+            })() : (
                 <ChartSkeleton />
             )}
         </div>
