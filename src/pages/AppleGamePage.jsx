@@ -499,28 +499,47 @@ const AppleGamePage = ({ onBack, userName }) => {
                                     position: 'relative', cursor: 'crosshair', background: 'transparent',
                                     padding: '5px', borderRadius: '20px',
                                     transform: `scale(${gridScale})`, transformOrigin: 'top center',
-                                    width: '100%', maxWidth: '750px', margin: '0 auto'
+                                    width: '100%', maxWidth: '750px', margin: '0 auto',
+                                    aspectRatio: '17/10' // 가로세로 비율(17열:10행)을 고정하여 개별 타일의 찌그러짐 방지!
                                 }}
                             >
                                 {grid.map((cell) => (
                                     <div
                                         key={cell.id}
                                         style={{
-                                            aspectRatio: '1', borderRadius: '12px',
-                                            background: cell.removed ? 'transparent' : 'white',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '1.3rem', fontWeight: 900,
-                                            color: cell.removed ? 'transparent' : '#334155',
-                                            border: cell.removed ? 'none' : '1px solid #e2e8f0',
-                                            boxShadow: cell.removed ? 'none' : '0 4px 6px rgba(0,0,0,0.05)',
-                                            position: 'relative', overflow: 'hidden',
-                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                                            aspectRatio: '1', 
+                                            borderRadius: '50%', // 사과 모양 완벽한 원형!
+                                            background: cell.removed 
+                                                ? 'transparent' 
+                                                : 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)', // 먹음직스러운 사과빛 그라데이션
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center',
+                                            fontSize: isMobileView ? '1.1rem' : '1.4rem', 
+                                            fontWeight: 900,
+                                            color: cell.removed ? 'transparent' : 'white', // 글씨는 흰색으로 더 선명하게!
+                                            border: cell.removed ? 'none' : '1px solid rgba(244, 63, 94, 0.2)',
+                                            boxShadow: cell.removed ? 'none' : '0 4px 8px rgba(244, 63, 94, 0.3)', // 사과의 은은한 입체적 그림자
+                                            position: 'relative', 
+                                            overflow: 'hidden',
+                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            width: '100%',
+                                            height: '100%'
                                         }}
                                     >
                                         {!cell.removed && (
                                             <>
-                                                {/* Apple Glow (Soft Red) */}
-                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'radial-gradient(circle at 35% 35%, rgba(244, 63, 94, 0.15) 0%, transparent 80%)', zIndex: 0 }}></div>
+                                                {/* Apple Highlights (사과의 입체적인 광택 효과) */}
+                                                <div style={{ 
+                                                    position: 'absolute', 
+                                                    top: '10%', 
+                                                    left: '15%', 
+                                                    width: '35%', 
+                                                    height: '35%', 
+                                                    background: 'radial-gradient(circle, rgba(255,255,255,0.45) 0%, transparent 80%)', 
+                                                    borderRadius: '50%',
+                                                    zIndex: 0 
+                                                }}></div>
                                                 <span style={{ position: 'relative', zIndex: 1 }}>{cell.value}</span>
                                             </>
                                         )}
