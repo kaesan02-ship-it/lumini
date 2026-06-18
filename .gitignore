@@ -8,3 +8,14 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# build / lint logs and reports
+*.log
+build-log.txt
+build_*.txt
+lint_*.txt
+lint_*.json
+eslint_report.*
+*_err.txt
+recent_pngs.txt
+hello.js
