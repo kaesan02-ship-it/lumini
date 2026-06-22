@@ -15,11 +15,13 @@ const useUserStore = create((set, get) => ({
     profile: null,
     loading: false,
     error: null,
+    activeRankingTab: 'apple',
 
     setUserData: (data) => set({ userData: data }),
     setMbtiType: (type) => set({ mbtiType: type }),
     setUserName: (name) => set({ userName: name }),
     setProfile: (profileData) => set({ profile: profileData }),
+    setActiveRankingTab: (tab) => set({ activeRankingTab: tab }),
 
     fetchProfile: async (userId) => {
         if (!userId) return;
@@ -153,6 +155,7 @@ const useUserStore = create((set, get) => ({
             profile: null,
             loading: false,
             error: null,
+            activeRankingTab: 'apple',
         });
         // (구) persist 스토어 잔재가 있을 경우를 위해 명시적 제거
         localStorage.removeItem('lumini-user-storage');

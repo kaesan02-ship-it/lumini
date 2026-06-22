@@ -44,14 +44,14 @@ const Game2048Page = ({ onBack }) => {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [isMouseDown, setIsMouseDown] = useState(false);
 
-    // 리더보드 로드
+    // 리더보드 로드 (Top 10으로 확장)
     const fetchLeaderboard = useCallback(() => {
         if (USE_MOCK_DATA) return;
 
         supabase.from('game_2048_scores')
             .select('score, max_tile, created_at, profiles(username)')
             .order('score', { ascending: false })
-            .limit(5)
+            .limit(10)
             .then(({ data, error }) => {
                 if (data && !error) {
                     const mappedData = data.map(item => ({
@@ -348,17 +348,35 @@ const Game2048Page = ({ onBack }) => {
                         <p style={{ fontSize: '0.82rem', color: '#718096', maxWidth: '300px', lineHeight: 1.5, marginBottom: '24px' }}>
                             모바일 터치뿐 아니라 **PC 마우스로도 드래그가 가능**하도록 개선되었습니다. 루미니 최고 지배자(2048) 소환에 도전해 보세요!
                         </p>
-                        <button
-                            onClick={startGame}
-                            style={{
-                                background: '#ff6b8b', color: 'white', border: 'none',
-                                padding: '14px 28px', borderRadius: '16px', fontWeight: 700,
-                                fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 6px 16px rgba(255,107,139,0.3)',
-                                display: 'flex', alignItems: 'center', gap: '8px'
-                            }}
-                        >
-                            게임 시작하기
-                        </button>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            <button
+                                onClick={startGame}
+                                style={{
+                                    background: '#ff6b8b', color: 'white', border: 'none',
+                                    padding: '14px 28px', borderRadius: '16px', fontWeight: 700,
+                                    fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 6px 16px rgba(255,107,139,0.3)',
+                                    display: 'flex', alignItems: 'center', gap: '8px'
+                                }}
+                            >
+                                게임 시작하기
+                            </button>
+                            <button
+                                onClick={() => {
+                                    useUserStore.getState().setActiveRankingTab('game2048');
+                                    // AppRouter에서 step을 'ranking'으로 이동하게끔 changeStep 이벤트 디스패치
+                                    const event = new CustomEvent('changeStep', { detail: 'ranking' });
+                                    window.dispatchEvent(event);
+                                }}
+                                style={{
+                                    background: '#ffffff', color: '#2d3748', border: '1px solid #ffd3db',
+                                    padding: '14px 28px', borderRadius: '16px', fontWeight: 700,
+                                    fontSize: '1.05rem', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '8px'
+                                }}
+                            >
+                                <Trophy size={18} color="#ff6b8b" /> 전체 랭킹 보기
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -522,7 +540,7 @@ const Game2048Page = ({ onBack }) => {
                     ) : (
                         leaderboard.map((item, idx) => {
                             const isMe = item.username === (userName || '나');
-                            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+                            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
                             const maxTileEvo = EVOLUTION_MAP[item.max_tile] || { emoji: '🥚' };
                             return (
                                 <div

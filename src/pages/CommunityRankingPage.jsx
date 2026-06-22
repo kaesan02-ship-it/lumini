@@ -15,9 +15,9 @@ const SCORE_GUIDE = [
 
 const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const { earnCrystals } = useCrystalStore();
-    const { userName } = useUserStore();
+    const { userName, activeRankingTab } = useUserStore();
     const { user } = useAuthStore();
-    const [activeTab, setActiveTab] = useState('apple'); // apple, shisen, game2048
+    const [activeTab, setActiveTab] = useState(activeRankingTab || 'apple'); // apple, shisen, game2048
     const [showGuide, setShowGuide] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
@@ -273,7 +273,10 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     ].map(t => (
                         <button
                             key={t.id}
-                            onClick={() => setActiveTab(t.id)}
+                            onClick={() => {
+                                setActiveTab(t.id);
+                                useUserStore.getState().setActiveRankingTab(t.id);
+                            }}
                             style={{
                                 padding: '10px 20px', borderRadius: '100px',
                                 border: activeTab !== t.id ? '1px solid var(--glass-border)' : 'none',

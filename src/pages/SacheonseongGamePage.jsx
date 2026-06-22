@@ -45,14 +45,14 @@ const SacheonseongGamePage = ({ onBack }) => {
     const boardRef = useRef(null);
     const timerRef = useRef(null);
 
-    // 랭킹 리더보드 가져오기
+    // 랭킹 리더보드 가져오기 (Top 10으로 확장)
     const fetchLeaderboard = useCallback(() => {
         if (USE_MOCK_DATA) return;
 
         supabase.from('shisen_sho_scores')
             .select('score, created_at, profiles(username)')
             .order('score', { ascending: false }) // 점수 높은 순 정렬
-            .limit(5)
+            .limit(10)
             .then(({ data, error }) => {
                 if (data && !error) {
                     const mappedData = data.map(item => ({
@@ -427,10 +427,28 @@ const SacheonseongGamePage = ({ onBack }) => {
         }
     };
 
-    // 타임아웃
+    // 타임아웃 (획득한 점수가 0점보다 크면 랭킹 자동 등록)
     const handleTimeout = () => {
         setGameState('timeout');
         if (timerRef.current) clearInterval(timerRef.current);
+
+        if (score > 0) {
+            setBestScore(prevBest => {
+                const newBest = Math.max(prevBest, score);
+                localStorage.setItem(bestScoreKey, newBest.toString());
+
+                // Supabase 랭킹 등록
+                if (!USE_MOCK_DATA && user?.id) {
+                    supabase.from('shisen_sho_scores')
+                        .insert({ user_id: user.id, score: score })
+                        .then(({ error }) => {
+                            if (error) console.error('Failed to submit Shisen-sho score on timeout:', error);
+                            else fetchLeaderboard();
+                        });
+                }
+                return newBest;
+            });
+        }
     };
 
     // 미션 클리어
@@ -505,17 +523,35 @@ const SacheonseongGamePage = ({ onBack }) => {
                         <p style={{ fontSize: '0.82rem', color: '#718096', maxWidth: '300px', lineHeight: 1.5, marginBottom: '24px' }}>
                             보드가 **10x10(플레이 8x8)**으로 확장되었습니다. 120초의 한계를 이겨내고 신기록 고득점을 올려보세요!
                         </p>
-                        <button
-                            onClick={startGame}
-                            style={{
-                                background: '#ff6b8b', color: 'white', border: 'none',
-                                padding: '14px 28px', borderRadius: '16px', fontWeight: 700,
-                                fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 6px 16px rgba(255,107,139,0.3)',
-                                display: 'flex', alignItems: 'center', gap: '8px'
-                            }}
-                        >
-                            게임 시작하기
-                        </button>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            <button
+                                onClick={startGame}
+                                style={{
+                                    background: '#ff6b8b', color: 'white', border: 'none',
+                                    padding: '14px 28px', borderRadius: '16px', fontWeight: 700,
+                                    fontSize: '1.05rem', cursor: 'pointer', boxShadow: '0 6px 16px rgba(255,107,139,0.3)',
+                                    display: 'flex', alignItems: 'center', gap: '8px'
+                                }}
+                            >
+                                게임 시작하기
+                            </button>
+                            <button
+                                onClick={() => {
+                                    useUserStore.getState().setActiveRankingTab('shisen');
+                                    // AppRouter에서 step을 'ranking'으로 이동하게끔 changeStep 이벤트 디스패치
+                                    const event = new CustomEvent('changeStep', { detail: 'ranking' });
+                                    window.dispatchEvent(event);
+                                }}
+                                style={{
+                                    background: '#ffffff', color: '#2d3748', border: '1px solid #ffd3db',
+                                    padding: '14px 28px', borderRadius: '16px', fontWeight: 700,
+                                    fontSize: '1.05rem', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '8px'
+                                }}
+                            >
+                                <Trophy size={18} color="#ff6b8b" /> 전체 랭킹 보기
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -747,7 +783,7 @@ const SacheonseongGamePage = ({ onBack }) => {
                     ) : (
                         leaderboard.map((item, idx) => {
                             const isMe = item.username === (userName || '나');
-                            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+                            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
                             return (
                                 <div
                                     key={idx}
