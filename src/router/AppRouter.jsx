@@ -33,6 +33,8 @@ import DailyChallengesPage from '../pages/DailyChallengesPage';
 import CommunityHubPage from '../pages/CommunityHubPage';
 import ValueGamePage from '../pages/ValueGamePage';
 import AppleGamePage from '../pages/AppleGamePage';
+import SacheonseongGamePage from '../pages/SacheonseongGamePage';
+import Game2048Page from '../pages/Game2048Page';
 
 // Stores
 import useAuthStore from '../store/authStore';
@@ -56,7 +58,7 @@ export const PUBLIC_ROUTES = new Set([
     'create-event', 'community', 'groups', 'group-chat',
     'ranking', 'magazine', 'compatibility-game', 'weekly-report',
     'insights', 'ai-insights', 'stats', 'growth',
-    'daily-challenges', 'apple-game',
+    'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048',
 ]);
 
 /**
@@ -266,7 +268,13 @@ const AppRouter = ({
                 <AppleGamePage key="apple-game" onBack={() => navigate('dashboard')} />
             )}
 
+            {step === 'shisen-sho' && (
+                <SacheonseongGamePage key="shisen-sho" onBack={() => navigate('dashboard')} />
+            )}
 
+            {step === 'game-2048' && (
+                <Game2048Page key="game-2048" onBack={() => navigate('dashboard')} />
+            )}
 
             {/* ── 보호 페이지 (로그인 필수) ────────────────────── */}
 

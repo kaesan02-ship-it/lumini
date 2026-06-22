@@ -81,8 +81,32 @@ const useUserStore = create((set, get) => ({
                 }
             }
         } catch (err) {
-            console.error('Failed to fetch profile:', err);
+            console.error('Failed to fetch profile (using fallback):', err);
             set({ error: err.message });
+            
+            // 극단적인 API 에러 상황에서 화이트아웃을 방지하기 위한 최소 복구용 fallback 프로필 설정
+            const fallbackProfile = {
+                id: userId,
+                username: localStorage.getItem('lumini_user_name') || get().userName || '임시 사용자',
+                mbti_type: localStorage.getItem('lumini_mbti_type') || get().mbtiType || '?',
+                personality_data: null
+            };
+            
+            try {
+                const localData = localStorage.getItem('lumini_user_data');
+                if (localData) {
+                    fallbackProfile.personality_data = JSON.parse(localData);
+                }
+            } catch (jsonErr) {
+                console.error('Failed to parse local personality data:', jsonErr);
+            }
+            
+            set({
+                profile: fallbackProfile,
+                userName: fallbackProfile.username,
+                mbtiType: fallbackProfile.mbti_type,
+                userData: fallbackProfile.personality_data
+            });
         } finally {
             set({ loading: false });
         }

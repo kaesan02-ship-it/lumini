@@ -49,6 +49,16 @@ const useAuthStore = create((set, get) => ({
                 user_metadata: { username: account.username, isAdmin: account.isAdmin },
             };
             const mockSession = { user: mockUser, access_token: 'mock-token' };
+            
+            // 데모 로그인에서도 성향 검사 강제 초기화
+            if (!account.isAdmin) {
+                localStorage.removeItem('lumini_user_data');
+                localStorage.removeItem('lumini_mbti_type');
+                localStorage.removeItem('lumini_deep_soul');
+                useUserStore.getState().setUserData(null);
+                useUserStore.getState().setMbtiType('?');
+            }
+
             set({ user: mockUser, session: mockSession, loading: false, isAdmin: account.isAdmin });
             return { user: mockUser, session: mockSession };
         }
@@ -61,6 +71,26 @@ const useAuthStore = create((set, get) => ({
         const isAdmin =
             data.user?.email === 'admin@lumini.me' ||
             data.user?.user_metadata?.isAdmin === true;
+            
+        // 로그인 성공 시 해당 유저의 성향 데이터를 리셋 (성향 검사 새로 받기 구현)
+        if (!isAdmin && data.user) {
+            localStorage.removeItem('lumini_user_data');
+            localStorage.removeItem('lumini_mbti_type');
+            localStorage.removeItem('lumini_deep_soul');
+            useUserStore.getState().setUserData(null);
+            useUserStore.getState().setMbtiType('?');
+            
+            try {
+                // profiles 테이블에서 해당 유저의 성향 데이터를 리셋
+                await supabase.from('profiles').update({
+                    personality_data: null,
+                    mbti_type: '?'
+                }).eq('id', data.user.id);
+            } catch (dbErr) {
+                console.error('Failed to reset DB profile personality data:', dbErr);
+            }
+        }
+
         set({ isAdmin, user: data.user, session: data.session, loading: false });
         return data;
     },

@@ -85,13 +85,17 @@ function App() {
     // ─── 인증 상태 → 페이지 가드 ─────────────────────────────────
     // 핵심 로직: 로딩 완료 후 접근 권한 및 성향 테스트 완료 여부 확인
     useEffect(() => {
-        // 인증 상태나 프로필 데이터를 아직 불러오고 있다면 대기
-        if (authLoading || profileLoading) return;
+        // 인증 세션 확인 중일 때는 대기
+        if (authLoading) return;
 
         const isAuthenticated = !!(user || session);
         
-        // 인증은 되었으나 프로필 정보가 아직 로드되지 않은 찰나에는 리다이렉트 방지를 위해 대기
-        if (isAuthenticated && profile === null) return;
+        // 인증은 되었으나 프로필 정보가 아직 로드되지 않은 찰나에는 대기
+        if (isAuthenticated && profile === null) {
+            // 만약 프로필 조회가 로딩 중이라면 로딩이 완료될 때까지 리다이렉션을 홀딩
+            if (profileLoading) return;
+            // 로딩도 끝났는데 profile이 계속 null인 극단적 비동기 예외 상황에서는 리턴하지 않고 통과
+        }
 
         const hasPersonalityData = !!userData && mbtiType && mbtiType !== '?';
 
@@ -126,7 +130,7 @@ function App() {
                 setStep('dashboard');
             }
         }
-    }, [user, session, authLoading, profileLoading, isAdmin, step, userData, mbtiType]);
+    }, [user, session, authLoading, profileLoading, isAdmin, step, userData, mbtiType, profile]);
 
     // ─── 관리자 패널 세션스토리지 동기화 ─────────────────────────
     useEffect(() => {
@@ -171,8 +175,8 @@ function App() {
         setMbtiType(type);
         if (user) {
             try {
+                // updateProfile 내부에서 상태 업데이트가 완료되므로, 중복 렌더링 방지를 위해 fetchProfile은 생략
                 await updateProfile(user.id, { personality_data: data, mbti_type: type });
-                await fetchProfile(user.id);
                 await fetchNearbyUsers();
             } catch (err) {
                 console.error('Profile update failed:', err);
@@ -180,7 +184,7 @@ function App() {
         }
         localStorage.setItem('lumini_user_data', JSON.stringify(data));
         localStorage.setItem('lumini_mbti_type', type);
-    }, [user, updateProfile, fetchProfile, fetchNearbyUsers]);
+    }, [user, updateProfile, fetchNearbyUsers]);
 
     // ─── 데이터 리셋 (성격 테스트 재시작) ────────────────────────
     const resetData = useCallback(() => {
@@ -193,6 +197,43 @@ function App() {
     }, []);
 
     // ─── 레이아웃 표시 여부 ───────────────────────────────────────
+    // ─── 앱 로딩 상태 판정 ──────────────────────────────────────────
+    // 세션 조회 중이거나, 로그인 상태인데 프로필 로드가 완료되지 않은 찰나
+    const isAppLoading = authLoading || (!!(user || session) && profile === null && profileLoading);
+
+    if (isAppLoading) {
+        return (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                background: '#f8fafc',
+                gap: '16px',
+                fontFamily: 'Inter, sans-serif'
+            }}>
+                <div style={{
+                    width: '45px',
+                    height: '45px',
+                    border: '3px solid #ffeef1',
+                    borderTop: '3px solid #ff6b8b',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                }} />
+                <style>{`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `}</style>
+                <span style={{ fontSize: '0.92rem', color: '#ff6b8b', fontWeight: 700 }}>
+                    루미니를 불러오는 중... ✨
+                </span>
+            </div>
+        );
+    }
+
     const isLoggedIn = !!(user || userData);
     const isAuthPage = step === 'welcome' || step === 'auth';
     const showNav = isLoggedIn && !isAuthPage;
