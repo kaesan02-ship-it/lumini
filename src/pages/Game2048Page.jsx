@@ -44,22 +44,29 @@ const Game2048Page = ({ onBack }) => {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [isMouseDown, setIsMouseDown] = useState(false);
 
-    // 리더보드 로드 (Top 10으로 확장)
+    // 리더보드 로드 (중복 제거 및 Top 10)
     const fetchLeaderboard = useCallback(() => {
         if (USE_MOCK_DATA) return;
 
         supabase.from('game_2048_scores')
-            .select('score, max_tile, created_at, profiles(username)')
+            .select('score, max_tile, user_id, profiles(username)')
             .order('score', { ascending: false })
-            .limit(10)
             .then(({ data, error }) => {
                 if (data && !error) {
-                    const mappedData = data.map(item => ({
-                        username: item.profiles?.username || '익명',
-                        score: item.score,
-                        max_tile: item.max_tile
-                    }));
-                    setLeaderboard(mappedData);
+                    const uniqueUsers = [];
+                    const seenUsers = new Set();
+                    data.forEach(item => {
+                        const uId = item.user_id;
+                        if (uId && !seenUsers.has(uId)) {
+                            seenUsers.add(uId);
+                            uniqueUsers.push({
+                                username: item.profiles?.username || '익명',
+                                score: item.score,
+                                max_tile: item.max_tile
+                            });
+                        }
+                    });
+                    setLeaderboard(uniqueUsers.slice(0, 10));
                 }
             });
     }, []);

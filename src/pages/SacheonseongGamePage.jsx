@@ -45,21 +45,28 @@ const SacheonseongGamePage = ({ onBack }) => {
     const boardRef = useRef(null);
     const timerRef = useRef(null);
 
-    // 랭킹 리더보드 가져오기 (Top 10으로 확장)
+    // 랭킹 리더보드 가져오기 (중복 제거 및 Top 10)
     const fetchLeaderboard = useCallback(() => {
         if (USE_MOCK_DATA) return;
 
         supabase.from('shisen_sho_scores')
-            .select('score, created_at, profiles(username)')
+            .select('score, user_id, profiles(username)')
             .order('score', { ascending: false }) // 점수 높은 순 정렬
-            .limit(10)
             .then(({ data, error }) => {
                 if (data && !error) {
-                    const mappedData = data.map(item => ({
-                        username: item.profiles?.username || '익명',
-                        score: item.score
-                    }));
-                    setLeaderboard(mappedData);
+                    const uniqueUsers = [];
+                    const seenUsers = new Set();
+                    data.forEach(item => {
+                        const uId = item.user_id;
+                        if (uId && !seenUsers.has(uId)) {
+                            seenUsers.add(uId);
+                            uniqueUsers.push({
+                                username: item.profiles?.username || '익명',
+                                score: item.score
+                            });
+                        }
+                    });
+                    setLeaderboard(uniqueUsers.slice(0, 10));
                 }
             });
     }, []);

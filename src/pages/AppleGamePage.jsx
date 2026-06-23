@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Timer, Trophy, RefreshCw, ArrowLeft, Star, Heart, Gem, Info, Volume2, VolumeX, ShoppingBag, Play, Sparkles } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useAuthStore from '../store/authStore';
+import useUserStore from '../store/userStore';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
 
@@ -29,31 +30,20 @@ const AppleGamePage = ({ onBack, userName }) => {
     const dailyCountKey = `apple_game_daily_count_${userId}`;
     const lastDateKey = `apple_game_last_date_${userId}`;
  
-    // 리더보드 데이터를 서버에서 새로 가져오는 함수
+    // 리더보드 데이터를 서버에서 새로 가져오는 함수 (중복 없는 profiles 기준 10위까지로 통일)
     const fetchLeaderboard = useCallback(() => {
         if (USE_MOCK_DATA) return;
- 
-        supabase.from('apple_game_scores')
-            .select('score, created_at, profiles(username)')
-            .order('score', { ascending: false })
-            .limit(5)
+
+        supabase.from('profiles')
+            .select('username, apple_game_best_score')
+            .gt('apple_game_best_score', 0)
+            .order('apple_game_best_score', { ascending: false })
+            .limit(10)
             .then(({ data, error }) => {
                 if (data && !error) {
-                    const mappedData = data.map(item => ({
-                        username: item.profiles?.username || '익명',
-                        apple_game_best_score: item.score
-                    }));
-                    setLeaderboard(mappedData);
+                    setLeaderboard(data);
                 } else {
-                    // 테이블 부재 시 profiles에서 단일 최고점 리스트 폴백 로드
-                    supabase.from('profiles')
-                        .select('username, apple_game_best_score')
-                        .gt('apple_game_best_score', 0)
-                        .order('apple_game_best_score', { ascending: false })
-                        .limit(5)
-                        .then(({ data: fallbackData, error: fallbackErr }) => {
-                            if (fallbackData && !fallbackErr) setLeaderboard(fallbackData);
-                        });
+                    console.error('Failed to fetch apple game leaderboard:', error);
                 }
             });
     }, []);
@@ -427,12 +417,19 @@ const AppleGamePage = ({ onBack, userName }) => {
                                 </motion.div>
                                 <h3 style={{ fontSize: isMobileView ? '1.5rem' : '2.5rem', fontWeight: 900, marginBottom: '10px', color: '#334155' }}>사과 수확 준비 완료!</h3>
                                 <p style={{ color: '#64748b', fontSize: isMobileView ? '0.85rem' : '1.1rem', marginBottom: '20px', fontWeight: 600, textAlign: 'center', padding: '0 10px' }}>합이 10이 되도록 사과를 드래그하세요 🦦</p>
-                                <div style={{ display: 'flex', flexDirection: isMobileView ? 'column' : 'row', gap: '12px', width: isMobileView ? '100%' : 'auto', maxWidth: '300px' }}>
-                                    <button onClick={() => setGameState('shopping')} style={{ padding: isMobileView ? '12px 20px' : '18px 35px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 800, borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: isMobileView ? '0.9rem' : '1.1rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', width: '100%' }}>
+                                <div style={{ display: 'flex', flexDirection: isMobileView ? 'column' : 'row', gap: '12px', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
+                                    <button onClick={() => setGameState('shopping')} style={{ padding: isMobileView ? '12px 20px' : '18px 30px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 800, borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: isMobileView ? '0.9rem' : '1.1rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', flex: 1 }}>
                                         <ShoppingBag size={isMobileView ? 18 : 22} /> 상점 방문
                                     </button>
-                                    <button onClick={startGame} style={{ padding: isMobileView ? '12px 25px' : '18px 50px', background: 'linear-gradient(135deg, #f43f5e 0%, #ec4899 100%)', border: 'none', color: 'white', fontWeight: 900, borderRadius: '15px', fontSize: isMobileView ? '1rem' : '1.3rem', boxShadow: '0 10px 20px rgba(244, 63, 94, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', width: '100%' }}>
-                                        <Play fill="white" size={isMobileView ? 18 : 24} /> 게임 시작
+                                    <button onClick={() => {
+                                        useUserStore.getState().setActiveRankingTab('apple');
+                                        const event = new CustomEvent('changeStep', { detail: 'ranking' });
+                                        window.dispatchEvent(event);
+                                    }} style={{ padding: isMobileView ? '12px 20px' : '18px 30px', background: 'white', border: '1px solid #ffd3db', color: '#f43f5e', fontWeight: 800, borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: isMobileView ? '0.9rem' : '1.1rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(244,63,94,0.05)', flex: 1 }}>
+                                        <Trophy size={isMobileView ? 18 : 22} color="#f43f5e" /> 랭킹 보기
+                                    </button>
+                                    <button onClick={startGame} style={{ padding: isMobileView ? '12px 25px' : '18px 40px', background: 'linear-gradient(135deg, #f43f5e 0%, #ec4899 100%)', border: 'none', color: 'white', fontWeight: 900, borderRadius: '15px', fontSize: isMobileView ? '1rem' : '1.3rem', boxShadow: '0 10px 20px rgba(244, 63, 94, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', flex: 1.2 }}>
+                                        <Play fill="white" size={isMobileView ? 18 : 24} /> 시작하기
                                     </button>
                                 </div>
                                 <p style={{ marginTop: '20px', color: '#64748b', fontSize: isMobileView ? '0.8rem' : '1rem', fontWeight: 600 }}>무료 플레이: <span style={{ color: '#10B981', fontWeight: 800 }}>무제한 무료 🎮</span> | 보유 코인: <span style={{ color: '#ec4899', fontWeight: 800 }}>{inventory['apple-ticket'] || 0}개</span></p>
@@ -574,17 +571,25 @@ const AppleGamePage = ({ onBack, userName }) => {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             {leaderboard.length > 0 ? (
-                                leaderboard.map((item, i) => (
-                                    <div key={i} style={{
-                                        display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
-                                        background: item.username === userName ? 'rgba(99, 102, 241, 0.1)' : 'white',
-                                        border: item.username === userName ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid #e2e8f0',
-                                        borderRadius: '16px', transition: 'transform 0.2s'
-                                    }}>
-                                        <span style={{ fontWeight: 800, color: item.username === userName ? '#4f46e5' : '#64748b', fontSize: '1rem' }}>{i + 1}위 {item.username || '루미니언'}</span>
-                                        <span style={{ fontWeight: 900, color: item.username === userName ? '#4f46e5' : '#334155', fontSize: '1rem' }}>{(item.apple_game_best_score || 0).toLocaleString()}</span>
-                                    </div>
-                                ))
+                                leaderboard.map((item, i) => {
+                                    const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+                                    const rankBadge = medals[i] || `${i + 1}위`;
+                                    return (
+                                        <div key={i} style={{
+                                            display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
+                                            background: item.username === userName ? 'rgba(99, 102, 241, 0.1)' : 'white',
+                                            border: item.username === userName ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid #e2e8f0',
+                                            borderRadius: '16px', transition: 'transform 0.2s',
+                                            alignItems: 'center'
+                                        }}>
+                                            <span style={{ fontWeight: 800, color: item.username === userName ? '#4f46e5' : '#64748b', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '1.2rem' }}>{rankBadge}</span>
+                                                <span>{item.username || '루미니언'}</span>
+                                            </span>
+                                            <span style={{ fontWeight: 900, color: item.username === userName ? '#4f46e5' : '#334155', fontSize: '1rem' }}>{(item.apple_game_best_score || 0).toLocaleString()}점</span>
+                                        </div>
+                                    );
+                                })
                             ) : (
                                 <div style={{ textAlign: 'center', padding: '30px 10px', color: '#64748b', fontSize: '0.9rem', fontWeight: 600 }}>
                                     아직 명예의 전당에<br />기록된 점수가 없습니다. 🍎
