@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { USE_MOCK_DATA } from '../config';
 import { getMessages, sendMessage } from '../supabase/queries';
+import { supabase } from '../supabase/client';
 
 // 모크 자동 응답 풀
 const AUTO_RESPONSES = [
@@ -51,7 +52,6 @@ export const useChat = (options) => {
 
         let channel;
         try {
-            const { supabase } = require('../supabase/client');
             if (options.communityId) {
                 channel = supabase
                     .channel(`community:${options.communityId}`)
@@ -59,12 +59,16 @@ export const useChat = (options) => {
                         event: 'INSERT', schema: 'public', table: 'messages',
                         filter: `community_id=eq.${options.communityId}`,
                     }, (payload) => {
-                        setMessages((prev) => [...prev, payload.new]);
+                        const newMessage = payload.new;
+                        setMessages((prev) => {
+                            if (prev.some(m => m.id === newMessage.id)) return prev;
+                            return [...prev, newMessage];
+                        });
                     })
                     .subscribe();
             } else if (options.receiverId) {
                 channel = supabase
-                    .channel(`chat:${options.senderId}`)
+                    .channel(`chat:${options.senderId}-${options.receiverId}`)
                     .on('postgres_changes', {
                         event: 'INSERT', schema: 'public', table: 'messages',
                     }, (payload) => {
@@ -73,19 +77,21 @@ export const useChat = (options) => {
                             (newMessage.sender_id === options.senderId && newMessage.receiver_id === options.receiverId) ||
                             (newMessage.sender_id === options.receiverId && newMessage.receiver_id === options.senderId)
                         ) {
-                            setMessages((prev) => [...prev, newMessage]);
+                            setMessages((prev) => {
+                                if (prev.some(m => m.id === newMessage.id)) return prev;
+                                return [...prev, newMessage];
+                            });
                         }
                     })
                     .subscribe();
             }
         } catch (err) {
-            console.log('Realtime subscription skipped in mock mode');
+            console.log('Realtime subscription skipped in mock mode', err);
         }
 
         return () => {
             if (channel) {
                 try {
-                    const { supabase } = require('../supabase/client');
                     supabase.removeChannel(channel);
                 } catch { }
             }
