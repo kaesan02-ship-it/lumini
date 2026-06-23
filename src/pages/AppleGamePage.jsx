@@ -30,18 +30,21 @@ const AppleGamePage = ({ onBack, userName }) => {
     const dailyCountKey = `apple_game_daily_count_${userId}`;
     const lastDateKey = `apple_game_last_date_${userId}`;
  
-    // 리더보드 데이터를 서버에서 새로 가져오는 함수 (중복 없는 profiles 기준 10위까지로 통일)
+    // 리더보드 데이터를 서버에서 새로 가져오는 함수 (중복 허용 고득점 Top 10)
     const fetchLeaderboard = useCallback(() => {
         if (USE_MOCK_DATA) return;
 
-        supabase.from('profiles')
-            .select('username, apple_game_best_score')
-            .gt('apple_game_best_score', 0)
-            .order('apple_game_best_score', { ascending: false })
+        supabase.from('apple_game_scores')
+            .select('score, profiles(username)')
+            .order('score', { ascending: false })
             .limit(10)
             .then(({ data, error }) => {
                 if (data && !error) {
-                    setLeaderboard(data);
+                    const mappedData = data.map(item => ({
+                        username: item.profiles?.username || '익명',
+                        apple_game_best_score: item.score
+                    }));
+                    setLeaderboard(mappedData);
                 } else {
                     console.error('Failed to fetch apple game leaderboard:', error);
                 }

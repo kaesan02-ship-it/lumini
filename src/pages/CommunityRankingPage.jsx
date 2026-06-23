@@ -61,115 +61,83 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
             }
 
             if (activeTab === 'apple') {
-                // 1. 사과게임 랭킹 로드 (profiles 테이블의 단일 최고점 컬럼 활용)
-                const { data: profiles, error } = await supabase
-                    .from('profiles')
-                    .select('id, username, mbti_type, apple_game_best_score')
-                    .gt('apple_game_best_score', 0)
-                    .order('apple_game_best_score', { ascending: false })
+                // 1. 사과게임 랭킹 로드 (apple_game_scores 테이블에서 중복 허용으로 로드)
+                const { data: scores, error } = await supabase
+                    .from('apple_game_scores')
+                    .select('score, user_id, profiles(username, mbti_type)')
+                    .order('score', { ascending: false })
                     .limit(20);
 
-                if (!error && profiles) {
-                    const mapped = profiles.map((p, i) => ({
+                if (!error && scores) {
+                    const mapped = scores.map((s, i) => ({
                         rank: i + 1,
-                        name: p.username || '익명',
-                        mbti: p.mbti_type || '?',
-                        score: p.apple_game_best_score || 0,
+                        name: s.profiles?.username || '익명',
+                        mbti: s.profiles?.mbti_type || '?',
+                        score: s.score || 0,
                         badge: i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
-                        isMe: p.id === user?.id
+                        isMe: s.user_id === user?.id
                     }));
                     setLeaderboard(mapped);
 
                     // 내 정보 추출
-                    const myIdx = profiles.findIndex(p => p.id === user?.id);
+                    const myIdx = scores.findIndex(s => s.user_id === user?.id);
                     if (myIdx !== -1) {
-                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${profiles[myIdx].apple_game_best_score}점` });
+                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${scores[myIdx].score}점` });
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
                 }
             } else if (activeTab === 'shisen') {
-                // 2. 사천성 랭킹 로드 (shisen_sho_scores 테이블 - 최종 점수제 랭킹 적용)
+                // 2. 사천성 랭킹 로드 (shisen_sho_scores 테이블 - 중복 허용)
                 const { data: scores, error } = await supabase
                     .from('shisen_sho_scores')
                     .select('score, user_id, profiles(username, mbti_type)')
-                    .order('score', { ascending: false });
+                    .order('score', { ascending: false })
+                    .limit(20);
 
                 if (!error && scores) {
-                    // 유저별 최고 점수 중복 배제 필터링
-                    const uniqueUsers = [];
-                    const seenUsers = new Set();
-                    scores.forEach(item => {
-                        const uId = item.user_id;
-                        if (!seenUsers.has(uId)) {
-                            seenUsers.add(uId);
-                            uniqueUsers.push({
-                                user_id: uId,
-                                name: item.profiles?.username || '익명',
-                                mbti: item.profiles?.mbti_type || '?',
-                                score: item.score,
-                            });
-                        }
-                    });
-
-                    const top20 = uniqueUsers.slice(0, 20).map((u, i) => ({
+                    const top20 = scores.map((s, i) => ({
                         rank: i + 1,
-                        name: u.name,
-                        mbti: u.mbti,
-                        score: u.score,
+                        name: s.profiles?.username || '익명',
+                        mbti: s.profiles?.mbti_type || '?',
+                        score: s.score,
                         badge: i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
-                        isMe: u.user_id === user?.id
+                        isMe: s.user_id === user?.id
                     }));
                     setLeaderboard(top20);
 
                     // 내 정보 추출
-                    const myIdx = uniqueUsers.findIndex(u => u.user_id === user?.id);
+                    const myIdx = scores.findIndex(s => s.user_id === user?.id);
                     if (myIdx !== -1) {
-                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${uniqueUsers[myIdx].score.toLocaleString()}점` });
+                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${scores[myIdx].score.toLocaleString()}점` });
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
                 }
             } else if (activeTab === 'game2048') {
-                // 3. 2048 랭킹 로드 (game_2048_scores 테이블)
+                // 3. 2048 랭킹 로드 (game_2048_scores 테이블 - 중복 허용)
                 const { data: scores, error } = await supabase
                     .from('game_2048_scores')
                     .select('score, max_tile, user_id, profiles(username, mbti_type)')
-                    .order('score', { ascending: false });
+                    .order('score', { ascending: false })
+                    .limit(20);
 
                 if (!error && scores) {
-                    // 유저별 최고 점수 중복 배제 필터링
-                    const uniqueUsers = [];
-                    const seenUsers = new Set();
-                    scores.forEach(item => {
-                        const uId = item.user_id;
-                        if (!seenUsers.has(uId)) {
-                            seenUsers.add(uId);
-                            uniqueUsers.push({
-                                user_id: uId,
-                                name: item.profiles?.username || '익명',
-                                mbti: item.profiles?.mbti_type || '?',
-                                score: item.score,
-                                max_tile: item.max_tile
-                            });
-                        }
-                    });
-
-                    const top20 = uniqueUsers.slice(0, 20).map((u, i) => ({
+                    const top20 = scores.map((s, i) => ({
                         rank: i + 1,
-                        name: u.name,
-                        mbti: u.mbti,
-                        score: u.score,
-                        max_tile: u.max_tile,
+                        name: s.profiles?.username || '익명',
+                        mbti: s.profiles?.mbti_type || '?',
+                        score: s.score,
+                        max_tile: s.max_tile,
                         badge: i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
-                        isMe: u.user_id === user?.id
+                        isMe: s.user_id === user?.id
                     }));
                     setLeaderboard(top20);
 
                     // 내 정보 추출
-                    const myIdx = uniqueUsers.findIndex(u => u.user_id === user?.id);
+                    const myIdx = scores.findIndex(s => s.user_id === user?.id);
                     if (myIdx !== -1) {
-                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${uniqueUsers[myIdx].score}점` });
+                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${scores[myIdx].score}점` });
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
