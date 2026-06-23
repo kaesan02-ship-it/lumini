@@ -80,9 +80,14 @@ const useAppInit = (setNearbyUsers) => {
                     return;
                 }
 
-                const {
-                    data: { session: currentSession },
-                } = await supabase.auth.getSession();
+                // ─── Supabase 세션 조회의 타임아웃 제한(4초) 설정 ─────────
+                // 네트워크 지연으로 인해 getSession()이 무한 대기하여 무한 로딩에 빠지는 현상 방지
+                const sessionPromise = supabase.auth.getSession();
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Supabase session request timeout (4s)')), 4000)
+                );
+
+                const { data: { session: currentSession } } = await Promise.race([sessionPromise, timeoutPromise]);
 
                 if (!mountedRef.current) return;
 
@@ -96,8 +101,11 @@ const useAppInit = (setNearbyUsers) => {
                     setSession(null);
                 }
             } catch (err) {
-                console.error('Auth init error:', err.message);
-                if (mountedRef.current) setSession(null);
+                console.error('Auth init error (falling back to guest):', err.message);
+                if (mountedRef.current) {
+                    // 에러 발생 시 세션을 null로 풀어 로딩 해제 후 게스트 진입
+                    setSession(null);
+                }
             }
         };
 

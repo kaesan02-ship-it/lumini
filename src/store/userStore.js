@@ -32,7 +32,13 @@ const useUserStore = create((set, get) => ({
 
         set({ loading: true, error: null });
         try {
-            const profile = await getProfile(userId);
+            // ─── Supabase 프로필 조회의 타임아웃 제한(4초) 설정 ─────────
+            const fetchPromise = getProfile(userId);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Supabase profile fetch timeout (4s)')), 4000)
+            );
+            const profile = await Promise.race([fetchPromise, timeoutPromise]);
+
             if (profile) {
                 set({
                     profile,
