@@ -13,7 +13,7 @@ import Badge from '../components/Badge';
 import ProfileModal from '../components/ProfileModal';
 import Tooltip from '../components/Tooltip';
 
-const AdminDashboardPage = () => {
+const AdminDashboardPage = ({ onBack }) => {
     const [members, setMembers] = useState([]);
     const [stats, setStats] = useState({
         total: 0,
@@ -185,11 +185,21 @@ const AdminDashboardPage = () => {
                         </Tooltip>
                         
                         <Tooltip text="데이터를 최신 상태로 수동 갱신합니다.">
-                            <button 
+                            <button
                                 onClick={fetchData}
                                 className={`p-2.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all ${isRefreshing ? 'animate-spin text-primary' : ''}`}
                             >
                                 <RefreshCcw size={22} />
+                            </button>
+                        </Tooltip>
+
+                        <Tooltip text="관리자 페이지를 닫고 앱으로 돌아갑니다.">
+                            <button
+                                onClick={onBack}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 rounded-xl transition-all"
+                            >
+                                <LogOut size={18} />
+                                나가기
                             </button>
                         </Tooltip>
                     </div>

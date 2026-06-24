@@ -41,6 +41,7 @@ import AppleGamePage from './pages/AppleGamePage';
 
 // Supabase
 import { supabase } from './supabase/client';
+import { USE_MOCK_DATA } from './config';
 // import { upsertProfile } from './supabase/queries'; // Unused
 
 // Stores
@@ -223,16 +224,20 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
-        setSession(currentSession);
-        
-        if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id);
-          const isUserAdmin = currentSession.user.email === 'admin@lumini.me' || currentSession.user.user_metadata?.isAdmin;
-          if (step === 'welcome' || step === 'auth' || step === 'dashboard') {
-            setStep(isUserAdmin ? 'admin' : 'dashboard');
+        // Mock 모드에서는 placeholder Supabase로 getSession()이 항상 null을 반환하여
+        // persist에 저장된 로그인/관리자 상태를 지워버리므로 세션 초기화를 건너뛴다.
+        if (!USE_MOCK_DATA) {
+          const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+          if (error) throw error;
+
+          setSession(currentSession);
+
+          if (currentSession?.user) {
+            await fetchProfile(currentSession.user.id);
+            const isUserAdmin = currentSession.user.email === 'admin@lumini.me' || currentSession.user.user_metadata?.isAdmin;
+            if (step === 'welcome' || step === 'auth' || step === 'dashboard') {
+              setStep(isUserAdmin ? 'admin' : 'dashboard');
+            }
           }
         }
       } catch (err) {
@@ -243,6 +248,12 @@ function App() {
     };
 
     initializeApp();
+
+    // Mock 모드에서는 supabase auth 이벤트를 구독하지 않는다.
+    // (INITIAL_SESSION이 null로 발생해 로그인 직후 관리자/유저 상태가 초기화되는 것을 방지)
+    if (USE_MOCK_DATA) {
+      return;
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);

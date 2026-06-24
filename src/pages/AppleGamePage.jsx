@@ -28,20 +28,23 @@ const AppleGamePage = ({ onBack, userName }) => {
     const dailyCountKey = `apple_game_daily_count_${userId}`;
     const lastDateKey = `apple_game_last_date_${userId}`;
 
-    // Supabase에서 최고 기록 로드 및 리더보드 로드
+    // Supabase에서 최고 기록 로드 및 리더보드 로드 (+ 실시간 자동 갱신)
     useEffect(() => {
-        if (!USE_MOCK_DATA) {
-            if (user) {
-                supabase.from('profiles').select('apple_game_best_score').eq('id', user.id).single()
-                    .then(({ data, error }) => {
-                        if (data && !error) {
-                            setBestScore(data.apple_game_best_score || 0);
-                            localStorage.setItem(scoreKey, (data.apple_game_best_score || 0).toString());
-                        }
-                    });
-            }
+        if (USE_MOCK_DATA) return;
 
-            // Top 5 리더보드 쿼리
+        // 내 최고 기록 로드
+        if (user) {
+            supabase.from('profiles').select('apple_game_best_score').eq('id', user.id).single()
+                .then(({ data, error }) => {
+                    if (data && !error) {
+                        setBestScore(data.apple_game_best_score || 0);
+                        localStorage.setItem(scoreKey, (data.apple_game_best_score || 0).toString());
+                    }
+                });
+        }
+
+        // Top 5 명예의 전당 조회
+        const fetchLeaderboard = () => {
             supabase.from('profiles')
                 .select('username, apple_game_best_score')
                 .order('apple_game_best_score', { ascending: false })
@@ -49,7 +52,16 @@ const AppleGamePage = ({ onBack, userName }) => {
                 .then(({ data, error }) => {
                     if (data && !error) setLeaderboard(data);
                 });
-        }
+        };
+
+        fetchLeaderboard();
+
+        // 폴링: 5초마다 명예의 전당을 다시 불러와 자동 갱신 (Realtime 권한 없이 동작)
+        const leaderboardInterval = setInterval(fetchLeaderboard, 5000);
+
+        return () => {
+            clearInterval(leaderboardInterval);
+        };
     }, [user, scoreKey]);
 
     // Drag states

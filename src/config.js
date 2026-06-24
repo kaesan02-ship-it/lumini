@@ -1,6 +1,8 @@
 // 환경 설정
 export const IS_DEVELOPMENT = import.meta.env.DEV;
-export const USE_MOCK_DATA = true;
+// .env의 VITE_USE_MOCK=false 일 때만 실제 Supabase DB를 사용한다.
+// (값이 없거나 'false'가 아니면 안전하게 mock 데이터 모드로 동작)
+export const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK !== 'false';
 
 // API 설정
 export const API_URL = import.meta.env.VITE_API_URL || 'https://api.lumini.app';
