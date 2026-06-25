@@ -53,6 +53,22 @@ const QuickActionsGrid = ({ onNavigate, completedChallenges, streak, showValueGa
                     <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>소울펫 진화 합성 🏆</div>
                 </motion.div>
             </Tooltip>
+
+            <Tooltip text="시간 제한 안에 과일을 떨어뜨려 수박을 완성하세요!" style={{ display: 'block', width: '100%' }}>
+                <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => onNavigate && onNavigate('watermelon-game')}
+                    className="action-card watermelon"
+                >
+                    <div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>타임어택 합성 🍉</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🍉 수박 게임
+                        </div>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>수박 대수확 퍼즐 🏆</div>
+                </motion.div>
+            </Tooltip>
             
             <Tooltip text="매일 주어지는 미션을 완료하고 크리스탈을 받으세요." style={{ display: 'block', width: '100%' }}>
                 <motion.div

@@ -11,7 +11,13 @@ const SCORE_GUIDE = [
     { action: '사천성 게임 클리어', points: '타임어택 경쟁', icon: '🐾' },
     { action: '2048 최고 진화 달성', points: '점수 합산 경쟁', icon: '🥚' },
     { action: '사과게임 10 만들기', points: '고득점 누적 경쟁', icon: '🍎' },
+    { action: '수박게임 120초 합성', points: '타임어택 합성 경쟁', icon: '🍉' },
 ];
+
+const FRUIT_EMOJIS = {
+    1: '🍒 체리', 2: '🍓 딸기', 3: '🍇 포도', 4: '🍊 귤', 5: '🍎 사과',
+    6: '🍐 배', 7: '🍑 복숭아', 8: '🍍 파인애플', 9: '🍈 멜론', 10: '🍉 수박'
+};
 
 const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const { earnCrystals } = useCrystalStore();
@@ -54,6 +60,13 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                         { rank: 3, name: '지후', mbti: 'ENFJ', score: 18900, badge: '🥉', isMe: false }
                     ];
                     setMyBestStat({ rank: 2, scoreVal: '24,800점' });
+                } else if (activeTab === 'watermelon') {
+                    mockList = [
+                        { rank: 1, name: '지후', mbti: 'ENFJ', score: 2850, badge: '🏆', isMe: false },
+                        { rank: 2, name: '서연', mbti: 'INFP', score: 2420, badge: '🥈', isMe: false },
+                        { rank: 3, name: userName || '나', mbti: mbtiType || 'ENFP', score: 1150, badge: '🥉', isMe: true }
+                    ];
+                    setMyBestStat({ rank: 3, scoreVal: '1,150점' });
                 }
                 setLeaderboard(mockList);
                 setLoading(false);
@@ -138,6 +151,34 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     const myIdx = scores.findIndex(s => s.user_id === user?.id);
                     if (myIdx !== -1) {
                         setMyBestStat({ rank: myIdx + 1, scoreVal: `${scores[myIdx].score}점` });
+                    } else {
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    }
+                }
+            } else if (activeTab === 'watermelon') {
+                // 4. 수박게임 랭킹 로드 (watermelon_game_scores 테이블 - 중복 허용)
+                const { data: scores, error } = await supabase
+                    .from('watermelon_game_scores')
+                    .select('score, max_fruit_level, user_id, profiles(username, mbti_type)')
+                    .order('score', { ascending: false })
+                    .limit(20);
+
+                if (!error && scores) {
+                    const top20 = scores.map((s, i) => ({
+                        rank: i + 1,
+                        name: s.profiles?.username || '익명',
+                        mbti: s.profiles?.mbti_type || '?',
+                        score: s.score,
+                        max_fruit_level: s.max_fruit_level,
+                        badge: i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
+                        isMe: s.user_id === user?.id
+                    }));
+                    setLeaderboard(top20);
+
+                    // 내 정보 추출
+                    const myIdx = scores.findIndex(s => s.user_id === user?.id);
+                    if (myIdx !== -1) {
+                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${scores[myIdx].score.toLocaleString()}점` });
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
@@ -237,7 +278,8 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     {[
                         { id: 'apple', label: '🍎 사과게임 랭킹' },
                         { id: 'shisen', label: '🐾 사천성 랭킹' },
-                        { id: 'game2048', label: '🥚 2048 랭킹' }
+                        { id: 'game2048', label: '🥚 2048 랭킹' },
+                        { id: 'watermelon', label: '🍉 수박게임 랭킹' }
                     ].map(t => (
                         <button
                             key={t.id}
@@ -359,6 +401,11 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                                             {user.max_tile && (
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                     최대 합치기 블록: {user.max_tile}
+                                                </div>
+                                            )}
+                                            {user.max_fruit_level && (
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    최대 수확 단계: {FRUIT_EMOJIS[user.max_fruit_level] || '🍉'}
                                                 </div>
                                             )}
                                         </div>

@@ -74,6 +74,7 @@
 .action-card.apple { background: linear-gradient(135deg, #FF6B6B, #EE5253); }
 .action-card.sacheonseong { background: linear-gradient(135deg, #FF7676, #EC4899); }
 .action-card.game2048 { background: linear-gradient(135deg, #EC4899, #8B5CF6); }
+.action-card.watermelon { background: linear-gradient(135deg, #10B981, #059669); }
 .action-card.challenge { background: linear-gradient(135deg, #F59E0B, #EF4444); }
 .action-card.value { background: linear-gradient(135deg, #06B6D4, #3B82F6); }
 
