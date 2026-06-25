@@ -393,37 +393,97 @@ const WatermelonGamePage = ({ onBack }) => {
                 ctx.lineTo(mouseXRef.current, CONTAINER_HEIGHT);
                 ctx.stroke();
 
-                // 대기 중인 낙하 과일 그리기
+                // 대기 중인 낙하 과일 그리기 (귀엽고 입체적인 젤리 구슬 형태)
                 const preset = FRUIT_PRESETS[currentFruitLevel];
-                ctx.font = `${preset.radius * 1.6}px Poppins, sans-serif`;
+                const r = preset.radius;
+                const x = mouseXRef.current;
+                const y = 50;
+
+                const gradient = ctx.createRadialGradient(
+                    x - r * 0.25, y - r * 0.25, r * 0.1,
+                    x, y, r
+                );
+                gradient.addColorStop(0, '#ffffff'); // 하이라이트 광원 시작점
+                gradient.addColorStop(0.2, preset.color); // 원본 색상 유지
+                gradient.addColorStop(1, preset.color + 'CC'); // 입체 쉐도우
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 흰색 내부 테두리
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, r - 1.5, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 바깥 원본색 테두리
+                ctx.strokeStyle = preset.color;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 이모지 그리기
+                ctx.font = `${r * 1.25}px Poppins, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(preset.emoji, mouseXRef.current, 50);
+                ctx.fillText(preset.emoji, x, y);
+
+                // 광택 물방울 반짝임 얹기
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.beginPath();
+                ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.18, 0, Math.PI * 2);
+                ctx.fill();
             }
 
             // 낙하한 과일 입자 렌더링
             const fruits = fruitsRef.current;
             fruits.forEach(f => {
                 const preset = FRUIT_PRESETS[f.level];
+                const r = f.radius;
 
-                // 뒷배경 면 채우기
-                ctx.fillStyle = preset.color + '20'; // 12% 투명도
+                // 과일 풍선/젤리 입체 그라데이션 적용
+                const gradient = ctx.createRadialGradient(
+                    f.x - r * 0.25, f.y - r * 0.25, r * 0.1,
+                    f.x, f.y, r
+                );
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(0.2, preset.color);
+                gradient.addColorStop(1, preset.color + 'CC');
+
+                ctx.fillStyle = gradient;
                 ctx.beginPath();
-                ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+                ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
                 ctx.fill();
 
-                // 외곽 테두리선
-                ctx.strokeStyle = preset.color + '60'; // 37% 투명도
-                ctx.lineWidth = 2;
+                // 내부 테두리 (귀엽고 뚜렷하게 테두리 적용)
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+                ctx.arc(f.x, f.y, r - 1.5, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 외부 테두리
+                ctx.strokeStyle = preset.color;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
                 ctx.stroke();
 
                 // 이모지 그리기
-                ctx.font = `${f.radius * 1.5}px Poppins, sans-serif`;
+                ctx.font = `${r * 1.25}px Poppins, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(preset.emoji, f.x, f.y);
+
+                // 광택 물방울 반짝임 얹기
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.beginPath();
+                ctx.arc(f.x - r * 0.35, f.y - r * 0.35, r * 0.18, 0, Math.PI * 2);
+                ctx.fill();
             });
 
             // 데드라인 경고 텍스트 (침범 상태일 때)
@@ -653,13 +713,35 @@ const WatermelonGamePage = ({ onBack }) => {
                         background: 'white', borderRadius: '30px', padding: '25px',
                         border: '1px solid #e2e8f0', boxShadow: '0 8px 25px rgba(0,0,0,0.03)'
                     }}>
-                        <h4 style={{ fontWeight: 900, fontSize: '1rem', color: '#1e293b', marginBottom: '12px' }}>🍉 진화 트리 가이드</h4>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>
-                            {Object.entries(FRUIT_PRESETS).map(([lvl, p]) => (
-                                <span key={lvl} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '4px 8px', borderRadius: '8px' }}>
-                                    {p.emoji} {p.name}
-                                </span>
-                            ))}
+                        <h4 style={{ fontWeight: 900, fontSize: '1rem', color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Sparkles size={18} color="#10b981" /> 🍉 진화 순서 도감
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
+                                {Object.entries(FRUIT_PRESETS).map(([lvl, p], idx) => (
+                                    <React.Fragment key={lvl}>
+                                        <span style={{ 
+                                            background: '#f8fafc', 
+                                            border: `1.5px solid ${p.color}`, 
+                                            padding: '6px 12px', 
+                                            borderRadius: '12px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                        }}>
+                                            <span style={{ fontSize: '1.1rem' }}>{p.emoji}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{p.name}</span>
+                                        </span>
+                                        {idx < Object.keys(FRUIT_PRESETS).length - 1 && (
+                                            <span style={{ color: '#94a3b8', fontWeight: 900, fontSize: '1.1rem' }}>➔</span>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                            <p style={{ margin: '8px 0 0 0', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, lineHeight: 1.45 }}>
+                                * 같은 종류의 과일 2개가 만나면 화살표 방향의 다음 단계 과일로 합성됩니다! 마지막 수박(🍉) 두 개를 합성하면 보너스 대폭발!
+                            </p>
                         </div>
                     </div>
                 </div>
