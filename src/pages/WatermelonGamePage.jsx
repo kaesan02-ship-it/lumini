@@ -21,125 +21,7 @@ const FRUIT_PRESETS = {
     10: { name: '수박', emoji: '🍉', radius: 100, color: '#10b981', score: 1024 }
 };
 
-// 귀여운 캐릭터 눈코입/볼터치 얼굴을 그리는 헬퍼 함수 (과일 등급별 다채로운 표정 지원)
-const drawCharacterFace = (ctx, x, y, r, level) => {
-    // 과일 크기에 비례하여 얼굴 요소 크기 계산
-    const eyeSize = Math.max(1.8, r * 0.12);
-    const pupilSize = Math.max(0.8, eyeSize * 0.55);
-    const sparkleSize = Math.max(0.4, pupilSize * 0.4);
-    const cheekRadius = Math.max(1.8, r * 0.14);
-    const mouthRadius = Math.max(1.8, r * 0.14);
 
-    // 1. 볼터치(홍조) 그리기 - 양 볼에 옅은 핑크색
-    ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
-    ctx.beginPath();
-    ctx.arc(x - r * 0.28, y + r * 0.12, cheekRadius, 0, Math.PI * 2); // 왼쪽 볼
-    ctx.arc(x + r * 0.28, y + r * 0.12, cheekRadius, 0, Math.PI * 2); // 오른쪽 볼
-    ctx.fill();
-
-    // 2. 눈 그리기 (눈 흰자 + 눈동자 + 반짝임 점)
-    const drawDefaultEye = (eyeX, eyeY, isWinking = false) => {
-        if (isWinking) {
-            // 윙크 (감은 눈 ➔ 둥근 호선)
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = Math.max(1.5, r * 0.07);
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.arc(eyeX, eyeY + eyeSize * 0.1, eyeSize * 0.9, 1.15 * Math.PI, 1.85 * Math.PI, false);
-            ctx.stroke();
-            return;
-        }
-
-        // 일반 초롱초롱 눈
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.arc(eyeX, eyeY, pupilSize, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(eyeX - pupilSize * 0.35, eyeY - pupilSize * 0.35, sparkleSize, 0, Math.PI * 2);
-        ctx.fill();
-    };
-
-    // 하트 눈 그리기
-    const drawHeartEye = (eyeX, eyeY) => {
-        const size = eyeSize * 1.5;
-        ctx.fillStyle = '#f43f5e';
-        ctx.beginPath();
-        ctx.moveTo(eyeX, eyeY + size * 0.2);
-        ctx.bezierCurveTo(eyeX - size * 0.5, eyeY - size * 0.5, eyeX - size, eyeY + size * 0.2, eyeX, eyeY + size * 0.8);
-        ctx.bezierCurveTo(eyeX + size, eyeY + size * 0.2, eyeX + size * 0.5, eyeY - size * 0.5, eyeX, eyeY + size * 0.2);
-        ctx.fill();
-    };
-
-    // 감은 졸린 눈 그리기 (-_-)
-    const drawClosedEye = (eyeX, eyeY) => {
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = Math.max(1.8, r * 0.08);
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(eyeX - eyeSize * 0.8, eyeY);
-        ctx.lineTo(eyeX + eyeSize * 0.8, eyeY);
-        ctx.stroke();
-    };
-
-    // 레벨 분기별 표정 그리기
-    if (level === 2) {
-        // 딸기 ➔ 오른쪽 눈 윙크
-        drawDefaultEye(x - r * 0.22, y - r * 0.04, false);
-        drawDefaultEye(x + r * 0.22, y - r * 0.04, true);
-    } else if (level === 3) {
-        // 포도 ➔ 졸린 감은 눈
-        drawClosedEye(x - r * 0.22, y - r * 0.04);
-        drawClosedEye(x + r * 0.22, y - r * 0.04);
-    } else if (level === 5) {
-        // 사과 ➔ 사랑스러운 하트 눈
-        drawHeartEye(x - r * 0.22, y - r * 0.06);
-        drawHeartEye(x + r * 0.22, y - r * 0.06);
-    } else if (level === 8) {
-        // 파인애플 ➔ 신난 윙크 (왼쪽 눈 감음)
-        drawDefaultEye(x - r * 0.22, y - r * 0.04, true);
-        drawDefaultEye(x + r * 0.22, y - r * 0.04, false);
-    } else {
-        // 기본 똘망똘망 눈
-        drawDefaultEye(x - r * 0.22, y - r * 0.04, false);
-        drawDefaultEye(x + r * 0.22, y - r * 0.04, false);
-    }
-
-    // 3. 미소 입선 그리기
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = Math.max(1.2, r * 0.06);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    
-    if (level === 3) {
-        // 포도는 지쳐서 일자 입
-        ctx.moveTo(x - mouthRadius * 0.7, y + r * 0.12);
-        ctx.lineTo(x + mouthRadius * 0.7, y + r * 0.12);
-        ctx.stroke();
-    } else if (level === 6 || level === 10) {
-        // 배와 수박 ➔ 입을 크게 헤 벌리고 웃음
-        ctx.fillStyle = '#f43f5e';
-        ctx.beginPath();
-        ctx.arc(x, y + r * 0.06, mouthRadius, 0, Math.PI);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-    } else {
-        // 일반 부드러운 반원 웃음
-        ctx.arc(x, y + r * 0.08, mouthRadius, 0.08 * Math.PI, 0.92 * Math.PI);
-        ctx.stroke();
-    }
-};
 
 const GAME_TIME = 120; // 2분 제한
 const CONTAINER_WIDTH = 380;
@@ -549,14 +431,11 @@ const WatermelonGamePage = ({ onBack }) => {
                 ctx.arc(x, y, r, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // 이모지 그리기 (머리 위의 앙증맞은 과일 모자처럼 배치)
-                ctx.font = `${r * 0.85}px Poppins, sans-serif`;
+                // 이모지 그리기 (유리 보석 정중앙에 큼직하게 배치)
+                ctx.font = `${r * 1.3}px Poppins, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(preset.emoji, x, y - r * 0.22);
-
-                // 귀여운 캐릭터 페이스 드로잉 (레벨 인자 전달)
-                drawCharacterFace(ctx, x, y + r * 0.12, r, currentFruitLevel);
+                ctx.fillText(preset.emoji, x, y);
 
                 // 광택 물방울 반짝임 얹기
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
@@ -599,14 +478,11 @@ const WatermelonGamePage = ({ onBack }) => {
                 ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // 이모지 그리기 (머리 위의 앙증맞은 과일 모자처럼 배치)
-                ctx.font = `${r * 0.85}px Poppins, sans-serif`;
+                // 이모지 그리기 (유리 보석 정중앙에 큼직하게 배치)
+                ctx.font = `${r * 1.3}px Poppins, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(preset.emoji, f.x, f.y - r * 0.22);
-
-                // 귀여운 캐릭터 페이스 드로잉 (레벨 인자 전달)
-                drawCharacterFace(ctx, f.x, f.y + r * 0.12, r, f.level);
+                ctx.fillText(preset.emoji, f.x, f.y);
 
                 // 광택 물방울 반짝임 얹기
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
