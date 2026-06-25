@@ -21,8 +21,8 @@ const FRUIT_PRESETS = {
     10: { name: '수박', emoji: '🍉', radius: 100, color: '#10b981', score: 1024 }
 };
 
-// 귀여운 캐릭터 눈코입/볼터치 얼굴을 그리는 헬퍼 함수
-const drawCharacterFace = (ctx, x, y, r) => {
+// 귀여운 캐릭터 눈코입/볼터치 얼굴을 그리는 헬퍼 함수 (과일 등급별 다채로운 표정 지원)
+const drawCharacterFace = (ctx, x, y, r, level) => {
     // 과일 크기에 비례하여 얼굴 요소 크기 계산
     const eyeSize = Math.max(1.8, r * 0.12);
     const pupilSize = Math.max(0.8, eyeSize * 0.55);
@@ -38,8 +38,19 @@ const drawCharacterFace = (ctx, x, y, r) => {
     ctx.fill();
 
     // 2. 눈 그리기 (눈 흰자 + 눈동자 + 반짝임 점)
-    const drawEye = (eyeX, eyeY) => {
-        // 흰자
+    const drawDefaultEye = (eyeX, eyeY, isWinking = false) => {
+        if (isWinking) {
+            // 윙크 (감은 눈 ➔ 둥근 호선)
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = Math.max(1.5, r * 0.07);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(eyeX, eyeY + eyeSize * 0.1, eyeSize * 0.9, 1.15 * Math.PI, 1.85 * Math.PI, false);
+            ctx.stroke();
+            return;
+        }
+
+        // 일반 초롱초롱 눈
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
@@ -48,29 +59,86 @@ const drawCharacterFace = (ctx, x, y, r) => {
         ctx.lineWidth = 0.8;
         ctx.stroke();
 
-        // 검은 눈동자
         ctx.fillStyle = '#1e293b';
         ctx.beginPath();
         ctx.arc(eyeX, eyeY, pupilSize, 0, Math.PI * 2);
         ctx.fill();
 
-        // 반짝이는 눈빛 흰점
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(eyeX - pupilSize * 0.35, eyeY - pupilSize * 0.35, sparkleSize, 0, Math.PI * 2);
         ctx.fill();
     };
 
-    drawEye(x - r * 0.22, y - r * 0.04); // 왼쪽 눈
-    drawEye(x + r * 0.22, y - r * 0.04); // 오른쪽 눈
+    // 하트 눈 그리기
+    const drawHeartEye = (eyeX, eyeY) => {
+        const size = eyeSize * 1.5;
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.moveTo(eyeX, eyeY + size * 0.2);
+        ctx.bezierCurveTo(eyeX - size * 0.5, eyeY - size * 0.5, eyeX - size, eyeY + size * 0.2, eyeX, eyeY + size * 0.8);
+        ctx.bezierCurveTo(eyeX + size, eyeY + size * 0.2, eyeX + size * 0.5, eyeY - size * 0.5, eyeX, eyeY + size * 0.2);
+        ctx.fill();
+    };
+
+    // 감은 졸린 눈 그리기 (-_-)
+    const drawClosedEye = (eyeX, eyeY) => {
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = Math.max(1.8, r * 0.08);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(eyeX - eyeSize * 0.8, eyeY);
+        ctx.lineTo(eyeX + eyeSize * 0.8, eyeY);
+        ctx.stroke();
+    };
+
+    // 레벨 분기별 표정 그리기
+    if (level === 2) {
+        // 딸기 ➔ 오른쪽 눈 윙크
+        drawDefaultEye(x - r * 0.22, y - r * 0.04, false);
+        drawDefaultEye(x + r * 0.22, y - r * 0.04, true);
+    } else if (level === 3) {
+        // 포도 ➔ 졸린 감은 눈
+        drawClosedEye(x - r * 0.22, y - r * 0.04);
+        drawClosedEye(x + r * 0.22, y - r * 0.04);
+    } else if (level === 5) {
+        // 사과 ➔ 사랑스러운 하트 눈
+        drawHeartEye(x - r * 0.22, y - r * 0.06);
+        drawHeartEye(x + r * 0.22, y - r * 0.06);
+    } else if (level === 8) {
+        // 파인애플 ➔ 신난 윙크 (왼쪽 눈 감음)
+        drawDefaultEye(x - r * 0.22, y - r * 0.04, true);
+        drawDefaultEye(x + r * 0.22, y - r * 0.04, false);
+    } else {
+        // 기본 똘망똘망 눈
+        drawDefaultEye(x - r * 0.22, y - r * 0.04, false);
+        drawDefaultEye(x + r * 0.22, y - r * 0.04, false);
+    }
 
     // 3. 미소 입선 그리기
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = Math.max(1.2, r * 0.06);
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.arc(x, y + r * 0.08, mouthRadius, 0.08 * Math.PI, 0.92 * Math.PI);
-    ctx.stroke();
+    
+    if (level === 3) {
+        // 포도는 지쳐서 일자 입
+        ctx.moveTo(x - mouthRadius * 0.7, y + r * 0.12);
+        ctx.lineTo(x + mouthRadius * 0.7, y + r * 0.12);
+        ctx.stroke();
+    } else if (level === 6 || level === 10) {
+        // 배와 수박 ➔ 입을 크게 헤 벌리고 웃음
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc(x, y + r * 0.06, mouthRadius, 0, Math.PI);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    } else {
+        // 일반 부드러운 반원 웃음
+        ctx.arc(x, y + r * 0.08, mouthRadius, 0.08 * Math.PI, 0.92 * Math.PI);
+        ctx.stroke();
+    }
 };
 
 const GAME_TIME = 120; // 2분 제한
@@ -239,11 +307,14 @@ const WatermelonGamePage = ({ onBack }) => {
         if (gameState !== 'playing' || !canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const x = clientX - rect.left;
         
-        // 컨테이너 범위 내로 조준 좌표 고정
+        // 화면상 렌더링된 너비와 실제 물리 너비(CONTAINER_WIDTH)를 매핑 보정
+        const relativeX = clientX - rect.left;
+        const scaleX = (relativeX / rect.width) * CONTAINER_WIDTH;
+        
+        // 컨테이너 범위 내로 조준 좌표 고정 (scaleX 적용)
         const activeRadius = FRUIT_PRESETS[currentFruitLevel].radius;
-        mouseXRef.current = Math.max(activeRadius + 10, Math.min(CONTAINER_WIDTH - activeRadius - 10, x));
+        mouseXRef.current = Math.max(activeRadius + 10, Math.min(CONTAINER_WIDTH - activeRadius - 10, scaleX));
     };
 
     // 과일 낙하 격발
@@ -484,8 +555,8 @@ const WatermelonGamePage = ({ onBack }) => {
                 ctx.textBaseline = 'middle';
                 ctx.fillText(preset.emoji, x, y - r * 0.22);
 
-                // 귀여운 캐릭터 페이스 드로잉
-                drawCharacterFace(ctx, x, y + r * 0.12, r);
+                // 귀여운 캐릭터 페이스 드로잉 (레벨 인자 전달)
+                drawCharacterFace(ctx, x, y + r * 0.12, r, currentFruitLevel);
 
                 // 광택 물방울 반짝임 얹기
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
@@ -534,8 +605,8 @@ const WatermelonGamePage = ({ onBack }) => {
                 ctx.textBaseline = 'middle';
                 ctx.fillText(preset.emoji, f.x, f.y - r * 0.22);
 
-                // 귀여운 캐릭터 페이스 드로잉
-                drawCharacterFace(ctx, f.x, f.y + r * 0.12, r);
+                // 귀여운 캐릭터 페이스 드로잉 (레벨 인자 전달)
+                drawCharacterFace(ctx, f.x, f.y + r * 0.12, r, f.level);
 
                 // 광택 물방울 반짝임 얹기
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
