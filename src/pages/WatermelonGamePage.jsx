@@ -7,26 +7,26 @@ import useUserStore from '../store/userStore';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
 
-// 과일 도감 및 정보 설정 (1 ~ 10단계)
+// 과일 도감 및 정보 설정 (1 ~ 10단계, 2/3 비율로 콤팩트 축소)
 const FRUIT_PRESETS = {
-    1:  { name: '체리', emoji: '🍒', radius: 15, color: '#f43f5e', score: 2 },
-    2:  { name: '딸기', emoji: '🍓', radius: 22, color: '#ec4899', score: 4 },
-    3:  { name: '포도', emoji: '🍇', radius: 30, color: '#a855f7', score: 8 },
-    4:  { name: '귤', emoji: '🍊', radius: 38, color: '#f97316', score: 16 },
-    5:  { name: '사과', emoji: '🍎', radius: 48, color: '#ef4444', score: 32 },
-    6:  { name: '배', emoji: '🍐', radius: 58, color: '#eab308', score: 64 },
-    7:  { name: '복숭아', emoji: '🍑', radius: 68, color: '#f472b6', score: 128 },
-    8:  { name: '파인애플', emoji: '🍍', radius: 78, color: '#fbbf24', score: 256 },
-    9:  { name: '멜론', emoji: '🍈', radius: 88, color: '#84cc16', score: 512 },
-    10: { name: '수박', emoji: '🍉', radius: 100, color: '#10b981', score: 1024 }
+    1:  { name: '체리', emoji: '🍒', radius: 10, color: '#f43f5e', score: 2 },
+    2:  { name: '딸기', emoji: '🍓', radius: 15, color: '#ec4899', score: 4 },
+    3:  { name: '포도', emoji: '🍇', radius: 20, color: '#a855f7', score: 8 },
+    4:  { name: '귤', emoji: '🍊', radius: 25, color: '#f97316', score: 16 },
+    5:  { name: '사과', emoji: '🍎', radius: 32, color: '#ef4444', score: 32 },
+    6:  { name: '배', emoji: '🍐', radius: 38, color: '#eab308', score: 64 },
+    7:  { name: '복숭아', emoji: '🍑', radius: 45, color: '#f472b6', score: 128 },
+    8:  { name: '파인애플', emoji: '🍍', radius: 52, color: '#fbbf24', score: 256 },
+    9:  { name: '멜론', emoji: '🍈', radius: 60, color: '#84cc16', score: 512 },
+    10: { name: '수박', emoji: '🍉', radius: 70, color: '#10b981', score: 1024 }
 };
 
 
 
 const GAME_TIME = 120; // 2분 제한
-const CONTAINER_WIDTH = 380;
-const CONTAINER_HEIGHT = 580;
-const DEADLINE_Y = 130; // 상단 한계선
+const CONTAINER_WIDTH = 250;
+const CONTAINER_HEIGHT = 380;
+const DEADLINE_Y = 90; // 상단 한계선
 
 const WatermelonGamePage = ({ onBack }) => {
     const { crystals, earnCrystals } = useCrystalStore();
