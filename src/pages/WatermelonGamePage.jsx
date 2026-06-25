@@ -21,10 +21,62 @@ const FRUIT_PRESETS = {
     10: { name: '수박', emoji: '🍉', radius: 100, color: '#10b981', score: 1024 }
 };
 
+// 귀여운 캐릭터 눈코입/볼터치 얼굴을 그리는 헬퍼 함수
+const drawCharacterFace = (ctx, x, y, r) => {
+    // 과일 크기에 비례하여 얼굴 요소 크기 계산
+    const eyeSize = Math.max(1.8, r * 0.12);
+    const pupilSize = Math.max(0.8, eyeSize * 0.55);
+    const sparkleSize = Math.max(0.4, pupilSize * 0.4);
+    const cheekRadius = Math.max(1.8, r * 0.14);
+    const mouthRadius = Math.max(1.8, r * 0.14);
+
+    // 1. 볼터치(홍조) 그리기 - 양 볼에 옅은 핑크색
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.28, y + r * 0.12, cheekRadius, 0, Math.PI * 2); // 왼쪽 볼
+    ctx.arc(x + r * 0.28, y + r * 0.12, cheekRadius, 0, Math.PI * 2); // 오른쪽 볼
+    ctx.fill();
+
+    // 2. 눈 그리기 (눈 흰자 + 눈동자 + 반짝임 점)
+    const drawEye = (eyeX, eyeY) => {
+        // 흰자
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(eyeX, eyeY, eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // 검은 눈동자
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(eyeX, eyeY, pupilSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 반짝이는 눈빛 흰점
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(eyeX - pupilSize * 0.35, eyeY - pupilSize * 0.35, sparkleSize, 0, Math.PI * 2);
+        ctx.fill();
+    };
+
+    drawEye(x - r * 0.22, y - r * 0.04); // 왼쪽 눈
+    drawEye(x + r * 0.22, y - r * 0.04); // 오른쪽 눈
+
+    // 3. 미소 입선 그리기
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = Math.max(1.2, r * 0.06);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x, y + r * 0.08, mouthRadius, 0.08 * Math.PI, 0.92 * Math.PI);
+    ctx.stroke();
+};
+
 const GAME_TIME = 120; // 2분 제한
-const CONTAINER_WIDTH = 480;
-const CONTAINER_HEIGHT = 640;
-const DEADLINE_Y = 100; // 상단 한계선
+const CONTAINER_WIDTH = 380;
+const CONTAINER_HEIGHT = 580;
+const DEADLINE_Y = 130; // 상단 한계선
 
 const WatermelonGamePage = ({ onBack }) => {
     const { crystals, earnCrystals } = useCrystalStore();
@@ -426,11 +478,14 @@ const WatermelonGamePage = ({ onBack }) => {
                 ctx.arc(x, y, r, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // 이모지 그리기
-                ctx.font = `${r * 1.25}px Poppins, sans-serif`;
+                // 이모지 그리기 (머리 위의 앙증맞은 과일 모자처럼 배치)
+                ctx.font = `${r * 0.85}px Poppins, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(preset.emoji, x, y);
+                ctx.fillText(preset.emoji, x, y - r * 0.22);
+
+                // 귀여운 캐릭터 페이스 드로잉
+                drawCharacterFace(ctx, x, y + r * 0.12, r);
 
                 // 광택 물방울 반짝임 얹기
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
@@ -473,11 +528,14 @@ const WatermelonGamePage = ({ onBack }) => {
                 ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // 이모지 그리기
-                ctx.font = `${r * 1.25}px Poppins, sans-serif`;
+                // 이모지 그리기 (머리 위의 앙증맞은 과일 모자처럼 배치)
+                ctx.font = `${r * 0.85}px Poppins, sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(preset.emoji, f.x, f.y);
+                ctx.fillText(preset.emoji, f.x, f.y - r * 0.22);
+
+                // 귀여운 캐릭터 페이스 드로잉
+                drawCharacterFace(ctx, f.x, f.y + r * 0.12, r);
 
                 // 광택 물방울 반짝임 얹기
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
@@ -510,7 +568,7 @@ const WatermelonGamePage = ({ onBack }) => {
                     setIsDeadlineWarning(true);
                     deadlineTimerRef.current = setTimeout(() => {
                         endGame();
-                    }, 3000); // 3초 침범 시 게임오버
+                    }, 1500); // 1.5초 침범 시 게임오버
                 }
             } else {
                 if (deadlineTimerRef.current) {
@@ -606,53 +664,59 @@ const WatermelonGamePage = ({ onBack }) => {
 
                     {/* 물리 시뮬레이션용 Canvas 그릇 */}
                     <div style={{
-                        position: 'relative', width: '100%', maxWidth: `${CONTAINER_WIDTH}px`,
-                        background: '#f8fafc', borderRadius: '24px', border: '3px solid #e2e8f0',
-                        boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.03)', overflow: 'hidden'
+                        position: 'relative', 
+                        width: '100%', 
+                        maxWidth: `${CONTAINER_WIDTH}px`,
+                        aspectRatio: `${CONTAINER_WIDTH} / ${CONTAINER_HEIGHT}`,
+                        background: '#f8fafc', 
+                        borderRadius: '24px', 
+                        border: '3px solid #e2e8f0',
+                        boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.03)', 
+                        overflow: 'hidden'
                     }}>
                         {gameState === 'ready' ? (
-                            <div style={{ height: `${CONTAINER_HEIGHT}px`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
                                 <motion.div
                                     animate={{ y: [0, -12, 0] }}
                                     transition={{ repeat: Infinity, duration: 2 }}
-                                    style={{ fontSize: '7rem', filter: 'drop-shadow(0 10px 15px rgba(16, 185, 129, 0.2))', cursor: 'pointer', marginBottom: '20px' }}
+                                    style={{ fontSize: '6rem', filter: 'drop-shadow(0 10px 15px rgba(16, 185, 129, 0.2))', cursor: 'pointer', marginBottom: '15px' }}
                                     onClick={startGame}
                                 >
                                     🍉
                                 </motion.div>
-                                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#1e293b', marginBottom: '8px' }}>타임어택 수박 농장</h3>
-                                <p style={{ color: '#64748b', fontSize: '0.95rem', fontWeight: 600, maxWidth: '280px', lineHeight: 1.5, marginBottom: '30px' }}>
+                                <h3 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#1e293b', marginBottom: '8px' }}>타임어택 수박 농장</h3>
+                                <p style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600, maxWidth: '280px', lineHeight: 1.45, marginBottom: '20px' }}>
                                     120초 제한시간 안에 과일을 합쳐 수박을 수확하세요! 그릇 밖으로 넘치면 즉시 아웃 ⚠️
                                 </p>
                                 <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '320px' }}>
                                     <button onClick={() => {
                                         useUserStore.getState().setActiveRankingTab('watermelon');
                                         window.dispatchEvent(new CustomEvent('changeStep', { detail: 'ranking' }));
-                                    }} title="수박게임 전체 랭킹을 확인하러 이동합니다" style={{ flex: 1, padding: '14px 20px', background: 'white', border: '1px solid #ffd3db', color: '#10b981', fontWeight: 800, borderRadius: '15px', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.05)' }}>
-                                        <Trophy size={18} color="#10b981" /> 랭킹 보기
+                                    }} title="수박게임 전체 랭킹을 확인하러 이동합니다" style={{ flex: 1, padding: '12px 16px', background: 'white', border: '1px solid #ffd3db', color: '#10b981', fontWeight: 800, borderRadius: '15px', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.05)' }}>
+                                        <Trophy size={16} color="#10b981" /> 랭킹 보기
                                     </button>
-                                    <button onClick={startGame} title="수박게임을 새로 시작합니다" style={{ flex: 1.2, padding: '14px 20px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: 'white', fontWeight: 900, borderRadius: '15px', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)' }}>
+                                    <button onClick={startGame} title="수박게임을 새로 시작합니다" style={{ flex: 1.2, padding: '12px 16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: 'white', fontWeight: 900, borderRadius: '15px', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)' }}>
                                         게임 시작
                                     </button>
                                 </div>
                             </div>
                         ) : gameState === 'finished' ? (
-                            <div style={{ height: `${CONTAINER_HEIGHT}px`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                                <div style={{ fontSize: '6rem', marginBottom: '20px' }}>🎉</div>
-                                <h3 style={{ fontSize: '2rem', fontWeight: 900, color: '#10b981', marginBottom: '10px' }}>타임 만료!</h3>
-                                <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#334155', marginBottom: '30px' }}>
+                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                                <div style={{ fontSize: '5rem', marginBottom: '15px' }}>🎉</div>
+                                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', marginBottom: '8px' }}>타임 만료!</h3>
+                                <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#334155', marginBottom: '20px' }}>
                                     최종 기록: <span style={{ color: '#d97706' }}>{score.toLocaleString()}</span>점
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '320px' }}>
                                     <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button onClick={onBack} title="대시보드로 돌아갑니다" style={{ flex: 1, padding: '14px 20px', borderRadius: '15px', fontWeight: 800, background: 'white', color: '#64748b', border: '1px solid #e2e8f0', cursor: 'pointer' }}>돌아가기</button>
-                                        <button onClick={startGame} title="수박 농장 게임을 처음부터 다시 도전합니다" style={{ flex: 1.2, padding: '14px 20px', borderRadius: '15px', fontWeight: 900, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 8px 15px rgba(16, 185, 129, 0.2)' }}>다시 하기</button>
+                                        <button onClick={onBack} title="대시보드로 돌아갑니다" style={{ flex: 1, padding: '12px 16px', borderRadius: '15px', fontWeight: 800, background: 'white', color: '#64748b', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '0.9rem' }}>돌아가기</button>
+                                        <button onClick={startGame} title="수박 농장 게임을 처음부터 다시 도전합니다" style={{ flex: 1.2, padding: '12px 16px', borderRadius: '15px', fontWeight: 900, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 8px 15px rgba(16, 185, 129, 0.2)', fontSize: '0.95rem' }}>다시 하기</button>
                                     </div>
                                     <button onClick={() => {
                                         useUserStore.getState().setActiveRankingTab('watermelon');
                                         window.dispatchEvent(new CustomEvent('changeStep', { detail: 'ranking' }));
-                                    }} title="명예의 전당 전체 랭킹으로 이동하여 경쟁 기록을 확인합니다" style={{ width: '100%', padding: '14px 20px', background: 'white', border: '1px solid #ffd3db', color: '#10b981', fontWeight: 800, borderRadius: '15px', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.05)' }}>
-                                        <Trophy size={18} color="#10b981" /> 전체 랭킹 구경하기
+                                    }} title="명예의 전당 전체 랭킹으로 이동하여 경쟁 기록을 확인합니다" style={{ width: '100%', padding: '12px 16px', background: 'white', border: '1px solid #ffd3db', color: '#10b981', fontWeight: 800, borderRadius: '15px', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.05)' }}>
+                                        <Trophy size={16} color="#10b981" /> 전체 랭킹 구경하기
                                     </button>
                                 </div>
                             </div>
@@ -664,7 +728,13 @@ const WatermelonGamePage = ({ onBack }) => {
                                 onMouseMove={handleMouseMove}
                                 onTouchMove={handleMouseMove}
                                 onClick={handleDrop}
-                                style={{ display: 'block', width: '100%', height: '100%', cursor: 'crosshair' }}
+                                style={{ 
+                                    display: 'block', 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    aspectRatio: `${CONTAINER_WIDTH} / ${CONTAINER_HEIGHT}`,
+                                    cursor: 'crosshair' 
+                                }}
                             />
                         )}
                     </div>
