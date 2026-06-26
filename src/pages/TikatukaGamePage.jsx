@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowLeft, Play, Gem, Volume2, VolumeX, Sparkles, RefreshCw, Swords, Shield, AlertTriangle } from 'lucide-react';
+import { Trophy, ArrowLeft, Gem, Volume2, VolumeX, Sparkles, RefreshCw, AlertTriangle, HelpCircle } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
 
-// 앤틱 스톤 질감의 6면체 주사위 눈 디자인 컴포넌트
-const DiceDot = ({ value }) => {
+// 앤틱 스톤 질감의 6면체 주사위 눈 디자인 컴포넌트 (보호막 이펙트 탑재)
+const DiceDot = ({ value, isShielded }) => {
     const dotPositions = {
         1: ['center'],
         2: ['top-left', 'bottom-right'],
@@ -25,13 +25,32 @@ const DiceDot = ({ value }) => {
             width: '100%',
             height: '100%',
             position: 'relative',
-            background: 'radial-gradient(circle, #f7f3e8 0%, #e2d9c3 100%)',
+            background: isShielded 
+                ? 'radial-gradient(circle, #e0f2fe 0%, #bae6fd 100%)' // 실드 주사위: 신비로운 하늘빛 돌
+                : 'radial-gradient(circle, #f7f3e8 0%, #e2d9c3 100%)', // 일반 주사위: 앤틱 돌
             borderRadius: '14px',
-            boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.9), 0 6px 12px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(0,0,0,0.15)',
-            border: '2.5px solid #8e7a63',
+            boxShadow: isShielded
+                ? '0 0 15px rgba(56, 189, 248, 0.8), inset 0 3px 6px rgba(255,255,255,0.9), inset 0 -3px 6px rgba(56, 189, 248, 0.4)'
+                : 'inset 0 3px 6px rgba(255,255,255,0.9), 0 6px 12px rgba(0,0,0,0.35), inset 0 -3px 6px rgba(0,0,0,0.15)',
+            border: isShielded 
+                ? '2.5px solid #0284c7' // 실드 테두리: 선명한 파란빛
+                : '2.5px solid #8e7a63', // 일반 테두리
             boxSizing: 'border-box',
-            padding: '8px'
+            padding: '8px',
+            transition: 'all 0.3s'
         }}>
+            {/* 보호막 막 보호 아우라 시각화 */}
+            {isShielded && (
+                <div style={{
+                    position: 'absolute',
+                    inset: '-4px',
+                    borderRadius: '18px',
+                    border: '1.5px solid rgba(56, 189, 248, 0.6)',
+                    animation: 'pulse 1.5s infinite alternate',
+                    pointerEvents: 'none'
+                }} />
+            )}
+
             {dots.map((pos, idx) => {
                 const getStyle = () => {
                     switch (pos) {
@@ -51,11 +70,11 @@ const DiceDot = ({ value }) => {
                         key={idx}
                         style={{
                             position: 'absolute',
-                            width: '8px',
-                            height: '8px',
-                            background: '#4a3628',
+                            width: '7px',
+                            height: '7px',
+                            background: isShielded ? '#0369a1' : '#4a3628',
                             borderRadius: '50%',
-                            boxShadow: 'inset 0 1.5px 2px rgba(0,0,0,0.6), 0 1px 0px rgba(255,255,255,0.4)',
+                            boxShadow: 'inset 0 1px 1.5px rgba(0,0,0,0.6)',
                             ...getStyle()
                         }}
                     />
@@ -65,7 +84,7 @@ const DiceDot = ({ value }) => {
     );
 };
 
-// 열(Column)별 점수 합산 룰 (객체 배열 호환 지원)
+// 열(Column)별 점수 합산 룰 (isShielded 객체 지원)
 const getColScore = (colArray) => {
     const counts = {};
     colArray.forEach(item => {
@@ -82,13 +101,32 @@ const getColScore = (colArray) => {
     return sum;
 };
 
-// 보드 전체 점수 합산 (객체 배열 호환 지원)
+// 보드 전체 점수 합산
 const getBoardTotalScore = (board) => {
     return board.reduce((acc, col) => acc + getColScore(col), 0);
 };
 
-// AI 최적 수 탐색 알고리즘
-const evaluateMove = (col, diceVal, playerBoard, opponentBoard) => {
+// AI 최적 수 탐색 알고리즘 (리팩토링: 실드 주사위 침투 가치 계산 포함)
+const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacement) => {
+    // 상대 보드 침투 배치일 때
+    if (isShieldPlacement) {
+        if (opponentBoard[col].length >= 3) return -Infinity;
+
+        // 상대 보드에 놓는 것이므로, 상대의 점수 변화를 최소화(혹은 방해)하려 함.
+        // 상대 라인에 내 주사위를 박아서 콤보가 깨지거나 잉여 칸이 차게 만드는 가치 계산
+        const currentOppScore = getColScore(opponentBoard[col]);
+        const nextOppCol = [...opponentBoard[col], { id: 'temp', val: diceVal, isShielded: true }];
+        const nextOppScore = getColScore(nextOppCol);
+        const scoreDifference = nextOppScore - currentOppScore;
+
+        // 상대방 라인을 가득 채워서 게임을 끝내려 하는 페널티/보너스 (상대 보드를 꽉 채우는 이득)
+        const lineFullBonus = nextOppCol.length === 3 ? 4 : 0;
+        
+        // 상대의 점수가 낮게 증가할수록 좋으며, 콤보를 꼬아버리는 배치 선호
+        return -scoreDifference + lineFullBonus + 2; 
+    }
+
+    // 내 보드 배치일 때
     if (playerBoard[col].length >= 3) return -Infinity;
 
     // 1. 점수 획득 이득 계산
@@ -97,31 +135,24 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard) => {
     const nextScore = getColScore(nextCol);
     const scoreGain = nextScore - currentScore;
 
-    // 2. 상대방 주사위 파괴 가치 계산
+    // 2. 상대방 주사위 파괴 가치 계산 (상대방 주사위가 보호막이 아닐 때만 파괴 가능)
     const oppCol = opponentBoard[col];
-    const matchCount = oppCol.filter(item => {
-        const val = typeof item === 'object' ? item.val : item;
-        return val === diceVal;
-    }).length;
+    const destructibleCount = oppCol.filter(item => item.val === diceVal && !item.isShielded).length;
     
     let destructionValue = 0;
-    let extraTurnValue = 0; // 추가 턴 획득에 따른 보너스 가치
-    if (matchCount > 0) {
+    let extraTurnValue = 0;
+    if (destructibleCount > 0) {
         const oppCurrentScore = getColScore(oppCol);
-        const oppNextCol = oppCol.filter(item => {
-            const val = typeof item === 'object' ? item.val : item;
-            return val !== diceVal;
-        });
+        const oppNextCol = oppCol.filter(item => !(item.val === diceVal && !item.isShielded));
         const oppNextScore = getColScore(oppNextCol);
         destructionValue = oppCurrentScore - oppNextScore;
-        extraTurnValue = 9; // 추가 턴 획득 시 보너스로 가치에 큰 점수(+9) 부여
+        extraTurnValue = 12; // 추가 턴 획득에 의한 막강한 보상 점수
     }
 
     // 3. 칸 잠김 감쇄 페널티
-    const spacePenalty = nextCol.length === 3 ? -2.5 : 0;
+    const spacePenalty = nextCol.length === 3 ? -3 : 0;
 
-    // 파괴 시 추가 턴 획득의 어마어마한 전술적 이점을 고려해 가중치 1.65배 부여
-    return scoreGain + (destructionValue * 1.65) + extraTurnValue + spacePenalty;
+    return scoreGain + (destructionValue * 1.7) + extraTurnValue + spacePenalty;
 };
 
 const TikatukaGamePage = ({ onBack }) => {
@@ -136,18 +167,30 @@ const TikatukaGamePage = ({ onBack }) => {
     const [winStreak, setWinStreak] = useState(0);
     const [bestWinStreak, setBestWinStreak] = useState(() => parseInt(localStorage.getItem(streakKey) || '0'));
     const [currentTurn, setCurrentTurn] = useState('player'); // player, ai
-    const [playerBoard, setPlayerBoard] = useState([[], [], []]); // [{id, val}][]
+    const [playerBoard, setPlayerBoard] = useState([[], [], []]); // [{id, val, isShielded}][] (가로 행 3라인)
     const [aiBoard, setAiBoard] = useState([[], [], []]);
+    
+    // 주사위 롤링 및 선택 상태
     const [currentDice, setCurrentDice] = useState(null);
     const [isRolling, setIsRolling] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
     const [gameResult, setGameResult] = useState(null); // 'win', 'lose', 'draw'
     const [gameRoundResult, setGameRoundResult] = useState({ playerWins: 0, aiWins: 0, ties: 0 });
-    
-    // 추가 턴 (Extra Turn) 연출용 상태
+
+    // 추가 턴 (Extra Turn) 및 보호막 주사위 상태
+    const [isCurrentDiceShielded, setIsCurrentDiceShielded] = useState(true); // 첫 턴은 항상 실드 주사위
+    const [isExtraTurn, setIsExtraTurn] = useState(false); // 현재 턴이 추가 턴인지 여부
     const [showExtraTurnBanner, setShowExtraTurnBanner] = useState(false);
-    const [extraTurnOwner, setExtraTurnOwner] = useState(null); // 'player' or 'ai'
+    const [extraTurnOwner, setExtraTurnOwner] = useState(null);
+    const [isFirstMove, setIsFirstMove] = useState(true); // 첫 턴 시작 여부 감지
+
+    // 리롤(Re-roll) 찬스 상태
+    const [playerReRollUsed, setPlayerReRollUsed] = useState(false);
+    const [aiReRollUsed, setAiReRollUsed] = useState(false);
+    const [reRolledDice, setReRolledDice] = useState(null);
+    const [isReRolling, setIsReRolling] = useState(false);
+    const [showReRollSelect, setShowReRollSelect] = useState(false); // 리롤 후 2지선다 주사위 선택창 표시
 
     // 파괴 이펙트(파티클) 및 AI 상태
     const [particles, setParticles] = useState([]);
@@ -211,6 +254,13 @@ const TikatukaGamePage = ({ onBack }) => {
         setGameRoundResult({ playerWins: 0, aiWins: 0, ties: 0 });
         setShowExtraTurnBanner(false);
         setExtraTurnOwner(null);
+        setIsExtraTurn(false);
+        setIsCurrentDiceShielded(true); // 최초 주사위는 실드 주사위로 장전
+        setIsFirstMove(true);
+        setPlayerReRollUsed(false);
+        setAiReRollUsed(false);
+        setReRolledDice(null);
+        setShowReRollSelect(false);
         setCurrentTurn('player');
         setGameState('playing');
 
@@ -224,24 +274,24 @@ const TikatukaGamePage = ({ onBack }) => {
 
     // 파괴 파티클 연출
     const triggerDestroyParticle = (x, y) => {
-        const newParticles = Array.from({ length: 12 }).map(() => ({
+        const newParticles = Array.from({ length: 15 }).map(() => ({
             id: Math.random(),
             x,
             y,
-            vx: (Math.random() - 0.5) * 12,
-            vy: (Math.random() - 0.5) * 12 - 4,
-            size: Math.floor(Math.random() * 5) + 5
+            vx: (Math.random() - 0.5) * 14,
+            vy: (Math.random() - 0.5) * 14 - 4,
+            size: Math.floor(Math.random() * 6) + 5
         }));
         setParticles(prev => [...prev, ...newParticles]);
 
         setTimeout(() => {
             setParticles(prev => prev.filter(p => !newParticles.includes(p)));
-        }, 800);
+        }, 850);
     };
 
     // 주사위 굴리기
     const rollDice = () => {
-        if (isRolling || currentDice !== null || gameState !== 'playing') return;
+        if (isRolling || currentDice !== null || gameState !== 'playing' || showReRollSelect) return;
         setIsRolling(true);
 
         const rollSfx = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-hard-pop-click-2364.mp3');
@@ -259,74 +309,150 @@ const TikatukaGamePage = ({ onBack }) => {
         }, 80);
     };
 
-    // 플레이어가 주사위를 특정 열에 둘 때
-    const handlePlaceDice = (colIndex) => {
-        if (currentTurn !== 'player' || currentDice === null || isRolling) return;
-        if (playerBoard[colIndex].length >= 3) return;
+    // 리롤 찬스 격발
+    const triggerReRoll = () => {
+        if (playerReRollUsed || currentDice === null || isRolling || isReRolling) return;
+        setIsReRolling(true);
+
+        const rollSfx = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-hard-pop-click-2364.mp3');
+        rollSfx.volume = 0.2;
+        if (!isMuted) rollSfx.play().catch(() => {});
+
+        let count = 0;
+        const interval = setInterval(() => {
+            setReRolledDice(Math.floor(Math.random() * 6) + 1);
+            count++;
+            if (count > 8) {
+                clearInterval(interval);
+                setIsReRolling(false);
+                setPlayerReRollUsed(true);
+                setShowReRollSelect(true); // 2지선다 선택창 표시
+            }
+        }, 80);
+    };
+
+    // 리롤 결과 선택 완료
+    const handleSelectDiceOption = (val) => {
+        setCurrentDice(val);
+        setReRolledDice(null);
+        setShowReRollSelect(false);
+    };
+
+    // 주사위 배치 핵심 함수 (동귀어진 및 실드 침투 룰 반영)
+    const placeDiceOnBoard = (lineIdx, targetOwner) => {
+        if (currentDice === null || isRolling || showReRollSelect) return;
+
+        // targetOwner: 'player' (내 보드) or 'ai' (상대 보드)
+        const isTargetPlayerBoard = targetOwner === 'player';
+        const targetBoard = isTargetPlayerBoard ? playerBoard : aiBoard;
+        const oppBoard = isTargetPlayerBoard ? aiBoard : playerBoard;
+
+        if (targetBoard[lineIdx].length >= 3) return; // 한 라인 최대 3개
+
+        // 침투 조건 검증: 상대 보드에 박으려면 반드시 추가 턴 실드 주사위여야 하며, 첫 턴은 안 됨
+        const isOpponentPlacement = (currentTurn === 'player' && !isTargetPlayerBoard) || (currentTurn === 'ai' && isTargetPlayerBoard);
+        if (isOpponentPlacement) {
+            if (!isCurrentDiceShielded || isFirstMove) return; // 추가 턴이 아닐 때는 침투 불가
+        }
 
         const placeSfx = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-plastic-clunk-3024.mp3');
         placeSfx.volume = 0.2;
         if (!isMuted) placeSfx.play().catch(() => {});
 
-        // 1. 주사위 배치 (고유 ID 장착)
-        const newItem = { id: `p_${colIndex}_${Date.now()}_${Math.random()}`, val: currentDice };
-        const newBoard = [...playerBoard];
-        newBoard[colIndex] = [...newBoard[colIndex], newItem];
-        setPlayerBoard(newBoard);
-
-        // 2. 상대방(AI) 일치 주사위 파괴 처리
         const targetVal = currentDice;
-        const oppCol = aiBoard[colIndex];
-        const matchExists = oppCol.some(item => item.val === targetVal);
+        const oppLine = oppBoard[lineIdx];
+        
+        // 상대 라인에서 '보호막이 없는' 일치 주사위가 존재하는지 확인
+        const matchExists = oppLine.some(item => item.val === targetVal && !item.isShielded);
 
-        let newAiBoard = [...aiBoard];
+        let newTargetBoard = [...targetBoard];
+        let newOppBoard = [...oppBoard];
         let hasDestroyed = false;
 
-        if (matchExists) {
+        // 알까기 파괴가 발생하는 경우
+        if (matchExists && !isOpponentPlacement) {
             hasDestroyed = true;
-            // 화면 기준 AI 보드의 열 위치 계산 (반응형 대응)
-            const rect = document.getElementById(`ai-col-${colIndex}`)?.getBoundingClientRect();
+            
+            // 파티클 생성
+            const colId = isTargetPlayerBoard ? `ai-line-${lineIdx}` : `player-line-${lineIdx}`;
+            const rect = document.getElementById(colId)?.getBoundingClientRect();
             if (rect) {
                 triggerDestroyParticle(rect.left + rect.width / 2, rect.top + rect.height / 2);
             } else {
-                triggerDestroyParticle(350 + colIndex * 90, 250);
+                triggerDestroyParticle(500, 300);
             }
 
             const destroySfx = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-boxer-punch-strike-2382.mp3');
             destroySfx.volume = 0.25;
             if (!isMuted) destroySfx.play().catch(() => {});
 
-            newAiBoard[colIndex] = oppCol.filter(item => item.val !== targetVal);
-            setAiBoard(newAiBoard);
+            // 상대 보드에서 파괴된 주사위(Shielded 제외) 필터링 소멸
+            newOppBoard[lineIdx] = oppLine.filter(item => !(item.val === targetVal && !item.isShielded));
+            
+            // 동귀어진(Mutual Destruction): 내 주사위도 보드에 올라가지 않고 증발
+            // (즉, newTargetBoard[lineIdx]에 currentDice를 추가하지 않고 넘어감)
+        } else {
+            // 알까기가 일어나지 않았거나 침투 배치일 때: 정상 배치
+            const newItem = {
+                id: `dice_${Date.now()}_${Math.random()}`,
+                val: targetVal,
+                isShielded: isCurrentDiceShielded
+            };
+            newTargetBoard[lineIdx] = [...newTargetBoard[lineIdx], newItem];
         }
 
-        // 3. 주사위 리셋
-        setCurrentDice(null);
+        // 보드 상태 저장
+        if (isTargetPlayerBoard) {
+            setPlayerBoard(newTargetBoard);
+            setAiBoard(newOppBoard);
+        } else {
+            setAiBoard(newTargetBoard);
+            setPlayerBoard(newOppBoard);
+        }
 
-        // 4. 추가 턴 규칙 적용 여부 확인
-        if (hasDestroyed) {
-            // 파괴 성공 시 플레이어 추가 턴 획득
-            setExtraTurnOwner('player');
+        // 주사위 소모 리셋
+        setCurrentDice(null);
+        setIsFirstMove(false);
+
+        // 추가 턴 분기 연산 (추가 턴 상태에서는 추가 턴 연속 획득 불가로 밸런싱)
+        if (hasDestroyed && !isExtraTurn) {
+            // 파괴 성공 및 추가 턴 트리거
+            setExtraTurnOwner(currentTurn);
             setShowExtraTurnBanner(true);
+            setIsExtraTurn(true);
+            setIsCurrentDiceShielded(true); // 추가 턴의 주사위는 "실드 주사위"
+
             setTimeout(() => {
                 setShowExtraTurnBanner(false);
             }, 1500);
 
-            // 턴 교체 없이 현재 보드로 게임 상태만 재검토 (턴은 player 유지)
-            checkGameStatus(newBoard, newAiBoard, 'player');
+            // 턴 교체 없이 현재 턴(player or ai) 유지
+            checkGameStatus(
+                isTargetPlayerBoard ? newTargetBoard : newOppBoard,
+                isTargetPlayerBoard ? newOppBoard : newTargetBoard,
+                currentTurn
+            );
         } else {
-            // 파괴 실패 시 정상적으로 AI 턴으로 교대
-            checkGameStatus(newBoard, newAiBoard, 'ai');
+            // 일반 배치 완료: 턴 교대 및 실드/추가 턴 리셋
+            setIsExtraTurn(false);
+            setIsCurrentDiceShielded(false);
+            
+            const nextTurn = currentTurn === 'player' ? 'ai' : 'player';
+            checkGameStatus(
+                isTargetPlayerBoard ? newTargetBoard : newOppBoard,
+                isTargetPlayerBoard ? newOppBoard : newTargetBoard,
+                nextTurn
+            );
         }
     };
 
-    // 게임 종료 및 승패 조건 점검 (3판 2선승제 적용)
+    // 게임 종료 및 최종 라인 3판 2선승 판정
     const checkGameStatus = (pBoard, aBoard, nextPlayer) => {
         const isPlayerFull = pBoard.every(col => col.length >= 3);
         const isAiFull = aBoard.every(col => col.length >= 3);
 
         if (isPlayerFull || isAiFull) {
-            // 라인별 1:1 비교
+            // 라인 1:1 비교
             let playerWins = 0;
             let aiWins = 0;
             let ties = 0;
@@ -349,7 +475,7 @@ const TikatukaGamePage = ({ onBack }) => {
             } else if (aiWins > playerWins) {
                 result = 'lose';
             } else {
-                // 획득 라인 전적이 동률(예: 1승 1무 1패 등)일 경우, 총점 비교로 최종 우열 판정
+                // 라인 득실 동률 시 최종 총점 비교
                 const pTotal = getBoardTotalScore(pBoard);
                 const aTotal = getBoardTotalScore(aBoard);
                 if (pTotal > aTotal) result = 'win';
@@ -361,11 +487,11 @@ const TikatukaGamePage = ({ onBack }) => {
             setGameState('finished');
             if (bgmRef.current) bgmRef.current.pause();
 
-            // 연승 관리 및 DB 저장
+            // 연승 관리 및 DB 기록
             if (result === 'win') {
                 const nextStreak = winStreak + 1;
                 setWinStreak(nextStreak);
-                earnCrystals(25); // 승리 보너스 상향
+                earnCrystals(25);
 
                 if (nextStreak > bestWinStreak) {
                     setBestWinStreak(nextStreak);
@@ -420,127 +546,133 @@ const TikatukaGamePage = ({ onBack }) => {
         }
     };
 
-    // AI 행동 턴 처리
+    // AI 지능형 의사결정 및 턴 루프 처리 (AI 멈춤 버그 완벽 수정)
     useEffect(() => {
-        if (gameState !== 'playing' || currentTurn !== 'ai' || gameResult) return;
+        if (gameState !== 'playing' || currentTurn !== 'ai' || gameResult || aiThinking || isRolling) return;
 
-        setAiThinking(true);
-        let aiDiceVal = Math.floor(Math.random() * 6) + 1;
+        // AI 컵에 주사위가 없을 때 주사위 굴리기 자동 개시
+        if (currentDice === null && !showReRollSelect) {
+            setAiThinking(true);
+            let aiDiceVal = Math.floor(Math.random() * 6) + 1;
 
-        let diceAnimInterval;
-        let count = 0;
-        setTimeout(() => {
-            diceAnimInterval = setInterval(() => {
-                setCurrentDice(Math.floor(Math.random() * 6) + 1);
-                count++;
-                if (count > 8) {
-                    clearInterval(diceAnimInterval);
-                    setCurrentDice(aiDiceVal);
-                    
-                    // 최적 가치 평가 배치
-                    setTimeout(() => {
-                        let bestCol = -1;
-                        let maxVal = -Infinity;
-
+            let diceAnimInterval;
+            let count = 0;
+            setTimeout(() => {
+                diceAnimInterval = setInterval(() => {
+                    setCurrentDice(Math.floor(Math.random() * 6) + 1);
+                    count++;
+                    if (count > 8) {
+                        clearInterval(diceAnimInterval);
+                        
+                        // 1. AI 주사위 리롤 여부 연산 (가치 하위일 때 1회 리롤 기회 소모)
+                        let bestColNormal = -1;
+                        let maxValNormal = -Infinity;
                         for (let c = 0; c < 3; c++) {
-                            const val = evaluateMove(c, aiDiceVal, aiBoard, playerBoard);
-                            if (val > maxVal) {
-                                maxVal = val;
-                                bestCol = c;
+                            const val = evaluateMove(c, aiDiceVal, aiBoard, playerBoard, false);
+                            if (val > maxValNormal) {
+                                maxValNormal = val;
+                                bestColNormal = c;
                             }
                         }
 
-                        if (bestCol === -1) {
-                            for (let c = 0; c < 3; c++) {
-                                if (aiBoard[c].length < 3) {
-                                    bestCol = c;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (bestCol !== -1) {
-                            // AI 주사위 안착
-                            const newItem = { id: `ai_${bestCol}_${Date.now()}_${Math.random()}`, val: aiDiceVal };
-                            const newAiBoard = [...aiBoard];
-                            newAiBoard[bestCol] = [...newAiBoard[bestCol], newItem];
-                            setAiBoard(newAiBoard);
-
-                            const placeSfx = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-plastic-clunk-3024.mp3');
-                            placeSfx.volume = 0.2;
-                            if (!isMuted) placeSfx.play().catch(() => {});
-
-                            // 플레이어 주사위 격파
-                            const pCol = playerBoard[bestCol];
-                            const matchExists = pCol.some(item => item.val === aiDiceVal);
+                        // 가치가 지나치게 낮고 리롤 기회가 있다면 리롤 시도
+                        if (maxValNormal < 4 && !aiReRollUsed) {
+                            setAiReRollUsed(true);
+                            let aiReRollVal = Math.floor(Math.random() * 6) + 1;
                             
-                            let newPlayerBoard = [...playerBoard];
-                            let hasDestroyed = false;
-
-                            if (matchExists) {
-                                hasDestroyed = true;
-                                const rect = document.getElementById(`player-col-${bestCol}`)?.getBoundingClientRect();
-                                if (rect) {
-                                    triggerDestroyParticle(rect.left + rect.width / 2, rect.top + rect.height / 2);
-                                } else {
-                                    triggerDestroyParticle(150 + bestCol * 90, 450);
+                            // 리롤 굴림 지연
+                            setTimeout(() => {
+                                // 기존 값과 리롤 값 중 더 유리한 주사위 선택
+                                let maxValReRoll = -Infinity;
+                                for (let c = 0; c < 3; c++) {
+                                    const val = evaluateMove(c, aiReRollVal, aiBoard, playerBoard, false);
+                                    if (val > maxValReRoll) maxValReRoll = val;
                                 }
 
-                                const destroySfx = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-boxer-punch-strike-2382.mp3');
-                                destroySfx.volume = 0.25;
-                                if (!isMuted) destroySfx.play().catch(() => {});
-
-                                newPlayerBoard[bestCol] = pCol.filter(item => item.val !== aiDiceVal);
-                                setPlayerBoard(newPlayerBoard);
-                            }
-
-                            // AI 주사위 컵 리셋
-                            setCurrentDice(null);
-                            setAiThinking(false);
-
-                            // 추가 턴 분기 적용
-                            if (hasDestroyed) {
-                                // 파괴 성공 시 AI 추가 턴 획득
-                                setExtraTurnOwner('ai');
-                                setShowExtraTurnBanner(true);
-                                setTimeout(() => {
-                                    setShowExtraTurnBanner(false);
-                                }, 1500);
-
-                                // 턴 변경 없이 AI 턴 유지
-                                checkGameStatus(newPlayerBoard, newAiBoard, 'ai');
-                            } else {
-                                // 파괴 실패 시 플레이어 턴으로 교대
-                                checkGameStatus(newPlayerBoard, newAiBoard, 'player');
-                            }
+                                if (maxValReRoll > maxValNormal) {
+                                    setCurrentDice(aiReRollVal);
+                                    executeAiPlacement(aiReRollVal);
+                                } else {
+                                    setCurrentDice(aiDiceVal);
+                                    executeAiPlacement(aiDiceVal);
+                                }
+                            }, 500);
+                        } else {
+                            setCurrentDice(aiDiceVal);
+                            executeAiPlacement(aiDiceVal);
                         }
-                    }, 600);
+                    }
+                }, 80);
+            }, 600);
+
+            return () => {
+                if (diceAnimInterval) clearInterval(diceAnimInterval);
+            };
+        }
+
+        // AI 주사위 장착 실행 함수
+        const executeAiPlacement = (diceVal) => {
+            setTimeout(() => {
+                let bestCol = -1;
+                let maxVal = -Infinity;
+                let shouldPlaceOpponent = false; // 상대 보드 침투 여부
+
+                // 실드 주사위이고 첫 턴이 아닐 경우 상대 보드 배치 가치도 비교
+                const canIntrude = isCurrentDiceShielded && !isFirstMove;
+
+                // 내 보드 가치 비교
+                for (let c = 0; c < 3; c++) {
+                    const val = evaluateMove(c, diceVal, aiBoard, playerBoard, false);
+                    if (val > maxVal) {
+                        maxVal = val;
+                        bestCol = c;
+                        shouldPlaceOpponent = false;
+                    }
                 }
-            }, 80);
-        }, 600);
 
-        return () => {
-            if (diceAnimInterval) clearInterval(diceAnimInterval);
+                // 상대 보드 침투 가치 비교
+                if (canIntrude) {
+                    for (let c = 0; c < 3; c++) {
+                        const val = evaluateMove(c, diceVal, aiBoard, playerBoard, true);
+                        // 침투 배치는 추가 가치 가산점 부여
+                        if (val > maxVal) {
+                            maxVal = val;
+                            bestCol = c;
+                            shouldPlaceOpponent = true;
+                        }
+                    }
+                }
+
+                // 비상 덤핑 처리
+                if (bestCol === -1) {
+                    for (let c = 0; c < 3; c++) {
+                        if (aiBoard[c].length < 3) {
+                            bestCol = c;
+                            shouldPlaceOpponent = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (bestCol !== -1) {
+                    setAiThinking(false);
+                    // 결정된 위치에 주사위 배치 격발
+                    placeDiceOnBoard(bestCol, shouldPlaceOpponent ? 'player' : 'ai');
+                } else {
+                    setAiThinking(false);
+                }
+            }, 600);
         };
-    }, [currentTurn, gameState]);
-
-    // 라인 0,1,2의 대결 상황 판정 (깃발 인디케이터용)
-    const getLineWinnerSymbol = (lineIdx) => {
-        const pScore = getColScore(playerBoard[lineIdx]);
-        const aScore = getColScore(aiBoard[lineIdx]);
-        if (pScore > aScore) return '👑';
-        if (aScore > pScore) return '💀';
-        return '⚔️';
-    };
+    }, [currentTurn, gameState, currentDice, aiThinking, isRolling, showReRollSelect]);
 
     return (
         <div style={{
             minHeight: '100vh', 
-            background: 'radial-gradient(circle, #1a231d 0%, #0d120f 100%)', // 마법의 숲 어두운 앤틱 그린 배경
+            background: 'radial-gradient(circle, #18221c 0%, #0a0e0c 100%)', // 에스더 마법 숲 딥 그린 다크 배경
             padding: '20px 2%', display: 'flex', flexDirection: 'column', alignItems: 'center',
             userSelect: 'none', color: '#e2e8f0', position: 'relative', overflow: 'hidden'
         }}>
-            {/* 파괴 파티클 레이어 (불꽃 이펙트 강화) */}
+            {/* 파괴 파티클 레이어 */}
             {particles.map(p => (
                 <span
                     key={p.id}
@@ -550,24 +682,24 @@ const TikatukaGamePage = ({ onBack }) => {
                         top: p.y,
                         width: p.size,
                         height: p.size,
-                        background: '#d4af37', // 골드 조각 파티클
+                        background: '#38bdf8', // 실드 전파 빛바랜 파란 조각 파티클
                         borderRadius: '2px',
                         pointerEvents: 'none',
                         zIndex: 99,
-                        boxShadow: '0 0 8px #fbbf24',
+                        boxShadow: '0 0 10px #0ea5e9',
                         transform: `translate(${p.vx * 3.5}px, ${p.vy * 3.5}px)`,
-                        transition: 'transform 0.8s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.8s',
+                        transition: 'transform 0.85s cubic-bezier(0.1, 0.85, 0.35, 1), opacity 0.85s',
                         opacity: 0
                     }}
                 />
             ))}
 
-            {/* 황금빛 앤틱 EXTRA TURN 배너 팝업 */}
+            {/* EXTRA TURN 배너 팝업 */}
             <AnimatePresence>
                 {showExtraTurnBanner && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.5, y: -40 }}
-                        animate={{ opacity: 1, scale: 1.1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.5, y: -45 }}
+                        animate={{ opacity: 1, scale: 1.15, y: 0 }}
                         exit={{ opacity: 0, scale: 0.8, y: 30 }}
                         transition={{ type: 'spring', stiffness: 220, damping: 11 }}
                         style={{
@@ -577,24 +709,24 @@ const TikatukaGamePage = ({ onBack }) => {
                             x: '-50%',
                             y: '-50%',
                             background: 'linear-gradient(135deg, #d4af37 0%, #a27a18 100%)',
-                            color: '#1e1100',
-                            padding: '22px 50px',
+                            color: '#1a0d00',
+                            padding: '22px 55px',
                             borderRadius: '24px',
                             border: '3px solid #ffdf7a',
-                            boxShadow: '0 15px 45px rgba(212, 175, 55, 0.65), 0 0 60px rgba(212, 175, 55, 0.35)',
+                            boxShadow: '0 15px 45px rgba(212, 175, 55, 0.7), 0 0 65px rgba(212, 175, 55, 0.45)',
                             zIndex: 100,
                             textAlign: 'center',
                             pointerEvents: 'none'
                         }}
                     >
-                        <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '3px', opacity: 0.95, color: '#3d2600' }}>
-                            {extraTurnOwner === 'player' ? '⚡ 용사의 기적 ⚡' : '🔮 마법의 견제 🔮'}
+                        <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '3px', color: '#4a2f02' }}>
+                            {extraTurnOwner === 'player' ? '⚡ 전장의 결단 ⚡' : '🔮 AI 전술 개입 🔮'}
                         </div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 950, marginTop: '4px', textShadow: '0 1px 2px rgba(255,255,255,0.4)', letterSpacing: '0.5px' }}>
+                        <div style={{ fontSize: '1.9rem', fontWeight: 950, marginTop: '3px', textShadow: '0 1px 2px rgba(255,255,255,0.35)' }}>
                             {extraTurnOwner === 'player' ? '추가 턴 획득!' : 'AI 추가 턴 획득!'}
                         </div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 800, marginTop: '6px', color: '#1a0f00' }}>
-                            상대 주사위를 폭파하여 보너스 주사위를 굴립니다.
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, marginTop: '6px', color: '#2a1a00' }}>
+                            상대 주사위를 폭파해 **보호막(Shield) 주사위** 장전 완료!
                         </div>
                     </motion.div>
                 )}
@@ -602,19 +734,19 @@ const TikatukaGamePage = ({ onBack }) => {
 
             <audio ref={bgmRef} loop src="https://assets.mixkit.co/music/preview/mixkit-retro-arcade-casino-key-515.mp3" />
 
-            {/* Header (앤틱 앤 골드) */}
-            <div style={{ width: '100%', maxWidth: '1150px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', zIndex: 10 }}>
-                <button onClick={() => { if (bgmRef.current) bgmRef.current.pause(); onBack(); }} title="대시보드로 돌아갑니다" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d4af37', fontWeight: 800, background: 'rgba(30,41,34,0.85)', padding: '10px 20px', borderRadius: '15px', border: '1.5px solid #d4af37', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.3)', transition: 'all 0.2s' }}>
+            {/* Header */}
+            <div style={{ width: '100%', maxWidth: '1180px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', zIndex: 10 }}>
+                <button onClick={() => { if (bgmRef.current) bgmRef.current.pause(); onBack(); }} title="대시보드로 돌아갑니다" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d4af37', fontWeight: 800, background: 'rgba(23,28,25,0.9)', padding: '10px 20px', borderRadius: '15px', border: '1.5px solid #d4af37', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', transition: 'all 0.2s' }}>
                     <ArrowLeft size={20} /> 로비로
                 </button>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f59e0b', textShadow: '0 0 10px rgba(245,158,11,0.5)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     ⚔️ 에스더 주사위 배틀 (티카투카)
                 </h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button onClick={() => { setIsMuted(!isMuted); if (bgmRef.current) isMuted ? bgmRef.current.play() : bgmRef.current.pause(); }} title={isMuted ? "배경음악 켜기" : "배경음악 끄기"} style={{ background: 'rgba(30,41,34,0.85)', padding: '12px', borderRadius: '50%', border: '1.5px solid #d4af37', cursor: 'pointer', color: '#d4af37', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
+                    <button onClick={() => { setIsMuted(!isMuted); if (bgmRef.current) isMuted ? bgmRef.current.play() : bgmRef.current.pause(); }} title={isMuted ? "배경음악 켜기" : "배경음악 끄기"} style={{ background: 'rgba(23,28,25,0.9)', padding: '12px', borderRadius: '50%', border: '1.5px solid #d4af37', cursor: 'pointer', color: '#d4af37', boxShadow: '0 4px 6px rgba(0,0,0,0.4)' }}>
                         {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                     </button>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(30,41,34,0.85)', padding: '10px 20px', borderRadius: '100px', border: '1.5px solid #d4af37', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(23,28,25,0.9)', padding: '10px 20px', borderRadius: '100px', border: '1.5px solid #d4af37', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
                         <Gem size={20} color="#fbbf24" fill="#fbbf24" />
                         <span style={{ fontWeight: 900, fontSize: '1.2rem', color: '#fbbf24' }}>{crystals}</span>
                     </div>
@@ -622,14 +754,14 @@ const TikatukaGamePage = ({ onBack }) => {
             </div>
 
             <div style={{
-                width: '100%', maxWidth: '1150px', display: 'grid',
+                width: '100%', maxWidth: '1180px', display: 'grid',
                 gridTemplateColumns: window.innerWidth <= 1024 ? '1fr' : '1fr 340px', gap: '30px', zIndex: 10
             }}>
-                {/* 메인 게임판 (나무와 금속 몰딩 고풍 테마) */}
+                {/* 메인 게임판 (나무 질감과 황금 몰딩) */}
                 <div style={{
-                    background: 'radial-gradient(circle, #2a1b15 0%, #150d0a 100%)', // 깊고 중후한 어두운 나무 질감
-                    border: '4px solid #b8860b', // 황금 테두리 몰딩
-                    boxShadow: '0 25px 50px rgba(0,0,0,0.75), inset 0 0 20px rgba(0,0,0,0.6)',
+                    background: 'radial-gradient(circle, #2e1e18 0%, #170f0b 100%)', // 깊고 중후한 어두운 나무 질감
+                    border: '4px solid #b8860b',
+                    boxShadow: '0 25px 55px rgba(0,0,0,0.8), inset 0 0 25px rgba(0,0,0,0.7)',
                     borderRadius: '35px', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center',
                     position: 'relative'
                 }}>
@@ -639,115 +771,173 @@ const TikatukaGamePage = ({ onBack }) => {
                             <Sparkles size={16} color="#fbbf24" />
                             <span style={{ fontWeight: 900, color: '#fbbf24', fontSize: '0.95rem' }}>현재 {winStreak}연승 유지 중</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontSize: '0.85rem', fontWeight: 700 }}>
-                            <AlertTriangle size={15} /> 3개 라인 중 2개 라인을 먼저 선점한 측이 전장에 승리합니다!
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '0.82rem', fontWeight: 800 }}>
+                            <AlertTriangle size={14} /> 보호막 주사위(실드)는 파괴되지 않으며 상대 보드에도 심을 수 있습니다.
                         </div>
                         <div style={{ fontWeight: 800, color: currentTurn === 'player' ? '#10b981' : '#a78bfa', fontSize: '0.95rem' }}>
-                            {currentTurn === 'player' ? '🟢 용사 턴 (내 차례)' : '🟣 AI 분석 중...'}
+                            {currentTurn === 'player' ? '🟢 내 턴 (주사위를 굴리세요)' : '🟣 AI 행동 설계 중...'}
                         </div>
                     </div>
 
-                    {/* 대결 플레이 필드 (가로 대칭형: 내 보드 - 중앙 조작 - 상대 보드) */}
+                    {/* 대칭 대결 플레이 필드 (가로 행(Row) 기반 전면 재구조화) */}
                     <div style={{
                         width: '100%', 
                         display: 'flex', 
-                        flexDirection: window.innerWidth <= 768 ? 'column' : 'row', 
-                        gap: '20px', 
+                        flexDirection: 'column', 
+                        gap: '24px', 
+                        padding: '10px 0',
                         alignItems: 'center',
-                        justifyContent: 'space-around',
-                        margin: '15px 0'
+                        justifyContent: 'center'
                     }}>
-                        
-                        {/* 1. 플레이어 보드 (왼쪽) */}
-                        <div style={{ textAlign: 'center', flex: '1', maxWidth: '300px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 8px 8px 8px', fontSize: '0.9rem', fontWeight: 800, color: '#10b981' }}>
-                                <span>👑 내 영토</span>
-                                <span>총점: {getBoardTotalScore(playerBoard)}점</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px', background: 'rgba(0, 0, 0, 0.4)', padding: '15px', borderRadius: '24px', border: '2px solid #3d271d', boxShadow: 'inset 0 0 15px rgba(0,0,0,0.8)' }}>
-                                {playerBoard.map((col, cIdx) => {
-                                    const canPlace = currentTurn === 'player' && currentDice !== null && !isRolling && col.length < 3;
-                                    return (
-                                        <div
-                                            key={cIdx}
-                                            id={`player-col-${cIdx}`}
-                                            onClick={() => canPlace && handlePlaceDice(cIdx)}
+                        {/* 3개 가로 라인 대치 렌더링 루프 */}
+                        {[0, 1, 2].map((idx) => {
+                            const canPlacePlayer = currentTurn === 'player' && currentDice !== null && !isRolling && !showReRollSelect && playerBoard[idx].length < 3;
+                            
+                            // 상대 보드 침투 배치 가능 여부 (플레이어의 실드 주사위이고, 첫 배치가 아닐 때만 AI 보드에 심기 가능)
+                            const canPlaceAIIntrude = currentTurn === 'player' && currentDice !== null && !isRolling && !showReRollSelect && isCurrentDiceShielded && !isFirstMove && aiBoard[idx].length < 3;
+
+                            return (
+                                <div 
+                                    key={idx} 
+                                    style={{ 
+                                        width: '100%', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'space-between',
+                                        background: 'rgba(0,0,0,0.25)',
+                                        padding: '15px 25px',
+                                        borderRadius: '20px',
+                                        border: '1.5px solid #4a3325',
+                                        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
+                                    }}
+                                >
+                                    {/* 왼쪽: 플레이어 보드 라인 */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                        <div style={{ width: '48px', textAlign: 'right', fontWeight: 900, color: '#10b981', fontSize: '1.1rem' }}>
+                                            {getColScore(playerBoard[idx])}점
+                                        </div>
+                                        <div 
+                                            id={`player-line-${idx}`}
+                                            onClick={() => canPlacePlayer && placeDiceOnBoard(idx, 'player')}
                                             style={{
-                                                flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', height: '260px',
-                                                background: canPlace ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.35)',
+                                                width: '240px', height: '70px',
+                                                background: canPlacePlayer ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.45)',
                                                 borderRadius: '16px',
-                                                border: canPlace ? '2px dashed #10b981' : '1.5px solid #4a3325',
-                                                padding: '8px', position: 'relative', cursor: canPlace ? 'pointer' : 'default',
-                                                justifyContent: 'flex-end',
-                                                transition: 'all 0.2s'
+                                                border: canPlacePlayer ? '2px dashed #10b981' : '1.5px solid #3d261b',
+                                                padding: '6px 12px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                cursor: canPlacePlayer ? 'pointer' : 'default',
+                                                transition: 'all 0.2s',
+                                                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.6)'
                                             }}
                                         >
-                                            <div style={{ position: 'absolute', top: '-28px', left: 0, right: 0, textAlign: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#10b981' }}>
-                                                {getColScore(col)}점
-                                            </div>
                                             <AnimatePresence>
-                                                {col.map((item) => (
+                                                {playerBoard[idx].map((item) => (
                                                     <motion.div
                                                         key={item.id}
-                                                        initial={{ scale: 0.2, y: -150, rotate: 15 }}
-                                                        animate={{ scale: 1, y: 0, rotate: 0 }}
+                                                        initial={{ scale: 0.1, x: -100, rotate: -45 }}
+                                                        animate={{ scale: 1, x: 0, rotate: 0 }}
                                                         exit={{ 
-                                                            scale: 0.4, 
-                                                            y: 200, 
-                                                            x: (Math.random() - 0.5) * 160, 
-                                                            rotate: 360, 
+                                                            scale: 0.3, 
+                                                            y: (Math.random() - 0.5) * 150, 
+                                                            x: -250, 
+                                                            rotate: -360, 
                                                             opacity: 0 
                                                         }}
-                                                        transition={{ type: 'spring', stiffness: 220, damping: 14 }}
-                                                        style={{ width: '100%', aspectRatio: '1/1', position: 'relative' }}
+                                                        transition={{ type: 'spring', stiffness: 220, damping: 13 }}
+                                                        style={{ width: '48px', height: '48px' }}
                                                     >
-                                                        <DiceDot value={item.val} />
+                                                        <DiceDot value={item.val} isShielded={item.isShielded} />
                                                     </motion.div>
                                                 ))}
                                             </AnimatePresence>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                    </div>
 
-                        {/* 2. 중앙 점령 지표 및 주사위 컨트롤러 */}
-                        <div style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            alignItems: 'center', 
-                            gap: '15px', 
-                            background: 'rgba(0,0,0,0.3)',
-                            padding: '16px', 
-                            borderRadius: '20px',
-                            border: '1.5px solid #4a3325',
-                            minWidth: '160px'
-                        }}>
-                            {/* 라인별 실시간 점령 현황 */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.78rem', color: '#d4af37', fontWeight: 800 }}>라인 전투 현황</span>
-                                {[0, 1, 2].map((idx) => (
-                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', fontWeight: 800 }}>
-                                        <span style={{ color: '#10b981' }}>{getColScore(playerBoard[idx])}</span>
-                                        <span style={{ fontSize: '1.1rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
+                                    {/* 중앙: 대치 점령 지표 깃발 */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#8e7a63', fontWeight: 800 }}>LINE {idx + 1}</span>
+                                        <span style={{ 
+                                            fontSize: '1.4rem', 
+                                            filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.8))',
+                                            transform: 'scale(1.1)'
+                                        }}>
                                             {getLineWinnerSymbol(idx)}
                                         </span>
-                                        <span style={{ color: '#a78bfa' }}>{getColScore(aiBoard[idx])}</span>
                                     </div>
-                                ))}
-                            </div>
 
-                            <hr style={{ width: '100%', border: 'none', borderTop: '1px solid #4a3325' }} />
+                                    {/* 오른쪽: 상대 AI 보드 라인 */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                        <div 
+                                            id={`ai-line-${idx}`}
+                                            onClick={() => canPlaceAIIntrude && placeDiceOnBoard(idx, 'ai')}
+                                            style={{
+                                                width: '240px', height: '70px',
+                                                background: canPlaceAIIntrude ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0,0,0,0.45)',
+                                                borderRadius: '16px',
+                                                border: canPlaceAIIntrude ? '2px dashed #0284c7' : '1.5px solid #3d261b',
+                                                padding: '6px 12px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                flexDirection: 'row-reverse', // 시각 대칭 정렬
+                                                gap: '10px',
+                                                cursor: canPlaceAIIntrude ? 'pointer' : 'default',
+                                                transition: 'all 0.2s',
+                                                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.6)'
+                                            }}
+                                        >
+                                            <AnimatePresence>
+                                                {aiBoard[idx].map((item) => (
+                                                    <motion.div
+                                                        key={item.id}
+                                                        initial={{ scale: 0.1, x: 100, rotate: 45 }}
+                                                        animate={{ scale: 1, x: 0, rotate: 0 }}
+                                                        exit={{ 
+                                                            scale: 0.3, 
+                                                            y: (Math.random() - 0.5) * 150, 
+                                                            x: 250, 
+                                                            rotate: 360, 
+                                                            opacity: 0 
+                                                        }}
+                                                        transition={{ type: 'spring', stiffness: 220, damping: 13 }}
+                                                        style={{ width: '48px', height: '48px' }}
+                                                    >
+                                                        <DiceDot value={item.val} isShielded={item.isShielded} />
+                                                    </motion.div>
+                                                ))}
+                                            </AnimatePresence>
+                                        </div>
+                                        <div style={{ width: '48px', textAlign: 'left', fontWeight: 900, color: '#a78bfa', fontSize: '1.1rem' }}>
+                                            {getColScore(aiBoard[idx])}점
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                            {/* 굴려진 주사위 디스플레이 */}
+                    {/* 하단 통합 주사위 대시 컨트롤러 */}
+                    <div style={{ 
+                        marginTop: '25px', width: '100%', display: 'flex', 
+                        justifyContent: 'center', gap: '30px', alignItems: 'center',
+                        background: 'rgba(0,0,0,0.4)', padding: '20px', borderRadius: '24px',
+                        border: '1.5px solid #4a3325', position: 'relative'
+                    }}>
+                        {/* 굴려진 주사위 디스플레이 */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fbbf24' }}>
+                                {isCurrentDiceShielded ? '🛡️ 보호막 주사위 장전' : '🎲 일반 주사위 장전'}
+                            </span>
                             <div style={{ width: '70px', height: '70px', position: 'relative' }}>
                                 {currentDice !== null ? (
                                     <motion.div 
-                                        animate={isRolling ? { rotate: 360, scale: [1, 1.1, 1] } : { scale: 1.1 }} 
+                                        animate={isRolling ? { rotate: 360, scale: [1, 1.15, 1] } : { scale: 1.1 }} 
                                         transition={isRolling ? { repeat: Infinity, duration: 0.3, ease: 'linear' } : { type: 'spring', stiffness: 300, damping: 10 }} 
                                         style={{ width: '100%', height: '100%' }}
                                     >
-                                        <DiceDot value={currentDice} />
+                                        <DiceDot value={currentDice} isShielded={isCurrentDiceShielded} />
                                     </motion.div>
                                 ) : (
                                     <div style={{ width: '100%', height: '100%', border: '2.5px dashed #8e7a63', borderRadius: '14px', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e7a63', fontSize: '1.4rem', fontWeight: 900 }}>
@@ -755,87 +945,84 @@ const TikatukaGamePage = ({ onBack }) => {
                                     </div>
                                 )}
                             </div>
+                        </div>
 
-                            {/* 주사위 컨트롤러 단추 */}
-                            {currentTurn === 'player' ? (
-                                <button
-                                    onClick={rollDice}
-                                    disabled={currentDice !== null || isRolling}
-                                    title="주사위를 굴립니다"
-                                    style={{
-                                        padding: '10px 18px', background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)',
-                                        border: 'none', color: '#1a0d00', fontWeight: 900, borderRadius: '12px', fontSize: '0.85rem',
-                                        cursor: (currentDice !== null || isRolling) ? 'not-allowed' : 'pointer',
-                                        boxShadow: '0 6px 15px rgba(212, 175, 55, 0.35)', display: 'flex', alignItems: 'center', gap: '4px'
-                                    }}
+                        {/* 리롤 2지선다 팝업 UI */}
+                        {showReRollSelect && (
+                            <div style={{
+                                position: 'absolute', inset: 0, borderRadius: '24px',
+                                background: 'radial-gradient(circle, #2d1a12 0%, #150d0a 100%)',
+                                border: '2px solid #fbbf24', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', gap: '25px', zIndex: 15
+                            }}>
+                                <span style={{ fontWeight: 800, color: '#fbbf24', fontSize: '0.85rem' }}>배치할 주사위 선택:</span>
+                                <button 
+                                    onClick={() => handleSelectDiceOption(currentDice)}
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1.5px solid #8e7a63', borderRadius: '14px', width: '56px', height: '56px', padding: '0', cursor: 'pointer' }}
                                 >
-                                    <RefreshCw size={14} className={isRolling ? 'animate-spin' : ''} /> 굴리기
+                                    <DiceDot value={currentDice} isShielded={isCurrentDiceShielded} />
                                 </button>
+                                <span style={{ fontWeight: 900, color: '#d4af37' }}>VS</span>
+                                <button 
+                                    onClick={() => handleSelectDiceOption(reRolledDice)}
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1.5px solid #fbbf24', borderRadius: '14px', width: '56px', height: '56px', padding: '0', cursor: 'pointer', boxShadow: '0 0 10px rgba(251,191,36,0.3)' }}
+                                >
+                                    <DiceDot value={reRolledDice} isShielded={isCurrentDiceShielded} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* 조작 버튼 영역 */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {currentTurn === 'player' ? (
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button
+                                        onClick={rollDice}
+                                        disabled={currentDice !== null || isRolling || showReRollSelect}
+                                        style={{
+                                            padding: '12px 24px', background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)',
+                                            border: 'none', color: '#1a0d00', fontWeight: 900, borderRadius: '12px', fontSize: '0.88rem',
+                                            cursor: (currentDice !== null || isRolling) ? 'not-allowed' : 'pointer',
+                                            boxShadow: '0 6px 15px rgba(212, 175, 55, 0.35)', display: 'flex', alignItems: 'center', gap: '6px'
+                                        }}
+                                    >
+                                        <RefreshCw size={15} className={isRolling ? 'animate-spin' : ''} /> 주사위 굴리기
+                                    </button>
+                                    <button
+                                        onClick={triggerReRoll}
+                                        disabled={playerReRollUsed || currentDice === null || isRolling || isReRolling}
+                                        style={{
+                                            padding: '12px 20px', 
+                                            background: playerReRollUsed ? 'rgba(0,0,0,0.3)' : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                                            border: playerReRollUsed ? '1.5px solid #4a3325' : 'none', 
+                                            color: playerReRollUsed ? '#64748b' : 'white', 
+                                            fontWeight: 900, borderRadius: '12px', fontSize: '0.88rem',
+                                            cursor: (playerReRollUsed || currentDice === null || isRolling) ? 'not-allowed' : 'pointer',
+                                            boxShadow: playerReRollUsed ? 'none' : '0 6px 15px rgba(239, 68, 68, 0.3)'
+                                        }}
+                                    >
+                                        다시 굴리기 (1회)
+                                    </button>
+                                </div>
                             ) : (
-                                <div style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.5)', border: '1.5px solid #8b5cf6', color: '#a78bfa', fontWeight: 800, borderRadius: '12px', fontSize: '0.78rem' }}>
-                                    AI 차례...
+                                <div style={{ padding: '12px 35px', background: 'rgba(0,0,0,0.5)', border: '1.5px solid #8b5cf6', color: '#a78bfa', fontWeight: 800, borderRadius: '12px', fontSize: '0.9rem', textAlign: 'center' }}>
+                                    {aiThinking ? '🤖 AI가 전술 계산 중...' : '🤖 상대가 행동 준비 중...'}
                                 </div>
                             )}
                         </div>
-
-                        {/* 3. AI 보드 (오른쪽) */}
-                        <div style={{ textAlign: 'center', flex: '1', maxWidth: '300px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 8px 8px 8px', fontSize: '0.9rem', fontWeight: 800, color: '#a78bfa' }}>
-                                <span>🤖 상대 AI</span>
-                                <span>총점: {getBoardTotalScore(aiBoard)}점</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px', background: 'rgba(0, 0, 0, 0.4)', padding: '15px', borderRadius: '24px', border: '2px solid #3d271d', boxShadow: 'inset 0 0 15px rgba(0,0,0,0.8)' }}>
-                                {aiBoard.map((col, cIdx) => (
-                                    <div 
-                                        key={cIdx} 
-                                        id={`ai-col-${cIdx}`}
-                                        style={{ 
-                                            flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', height: '260px', 
-                                            background: 'rgba(0,0,0,0.35)', borderRadius: '16px', border: '1.5px solid #4a3325', 
-                                            padding: '8px', position: 'relative', justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <div style={{ position: 'absolute', top: '-28px', left: 0, right: 0, textAlign: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#a78bfa' }}>
-                                            {getColScore(col)}점
-                                        </div>
-                                        <AnimatePresence>
-                                            {col.map((item) => (
-                                                <motion.div 
-                                                    key={item.id} 
-                                                    initial={{ scale: 0.2, y: -150, rotate: -15 }} 
-                                                    animate={{ scale: 1, y: 0, rotate: 0 }} 
-                                                    exit={{ 
-                                                        scale: 0.4, 
-                                                        y: -200, 
-                                                        x: (Math.random() - 0.5) * 160, 
-                                                        rotate: -360, 
-                                                        opacity: 0 
-                                                    }}
-                                                    transition={{ type: 'spring', stiffness: 220, damping: 14 }}
-                                                    style={{ width: '100%', aspectRatio: '1/1' }}
-                                                >
-                                                    <DiceDot value={item.val} />
-                                                </motion.div>
-                                            ))}
-                                        </AnimatePresence>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
                     </div>
 
-                    {/* 대기화면 (판타지 고대 서판풍) */}
+                    {/* 대기화면 */}
                     {gameState === 'ready' && (
                         <div style={{ position: 'absolute', inset: 0, borderRadius: '35px', background: 'radial-gradient(circle, #251812 0%, #0d0705 100%)', border: '4px solid #b8860b', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
                             <div style={{ fontSize: '4.5rem', marginBottom: '10px', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>⚔️</div>
-                            <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f59e0b', marginBottom: '10px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>티카투카 주사위 대결</h3>
-                            <p style={{ color: '#d8c5b0', fontSize: '0.85rem', fontWeight: 600, maxWidth: '380px', lineHeight: 1.5, textAlign: 'center', marginBottom: '30px' }}>
-                                주사위를 3개 라인에 배치하여 경쟁합니다.<br/>
-                                같은 주사위를 나란히 두면 **배수 보너스** 콤보!<br/>
-                                상대방과 동일한 눈금을 두면 상대 주사위를 **완전 폭파**시킵니다.<br/>
-                                **상대 주사위를 폭파하면 1회 추가 주사위 기회** 획득! ⚡<br/>
-                                **3개 라인 중 2개 라인을 선점**하는 측이 영토에 승리합니다!
+                            <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f59e0b', marginBottom: '10px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>에스더 주사위 배틀</h3>
+                            <p style={{ color: '#d8c5b0', fontSize: '0.85rem', fontWeight: 600, maxWidth: '440px', lineHeight: 1.55, textAlign: 'center', marginBottom: '30px' }}>
+                                **로스트아크 티카투카 미니게임 공식 룰 완벽 적용!**<br/>
+                                1. **동귀어진 파괴**: 알까기 성공 시 내 주사위와 상대 주사위가 둘 다 소멸합니다.<br/>
+                                2. **보호막(Shield) 주사위**: 첫 턴 및 추가 턴의 주사위는 보호막이 씌워져 파괴가 불가능해지며, 상대 보드에도 강제 침투시킬 수 있습니다.<br/>
+                                3. **리롤 찬스**: 판당 1번 리롤하여 원래 눈과 새로운 눈 중 원하는 것을 고를 수 있습니다.<br/>
+                                4. **승리 조건**: 3개 가로 라인 중 2개 이상을 선점하는 측이 승리합니다!
                             </p>
                             <button onClick={startGame} title="대결을 시작합니다" style={{ padding: '14px 45px', background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)', color: '#1a0d00', fontWeight: 900, borderRadius: '15px', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(212, 175, 55, 0.45)', border: '1px solid #ffdf7a' }}>
                                 전장 진입
@@ -843,7 +1030,7 @@ const TikatukaGamePage = ({ onBack }) => {
                         </div>
                     )}
 
-                    {/* Game finished modal (판타지 전장 통계 정보) */}
+                    {/* 게임 완료 모달 */}
                     {gameState === 'finished' && (
                         <div style={{ position: 'absolute', inset: 0, borderRadius: '35px', background: 'radial-gradient(circle, #251812 0%, #0d0705 100%)', border: '4px solid #b8860b', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
                             <div style={{ fontSize: '5rem', marginBottom: '15px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))' }}>
@@ -859,7 +1046,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                     점령 전적: <span style={{ color: '#10b981' }}>{gameRoundResult.playerWins}라인</span> 대 <span style={{ color: '#a78bfa' }}>{gameRoundResult.aiWins}라인</span>
                                 </div>
                                 <div style={{ fontSize: '0.85rem', color: '#d8c5b0' }}>
-                                    (누적 점수: {getBoardTotalScore(playerBoard)}점 vs {getBoardTotalScore(aiBoard)}점)
+                                    (최종 점수: {getBoardTotalScore(playerBoard)}점 vs {getBoardTotalScore(aiBoard)}점)
                                 </div>
                             </div>
 
@@ -879,7 +1066,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     )}
                 </div>
 
-                {/* 사이드바 (연승 명예의 전당 및 도움 정보) */}
+                {/* 사이드바 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{
                         background: 'rgba(23,17,13,0.95)', borderRadius: '30px', padding: '25px',
@@ -922,11 +1109,12 @@ const TikatukaGamePage = ({ onBack }) => {
                         background: 'rgba(23,17,13,0.95)', borderRadius: '30px', padding: '25px',
                         border: '2px solid #b8860b', boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
                     }}>
-                        <h4 style={{ fontWeight: 900, fontSize: '0.95rem', color: '#fbbf24', marginBottom: '12px' }}>📜 에스더 룰북</h4>
-                        <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.8rem', color: '#d8c5b0', fontWeight: 600, lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <li>**동일 눈금 콤보**: 동일한 주사위를 한 라인에 나란히 놓으면 점수 배수가 중첩됩니다. (1개 1배, 2개 4배, 3개 9배)</li>
-                            <li>**폭파 및 추가 턴**: 내가 주사위를 놓은 자리에 상대방의 동일한 숫자가 존재하면, 상대방의 주사위가 날아가며 파괴되고 **내게 1회 추가 주사위 굴리기 기회(Extra Turn)**가 주어집니다! ⚡</li>
-                            <li>**승리 기준**: 한 사람의 보드가 꽉 차면 종료되며, 3개 라인 중 더 높은 라인을 **2개 이상 선점**한 자가 승리합니다.</li>
+                        <h4 style={{ fontWeight: 900, fontSize: '0.95rem', color: '#fbbf24', marginBottom: '12px' }}>📜 에스더 룰북 (가로형)</h4>
+                        <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.8rem', color: '#d8c5b0', fontWeight: 600, lineHeight: 1.65, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <li>**동귀어진(파괴)**: 내 주사위가 상대 눈금을 파괴하면, 상대 주사위뿐만 아니라 내 주사위도 보드에 깔리지 않고 소멸(동귀어진)합니다.</li>
+                            <li>**실드 주사위 (하늘색)**: 최초 시작 및 추가 턴의 주사위는 보호막이 적용되어 상대에게 파괴되지 않으며, 내 보드 및 상대방 보드 빈칸에 강제 침투시킬 수 있습니다.</li>
+                            <li>**추가 턴 (Extra Turn)**: 상대방 주사위 파괴 시 보너스 턴을 받지만, 추가 턴 상태에서는 다시 추가 턴을 얻을 수 없습니다(밸런싱).</li>
+                            <li>**리롤 (1회)**: 주사위를 다시 던져 원래 주사위와 다시 굴린 주사위 중 하나를 선택할 수 있습니다.</li>
                         </ul>
                     </div>
                 </div>
