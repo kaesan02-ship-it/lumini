@@ -84,6 +84,36 @@ const DiceDot = ({ value, isShielded }) => {
     );
 };
 
+const OPPONENTS = {
+    1: { name: '견습 에스더 니네브', emoji: '🏹', difficulty: 'easy', desc: '기본적인 공간 배치에 충실한 초보 등급입니다.' },
+    2: { name: '정예 에스더 샨디', emoji: '🧙‍♂️', difficulty: 'normal', desc: '중간 수준의 밸런스형 인공지능 에스더입니다.' },
+    3: { name: '그림자 군단장 카멘', emoji: '⚔️', difficulty: 'hard', desc: '파괴(알까기)를 노리는 호전적인 공격형 군단장입니다.' },
+    4: { name: '심연의 아브렐슈드', emoji: '🔮', difficulty: 'expert', desc: '빈틈없는 수학적 계산으로 최적 배치를 노리는 정점입니다.' },
+    5: { name: '에스더 카단', emoji: '🗡️', difficulty: 'master', desc: '인간의 영역을 넘어선 난이도로, 모든 가능성을 압도합니다.' }
+};
+
+const getOpponentInfo = (stageNum) => {
+    return OPPONENTS[stageNum] || { name: `심연의 군주 (Lv.${stageNum})`, emoji: '😈', difficulty: 'master', desc: '도전을 불허하는 강력한 적입니다.' };
+};
+
+const canPlaceAnywhere = (board, oppBoard, diceVal, isShielded, isFirstMove) => {
+    if (diceVal === null) return false;
+    
+    // 1. 내 보드에 들어갈 자리가 있는지 확인
+    for (let i = 0; i < 3; i++) {
+        if (board[i].length < 3) return true;
+    }
+    
+    // 2. 보호막(실드) 주사위인 경우, 첫 턴이 아니고 상대 보드에 침투할 빈 자리가 있다면 가능
+    if (isShielded && !isFirstMove) {
+        for (let i = 0; i < 3; i++) {
+            if (oppBoard[i].length < 3) return true;
+        }
+    }
+    
+    return false;
+};
+
 // 열(Column)별 점수 합산 룰
 const getColScore = (colArray) => {
     const counts = {};
@@ -113,7 +143,7 @@ const getBoardTotalScore = (board) => {
 };
 
 // AI 최적 수 탐색 알고리즘 (리팩토링: 실드 주사위 침투 가치 계산 포함)
-const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacement, isCurrentDiceShielded) => {
+const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacement, isCurrentDiceShielded, difficulty = 'normal') => {
     // 상대 보드 침투 배치일 때
     if (isShieldPlacement) {
         if (opponentBoard[col].length >= 3) return -Infinity;
@@ -154,9 +184,25 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacemen
     }
 
     // 3. 칸 잠김 감쇄 페널티
-    const spacePenalty = nextCol.length === 3 ? -2.5 : 0;
+    let destWeight = 1.65;
+    let extraWeight = 12;
+    let spacePen = -2.5;
 
-    return scoreGain + (destructionValue * 1.65) + extraTurnValue + spacePenalty;
+    if (difficulty === 'easy') {
+        destWeight = 0.8;
+        extraWeight = 5;
+        spacePen = -4.0;
+    } else if (difficulty === 'hard') {
+        destWeight = 2.4;
+        extraWeight = 16;
+        spacePen = -1.2;
+    } else if (difficulty === 'expert' || difficulty === 'master') {
+        destWeight = 2.0;
+        extraWeight = 14;
+        spacePen = -2.0;
+    }
+
+    return scoreGain + (destructionValue * destWeight) + extraWeight + spacePen;
 };
 
 const TikatukaGamePage = ({ onBack }) => {
@@ -168,11 +214,14 @@ const TikatukaGamePage = ({ onBack }) => {
 
     // 상태 관리
     const [gameState, setGameState] = useState('ready'); // ready, playing, finished
+    const [stage, setStage] = useState(1);
+    const opponentInfo = getOpponentInfo(stage);
     const [winStreak, setWinStreak] = useState(0);
     const [bestWinStreak, setBestWinStreak] = useState(() => parseInt(localStorage.getItem(streakKey) || '0'));
     const [currentTurn, setCurrentTurn] = useState('player'); // player, ai
     const [playerBoard, setPlayerBoard] = useState([[], [], []]); // [{id, val, isShielded}][] (가로 행 3라인)
     const [aiBoard, setAiBoard] = useState([[], [], []]);
+    const [showPassBanner, setShowPassBanner] = useState(false);
     
     // 주사위 롤링 및 선택 상태
     const [currentDice, setCurrentDice] = useState(null);
@@ -248,8 +297,12 @@ const TikatukaGamePage = ({ onBack }) => {
         fetchLeaderboard();
     }, [user, streakKey, fetchLeaderboard]);
 
-    // 게임 시작
-    const startGame = () => {
+    // 게임 시작 (resetStage 파라미터 적용)
+    const startGame = (resetStage = false) => {
+        if (resetStage) {
+            setStage(1);
+            setWinStreak(0);
+        }
         setPlayerBoard([[], [], []]);
         setAiBoard([[], [], []]);
         setCurrentDice(null);
@@ -451,12 +504,12 @@ const TikatukaGamePage = ({ onBack }) => {
         }
     };
 
-    // 게임 종료 및 최종 라인 3판 2선승 판정
+    // 게임 종료 및 최종 라인 3판 2선승 판정 (양쪽 보드 완결형)
     const checkGameStatus = (pBoard, aBoard, nextPlayer) => {
         const isPlayerFull = pBoard.every(col => col.length >= 3);
         const isAiFull = aBoard.every(col => col.length >= 3);
 
-        if (isPlayerFull || isAiFull) {
+        if (isPlayerFull && isAiFull) {
             // 라인 1:1 비교
             let playerWins = 0;
             let aiWins = 0;
@@ -547,7 +600,22 @@ const TikatukaGamePage = ({ onBack }) => {
                 }
             }
         } else {
-            setCurrentTurn(nextPlayer);
+            // 아직 게임이 끝나지 않은 경우
+            // 다음 차례 플레이어가 턴에서 주사위를 둘 수 있는 공간이 있는지 감지 (보통 일반 턴이 시작되므로 자기 보드 꽉 찼으면 불가능)
+            const nextBoard = nextPlayer === 'player' ? pBoard : aBoard;
+            const oppBoard = nextPlayer === 'player' ? aBoard : pBoard;
+            const isNextBoardFull = nextBoard.every(col => col.length >= 3);
+            
+            // 만약 보호막(실드) 주사위 상태(추가 턴 격발 시)이고 상대 보드에 빈칸이 있으면 침투 가능하므로 스킵하지 않음
+            const hasIntrudeSpace = isCurrentDiceShielded && oppBoard.some(col => col.length < 3);
+
+            if (isNextBoardFull && !hasIntrudeSpace) {
+                // 둘 공간이 절대 없으므로 턴을 스킵하고 상대방이 연속으로 턴을 진행함
+                const finalNextPlayer = nextPlayer === 'player' ? 'ai' : 'player';
+                setCurrentTurn(finalNextPlayer);
+            } else {
+                setCurrentTurn(nextPlayer);
+            }
         }
     };
 
@@ -573,7 +641,7 @@ const TikatukaGamePage = ({ onBack }) => {
                         let bestColNormal = -1;
                         let maxValNormal = -Infinity;
                         for (let c = 0; c < 3; c++) {
-                            const val = evaluateMove(c, aiDiceVal, aiBoard, playerBoard, false, isCurrentDiceShielded);
+                            const val = evaluateMove(c, aiDiceVal, aiBoard, playerBoard, false, isCurrentDiceShielded, opponentInfo.difficulty);
                             if (val > maxValNormal) {
                                 maxValNormal = val;
                                 bestColNormal = c;
@@ -588,7 +656,7 @@ const TikatukaGamePage = ({ onBack }) => {
                             setTimeout(() => {
                                 let maxValReRoll = -Infinity;
                                 for (let c = 0; c < 3; c++) {
-                                    const val = evaluateMove(c, aiReRollVal, aiBoard, playerBoard, false, isCurrentDiceShielded);
+                                    const val = evaluateMove(c, aiReRollVal, aiBoard, playerBoard, false, isCurrentDiceShielded, opponentInfo.difficulty);
                                     if (val > maxValReRoll) maxValReRoll = val;
                                 }
 
@@ -624,7 +692,7 @@ const TikatukaGamePage = ({ onBack }) => {
 
                 // 내 보드 배치 가치 분석
                 for (let c = 0; c < 3; c++) {
-                    const val = evaluateMove(c, diceVal, aiBoard, playerBoard, false, isCurrentDiceShielded);
+                    const val = evaluateMove(c, diceVal, aiBoard, playerBoard, false, isCurrentDiceShielded, opponentInfo.difficulty);
                     if (val > maxVal) {
                         maxVal = val;
                         bestCol = c;
@@ -635,7 +703,7 @@ const TikatukaGamePage = ({ onBack }) => {
                 // 상대 보드 침투 배치 가치 분석
                 if (canIntrude) {
                     for (let c = 0; c < 3; c++) {
-                        const val = evaluateMove(c, diceVal, aiBoard, playerBoard, true, isCurrentDiceShielded);
+                        const val = evaluateMove(c, diceVal, aiBoard, playerBoard, true, isCurrentDiceShielded, opponentInfo.difficulty);
                         if (val > maxVal) {
                             maxVal = val;
                             bestCol = c;
@@ -664,7 +732,38 @@ const TikatukaGamePage = ({ onBack }) => {
                 }
             }, 600);
         }
-    }, [currentTurn, gameState, currentDice, aiThinking, isRolling, showReRollSelect, aiBoard, playerBoard, isCurrentDiceShielded, isFirstMove, aiReRollUsed]);
+    }, [currentTurn, gameState, currentDice, aiThinking, isRolling, showReRollSelect, aiBoard, playerBoard, isCurrentDiceShielded, isFirstMove, aiReRollUsed, opponentInfo.difficulty]);
+
+    // 주사위 배치 확정 시 패스 조건 체크 (둘 곳이 없을 때 알림 배너 띄우고 1.5초 후 강제 턴 양도)
+    useEffect(() => {
+        if (gameState !== 'playing' || isRolling || isReRolling || showReRollSelect || currentDice === null) return;
+
+        const board = currentTurn === 'player' ? playerBoard : aiBoard;
+        const oppBoard = currentTurn === 'player' ? aiBoard : playerBoard;
+
+        const possible = canPlaceAnywhere(board, oppBoard, currentDice, isCurrentDiceShielded, isFirstMove);
+        if (!possible) {
+            // 플레이어 턴이고 리롤 찬스가 남아있다면, 리롤 기회를 먼저 사용할 수 있게 자동 패스를 유예함
+            if (currentTurn === 'player' && !playerReRollUsed) {
+                return;
+            }
+
+            // 둘 곳이 아예 없는 확정 패스 상태
+            setShowPassBanner(true);
+            const passSfx = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-947.mp3');
+            passSfx.volume = 0.15;
+            if (!isMuted) passSfx.play().catch(() => {});
+
+            setTimeout(() => {
+                setShowPassBanner(false);
+                setCurrentDice(null);
+                
+                // 턴을 상대방에게 패스하고 상태 갱신
+                const nextTurn = currentTurn === 'player' ? 'ai' : 'player';
+                checkGameStatus(playerBoard, aiBoard, nextTurn);
+            }, 1800);
+        }
+    }, [currentDice, isRolling, isReRolling, showReRollSelect, currentTurn, playerBoard, aiBoard, isCurrentDiceShielded, isFirstMove, playerReRollUsed, gameState, isMuted]);
 
     // 라인 0,1,2의 대결 상황 판정 (깃발 인디케이터용)
     const getLineWinnerSymbol = (lineIdx) => {
@@ -741,6 +840,43 @@ const TikatukaGamePage = ({ onBack }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            {/* PASS 턴 패스 배너 팝업 */}
+            <AnimatePresence>
+                {showPassBanner && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5, y: -45 }}
+                        animate={{ opacity: 1, scale: 1.15, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 30 }}
+                        transition={{ type: 'spring', stiffness: 220, damping: 11 }}
+                        style={{
+                            position: 'absolute',
+                            top: '38%',
+                            left: '50%',
+                            x: '-50%',
+                            y: '-50%',
+                            background: 'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)',
+                            color: '#ffffff',
+                            padding: '22px 55px',
+                            borderRadius: '24px',
+                            border: '3px solid #fca55d',
+                            boxShadow: '0 15px 45px rgba(239, 68, 68, 0.5), 0 0 65px rgba(239, 68, 68, 0.3)',
+                            zIndex: 100,
+                            textAlign: 'center',
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '3px', color: '#ffd6cc' }}>
+                            ⚠️ 전술적 한계 ⚠️
+                        </div>
+                        <div style={{ fontSize: '1.9rem', fontWeight: 950, marginTop: '3px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                            턴 패스 (Pass)
+                        </div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, marginTop: '6px', color: '#ffebe6' }}>
+                            더 이상 주사위를 배치할 공간이 없습니다!
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <audio ref={bgmRef} loop src="https://assets.mixkit.co/music/preview/mixkit-retro-arcade-casino-key-515.mp3" />
 
@@ -750,7 +886,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     <ArrowLeft size={20} /> 로비로
                 </button>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f59e0b', textShadow: '0 0 10px rgba(245,158,11,0.5)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    ⚔️ 에스더 주사위 배틀 (티카투카)
+                    ⚔️ 에스더 주사위 배틀 (Stage {stage})
                 </h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button onClick={() => { setIsMuted(!isMuted); if (bgmRef.current) isMuted ? bgmRef.current.play() : bgmRef.current.pause(); }} title={isMuted ? "배경음악 켜기" : "배경음악 끄기"} style={{ background: 'rgba(23,28,25,0.9)', padding: '12px', borderRadius: '50%', border: '1.5px solid #d4af37', cursor: 'pointer', color: '#d4af37', boxShadow: '0 4px 6px rgba(0,0,0,0.4)' }}>
@@ -786,8 +922,10 @@ const TikatukaGamePage = ({ onBack }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '0.82rem', fontWeight: 800 }}>
                             <AlertTriangle size={14} /> 보호막 주사위(실드)는 파괴되지 않으며 상대 보드에도 심을 수 있습니다.
                         </div>
-                        <div style={{ fontWeight: 800, color: currentTurn === 'player' ? '#10b981' : '#a78bfa', fontSize: '0.95rem' }}>
-                            {currentTurn === 'player' ? '🟢 내 턴 (주사위를 굴리세요)' : '🟣 AI 행동 설계 중...'}
+                        <div style={{ fontWeight: 800, color: currentTurn === 'player' ? '#10b981' : '#a78bfa', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: '#fbbf24' }}>{opponentInfo.emoji} {opponentInfo.name}</span>
+                            <span>|</span>
+                            <span>{currentTurn === 'player' ? '🟢 내 턴 (주사위를 굴리세요)' : '🟣 AI 행동 설계 중...'}</span>
                         </div>
                     </div>
 
@@ -1033,9 +1171,9 @@ const TikatukaGamePage = ({ onBack }) => {
                                 1. **동귀어진 파괴**: 일반 주사위로 알까기 성공 시 내 주사위와 상대 주사위가 둘 다 소멸합니다.<br/>
                                 2. **보호막(Shield) 주사위**: 첫 턴 및 추가 턴의 주사위는 보호막이 적용되어 상대에게 파괴되지 않으며, 내 보드 및 상대방 보드 빈칸에 강제 침투시킬 수 있습니다. 단, **보호막 주사위는 상대방 주사위를 파괴(알까기)할 수 없습니다.**<br/>
                                 3. **리롤 찬스**: 판당 1번 리롤하여 원래 눈과 새로운 눈 중 원하는 것을 고를 수 있습니다.<br/>
-                                4. **승리 조건**: 3개 가로 라인 중 2개 이상을 선점하는 측이 승리합니다!
+                                4. **종료 및 승리 조건**: 양쪽 보드가 모두 채워지면 각 라인의 점수를 겨뤄 3개 라인 중 2개 이상 선점한 측이 최종 승리합니다.
                             </p>
-                            <button onClick={startGame} title="대결을 시작합니다" style={{ padding: '14px 45px', background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)', color: '#1a0d00', fontWeight: 900, borderRadius: '15px', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(212, 175, 55, 0.45)', border: '1px solid #ffdf7a' }}>
+                            <button onClick={() => startGame(true)} title="대결을 시작합니다" style={{ padding: '14px 45px', background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)', color: '#1a0d00', fontWeight: 900, borderRadius: '15px', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(212, 175, 55, 0.45)', border: '1px solid #ffdf7a' }}>
                                 전장 진입
                             </button>
                         </div>
@@ -1064,7 +1202,11 @@ const TikatukaGamePage = ({ onBack }) => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '300px' }}>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <button onClick={onBack} title="대시보드로 돌아갑니다" style={{ flex: 1, padding: '12px 20px', borderRadius: '15px', fontWeight: 800, background: 'rgba(255,255,255,0.05)', color: '#d8c5b0', border: '1.5px solid #8e7a63', cursor: 'pointer', fontSize: '0.9rem' }}>로비로</button>
-                                    <button onClick={startGame} title="다시 대결에 임합니다" style={{ flex: 1.2, padding: '12px 20px', borderRadius: '15px', fontWeight: 900, background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)', color: '#1a0d00', border: 'none', cursor: 'pointer', boxShadow: '0 8px 20px rgba(212, 175, 55, 0.35)', fontSize: '0.95rem' }}>다시 도전</button>
+                                    {gameResult === 'win' ? (
+                                        <button onClick={() => { setStage(prev => prev + 1); startGame(false); }} title="다음 단계 에스더에게 도전합니다" style={{ flex: 1.2, padding: '12px 20px', borderRadius: '15px', fontWeight: 900, background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)', color: '#1a0d00', border: 'none', cursor: 'pointer', boxShadow: '0 8px 20px rgba(212, 175, 55, 0.35)', fontSize: '0.95rem' }}>다음 단계</button>
+                                    ) : (
+                                        <button onClick={() => startGame(true)} title="1단계부터 다시 도전을 시작합니다" style={{ flex: 1.2, padding: '12px 20px', borderRadius: '15px', fontWeight: 900, background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 8px 20px rgba(239, 68, 68, 0.35)', fontSize: '0.95rem' }}>다시 도전</button>
+                                    )}
                                 </div>
                                 <button onClick={() => {
                                     useUserStore.getState().setActiveRankingTab('tikatuka');
@@ -1127,6 +1269,7 @@ const TikatukaGamePage = ({ onBack }) => {
                             <li>**실드 주사위 (하늘색)**: 최초 시작 및 추가 턴의 주사위는 보호막이 적용되어 상대에게 파괴되지 않으며, 내 보드 및 상대방 보드 빈칸에 강제 침투시킬 수 있습니다. **(파괴 기능은 작동하지 않음)**</li>
                             <li>**추가 턴 (Extra Turn)**: 상대방 주사위 파괴 시 보너스 턴을 받지만, 추가 턴 상태에서는 다시 추가 턴을 얻을 수 없습니다(밸런싱).</li>
                             <li>**리롤 (1회)**: 주사위를 다시 던져 원래 주사위와 다시 굴린 주사위 중 하나를 선택할 수 있습니다.</li>
+                            <li>**종료 및 승리**: 한쪽 보드가 다 차더라도 즉시 끝나지 않고 양쪽 보드가 완전히 채워질 때까지 끝까지 진행한 후, 각 라인의 최종 점수를 비교하여 3개 라인 중 2개 이상을 이긴 쪽이 매치에서 승리합니다.</li>
                         </ul>
                     </div>
                 </div>
