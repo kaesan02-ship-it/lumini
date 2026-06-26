@@ -26,23 +26,23 @@ const MiniDice = ({ value, color = '#10b981' }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '3px',
-            margin: '0 -2px',
+            gap: '2px',
+            margin: '0 -4px',
             zIndex: 10
         }}>
-            <span style={{ width: '8px', borderTop: `2px dashed ${color}`, opacity: 0.8 }} />
+            <span style={{ width: '6px', borderTop: `1.5px dashed ${color}`, opacity: 0.8 }} />
             <div style={{
-                width: '26px',
-                height: '26px',
+                width: '18px',
+                height: '18px',
                 position: 'relative',
                 background: isPlayerColor
                     ? 'radial-gradient(circle, #ffffff 0%, #f0fdf4 100%)'
                     : 'radial-gradient(circle, #ffffff 0%, #fff5f5 100%)',
-                borderRadius: '6px',
-                boxShadow: `0 0 8px ${color}80, inset 0 1px 2px rgba(255,255,255,1)`,
-                border: `1.8px dashed ${color}`,
+                borderRadius: '4px',
+                boxShadow: `0 0 5px ${color}60, inset 0 0.5px 1px rgba(255,255,255,1)`,
+                border: `1.2px dashed ${color}`,
                 boxSizing: 'border-box',
-                padding: '2px'
+                padding: '1px'
             }}>
                 {dots.map((pos, idx) => {
                     const getStyle = () => {
@@ -63,8 +63,8 @@ const MiniDice = ({ value, color = '#10b981' }) => {
                             key={idx}
                             style={{
                                 position: 'absolute',
-                                width: '3.5px',
-                                height: '3.5px',
+                                width: '2.2px',
+                                height: '2.2px',
                                 background: color,
                                 borderRadius: '50%',
                                 ...getStyle()
@@ -73,7 +73,7 @@ const MiniDice = ({ value, color = '#10b981' }) => {
                     );
                 })}
             </div>
-            <span style={{ width: '8px', borderTop: `2px dashed ${color}`, opacity: 0.8 }} />
+            <span style={{ width: '6px', borderTop: `1.5px dashed ${color}`, opacity: 0.8 }} />
         </div>
     );
 };
@@ -95,25 +95,34 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
     let borderColor = '';
     let shadowStyle = '';
     let dotColor = '';
+    let borderStyle = '2.5px solid';
 
-    if (isShielded) {
-        // 신성한 황금 보호막 주사위 테마 (초록색/분홍색 보드 위에서 눈에 띄도록 황금색으로 단일화)
-        bgStyle = 'radial-gradient(circle, #fffbeb 0%, #fef08a 100%)';
-        borderColor = '#eab308';
-        shadowStyle = '0 0 18px rgba(234, 179, 8, 0.85), inset 0 3px 6px rgba(255,255,255,0.95)';
-        dotColor = isPlayer ? '#047857' : '#be123c'; // 눈금 색상으로 소유자 판별
-    } else {
-        if (isPlayer) {
-            // 플레이어 주사위 (초록/민트 젤리 테마)
-            bgStyle = 'radial-gradient(circle, #ffffff 0%, #f0fdf4 100%)';
+    if (isPlayer) {
+        // 플레이어 주사위 (초록/민트 젤리 테마)
+        bgStyle = 'radial-gradient(circle, #ffffff 0%, #f0fdf4 100%)';
+        
+        if (isShielded) {
+            borderStyle = '4px double';
+            borderColor = '#10b981';
+            shadowStyle = '0 0 12px rgba(16, 185, 129, 0.4), inset 0 3px 6px rgba(255,255,255,0.9)';
+            dotColor = '#047857';
+        } else {
             borderColor = isComboActive ? '#10b981' : '#a7f3d0';
             shadowStyle = isComboActive
                 ? '0 0 15px rgba(16, 185, 129, 0.6), inset 0 3px 6px rgba(255,255,255,0.9)'
                 : 'inset 0 3px 6px rgba(255,255,255,1), 0 4px 10px rgba(16, 185, 129, 0.1)';
             dotColor = '#10b981';
+        }
+    } else {
+        // AI 주사위 (빨강/살구 젤리 테마)
+        bgStyle = 'radial-gradient(circle, #ffffff 0%, #fff5f5 100%)';
+        
+        if (isShielded) {
+            borderStyle = '4px double';
+            borderColor = '#ef4444';
+            shadowStyle = '0 0 12px rgba(239, 68, 68, 0.4), inset 0 3px 6px rgba(255,255,255,0.9)';
+            dotColor = '#be123c';
         } else {
-            // AI 주사위 (빨강/살구 젤리 테마)
-            bgStyle = 'radial-gradient(circle, #ffffff 0%, #fff5f5 100%)';
             borderColor = isComboActive ? '#f43f5e' : '#fecdd3';
             shadowStyle = isComboActive
                 ? '0 0 15px rgba(244, 63, 94, 0.6), inset 0 3px 6px rgba(255,255,255,0.9)'
@@ -130,7 +139,7 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
             background: bgStyle,
             borderRadius: '14px',
             boxShadow: shadowStyle,
-            border: `2.5px solid ${borderColor}`,
+            border: `${borderStyle} ${borderColor}`,
             boxSizing: 'border-box',
             padding: '8px',
             transition: 'all 0.3s'
@@ -140,7 +149,7 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
                     position: 'absolute',
                     inset: '-4px',
                     borderRadius: '18px',
-                    border: '1.5px solid rgba(234, 179, 8, 0.7)',
+                    border: `1.5px solid ${isPlayer ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'}`,
                     animation: 'pulse 1.5s infinite alternate',
                     pointerEvents: 'none'
                 }} />
@@ -1022,8 +1031,8 @@ const TikatukaGamePage = ({ onBack }) => {
             </div>
 
             <div style={{
-                width: '100%', maxWidth: '1180px', display: 'grid',
-                gridTemplateColumns: window.innerWidth <= 1024 ? '1fr' : '1fr 340px', gap: '30px', zIndex: 10
+                width: '100%', maxWidth: '1200px', display: 'grid',
+                gridTemplateColumns: window.innerWidth <= 1200 ? '1fr' : '820px 340px', gap: '30px', zIndex: 10
             }}>
                 {/* 메인 게임판 (나무 질감과 황금 몰딩) */}
                 <div style={{
@@ -1032,7 +1041,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     boxShadow: '0 25px 50px -12px rgba(244, 63, 94, 0.15), inset 0 0 30px rgba(244, 63, 94, 0.02)',
                     borderRadius: '35px', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center',
                     position: 'relative',
-                    maxWidth: '720px',
+                    maxWidth: '820px',
                     width: '100%'
                 }}>
                     {/* 상단 깃발 정보 */}
@@ -1189,11 +1198,10 @@ const TikatukaGamePage = ({ onBack }) => {
                                     </div>
 
                                     {/* 중앙: 대치 점령 지표 깃발 */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                        <span style={{ fontSize: '0.65rem', color: '#8e7a63', fontWeight: 800 }}>LINE {idx + 1}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }}>
                                         <span style={{ 
                                             fontSize: '1.4rem', 
-                                            filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.8))',
+                                            filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.2))',
                                             transform: 'scale(1.1)'
                                         }}>
                                             {getLineWinnerSymbol(idx)}
