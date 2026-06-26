@@ -1032,7 +1032,7 @@ const TikatukaGamePage = ({ onBack }) => {
 
             <div style={{
                 width: '100%', maxWidth: '1200px', display: 'grid',
-                gridTemplateColumns: window.innerWidth <= 1200 ? '1fr' : '820px 340px', gap: '30px', zIndex: 10
+                gridTemplateColumns: window.innerWidth <= 1200 ? '1fr' : '860px 340px', gap: '30px', zIndex: 10
             }}>
                 {/* 메인 게임판 (나무 질감과 황금 몰딩) */}
                 <div style={{
@@ -1041,7 +1041,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     boxShadow: '0 25px 50px -12px rgba(244, 63, 94, 0.15), inset 0 0 30px rgba(244, 63, 94, 0.02)',
                     borderRadius: '35px', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center',
                     position: 'relative',
-                    maxWidth: '820px',
+                    maxWidth: '860px',
                     width: '100%'
                 }}>
                     {/* 상단 깃발 정보 */}
@@ -1113,14 +1113,14 @@ const TikatukaGamePage = ({ onBack }) => {
                                         alignItems: 'center', 
                                         justifyContent: 'space-between',
                                         background: 'linear-gradient(135deg, #ffffff 0%, #fffbfc 100%)', // 뽀얀 순수 화이트 핑크
-                                        padding: '15px 25px',
+                                        padding: '15px 15px',
                                         borderRadius: '20px',
                                         border: '2px solid #ffeef0', // 산뜻한 연핑크 테두리
                                         boxShadow: '0 10px 25px rgba(244, 63, 94, 0.05)'
                                     }}
                                 >
                                     {/* 왼쪽: 플레이어 보드 라인 */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <div style={{ width: '48px', textAlign: 'right', fontWeight: 900, color: '#10b981', fontSize: '1.1rem' }}>
                                             {getColScore(playerBoard[idx])}점
                                         </div>
@@ -1179,7 +1179,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                                                     height: '48px',
                                                                     borderRadius: '14px',
                                                                     boxShadow: item.isShielded 
-                                                                        ? '0 0 18px rgba(234, 179, 8, 0.85)' 
+                                                                        ? '0 0 8px rgba(16, 185, 129, 0.3)' 
                                                                         : isCombo 
                                                                             ? '0 0 15px rgba(16, 185, 129, 0.95), 0 0 5px rgba(16, 185, 129, 0.5)' 
                                                                             : 'none',
@@ -1209,7 +1209,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                     </div>
 
                                     {/* 오른쪽: 상대 AI 보드 라인 */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <div 
                                             id={`ai-line-${idx}`}
                                             onClick={() => canPlaceAIIntrude && placeDiceOnBoard(idx, 'ai')}
@@ -1266,7 +1266,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                                                     height: '48px',
                                                                     borderRadius: '14px',
                                                                     boxShadow: item.isShielded 
-                                                                        ? '0 0 18px rgba(234, 179, 8, 0.85)' 
+                                                                        ? '0 0 8px rgba(239, 68, 68, 0.3)' 
                                                                         : isCombo 
                                                                             ? '0 0 15px rgba(249, 115, 22, 0.95), 0 0 5px rgba(249, 115, 22, 0.5)' 
                                                                             : 'none',
