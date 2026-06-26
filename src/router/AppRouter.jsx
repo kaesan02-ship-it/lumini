@@ -34,8 +34,8 @@ import CommunityHubPage from '../pages/CommunityHubPage';
 import ValueGamePage from '../pages/ValueGamePage';
 import AppleGamePage from '../pages/AppleGamePage';
 import SacheonseongGamePage from '../pages/SacheonseongGamePage';
-import Game2048Page from '../pages/Game2048Page';
 import WatermelonGamePage from '../pages/WatermelonGamePage';
+import TikatukaGamePage from '../pages/TikatukaGamePage';
 
 // Stores
 import useAuthStore from '../store/authStore';
@@ -59,7 +59,7 @@ export const PUBLIC_ROUTES = new Set([
     'create-event', 'community', 'groups', 'group-chat',
     'ranking', 'magazine', 'compatibility-game', 'weekly-report',
     'insights', 'ai-insights', 'stats', 'growth',
-    'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game',
+    'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game', 'tikatuka-game',
 ]);
 
 /**
@@ -279,6 +279,10 @@ const AppRouter = ({
 
             {step === 'watermelon-game' && (
                 <WatermelonGamePage key="watermelon-game" onBack={() => navigate('dashboard')} />
+            )}
+
+            {step === 'tikatuka-game' && (
+                <TikatukaGamePage key="tikatuka-game" onBack={() => navigate('dashboard')} />
             )}
 
             {/* ── 보호 페이지 (로그인 필수) ────────────────────── */}

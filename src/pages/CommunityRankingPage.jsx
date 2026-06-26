@@ -12,6 +12,7 @@ const SCORE_GUIDE = [
     { action: '2048 최고 진화 달성', points: '점수 합산 경쟁', icon: '🥚' },
     { action: '사과게임 10 만들기', points: '고득점 누적 경쟁', icon: '🍎' },
     { action: '수박게임 120초 합성', points: '타임어택 합성 경쟁', icon: '🍉' },
+    { action: '티카투카 주사위 대전', points: '연승 콤보 경쟁', icon: '🎲' },
 ];
 
 const FRUIT_EMOJIS = {
@@ -23,7 +24,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const { earnCrystals } = useCrystalStore();
     const { userName, activeRankingTab } = useUserStore();
     const { user } = useAuthStore();
-    const [activeTab, setActiveTab] = useState(activeRankingTab || 'apple'); // apple, shisen, game2048
+    const [activeTab, setActiveTab] = useState(activeRankingTab || 'apple'); // apple, shisen, game2048, watermelon, tikatuka
     const [showGuide, setShowGuide] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
@@ -67,6 +68,13 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                         { rank: 3, name: userName || '나', mbti: mbtiType || 'ENFP', score: 1150, badge: '🥉', isMe: true }
                     ];
                     setMyBestStat({ rank: 3, scoreVal: '1,150점' });
+                } else if (activeTab === 'tikatuka') {
+                    mockList = [
+                        { rank: 1, name: '지후', mbti: 'ENFJ', score: 11, badge: '🏆', isMe: false },
+                        { rank: 2, name: '서연', mbti: 'INFP', score: 8, badge: '🥈', isMe: false },
+                        { rank: 3, name: userName || '나', mbti: mbtiType || 'ENFP', score: 5, badge: '🥉', isMe: true }
+                    ];
+                    setMyBestStat({ rank: 3, scoreVal: '5연승' });
                 }
                 setLeaderboard(mockList);
                 setLoading(false);
@@ -183,6 +191,33 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
                 }
+            } else if (activeTab === 'tikatuka') {
+                // 5. 티카투카 랭킹 로드 (tikatuka_game_scores 테이블)
+                const { data: scores, error } = await supabase
+                    .from('tikatuka_game_scores')
+                    .select('max_win_streak, user_id, profiles(username, mbti_type)')
+                    .order('max_win_streak', { ascending: false })
+                    .limit(20);
+
+                if (!error && scores) {
+                    const top20 = scores.map((s, i) => ({
+                        rank: i + 1,
+                        name: s.profiles?.username || '익명',
+                        mbti: s.profiles?.mbti_type || '?',
+                        score: s.max_win_streak || 0,
+                        badge: i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',
+                        isMe: s.user_id === user?.id
+                    }));
+                    setLeaderboard(top20);
+
+                    // 내 정보 추출
+                    const myIdx = scores.findIndex(s => s.user_id === user?.id);
+                    if (myIdx !== -1) {
+                        setMyBestStat({ rank: myIdx + 1, scoreVal: `${scores[myIdx].max_win_streak}연승` });
+                    } else {
+                        setMyBestStat({ rank: '-', scoreVal: '0연승' });
+                    }
+                }
             }
         } catch (err) {
             console.error('Error fetching rankings:', err);
@@ -215,6 +250,9 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     }, [leaderboard, activeTab]);
 
     const formatScore = (val) => {
+        if (activeTab === 'tikatuka') {
+            return `${val}연승`;
+        }
         return `${val.toLocaleString()}점`;
     };
 
@@ -244,7 +282,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                 {/* 내 기록 현황 카드 */}
                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '18px', padding: '18px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.25)' }}>
                     <div style={{ fontSize: '0.78rem', opacity: 0.85, marginBottom: '8px' }}>
-                        내 {activeTab === 'apple' ? '사과게임' : activeTab === 'shisen' ? '사천성' : '2048'} 최고 기록
+                        내 {activeTab === 'apple' ? '사과게임' : activeTab === 'shisen' ? '사천성' : activeTab === 'game2048' ? '2048' : activeTab === 'watermelon' ? '수박게임' : activeTab === 'tikatuka' ? '티카투카' : ''} 최고 기록
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -279,7 +317,8 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                         { id: 'apple', label: '🍎 사과게임 랭킹' },
                         { id: 'shisen', label: '🐾 사천성 랭킹' },
                         { id: 'game2048', label: '🥚 2048 랭킹' },
-                        { id: 'watermelon', label: '🍉 수박게임 랭킹' }
+                        { id: 'watermelon', label: '🍉 수박게임 랭킹' },
+                        { id: 'tikatuka', label: '🎲 티카투카 랭킹' }
                     ].map(t => (
                         <button
                             key={t.id}

@@ -69,6 +69,22 @@ const QuickActionsGrid = ({ onNavigate, completedChallenges, streak, showValueGa
                     <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>수박 대수확 퍼즐 🏆</div>
                 </motion.div>
             </Tooltip>
+
+            <Tooltip text="상대 AI와 주사위를 굴려 점수를 겨루고, 상대를 깨부숴 연승에 도전하세요!" style={{ display: 'block', width: '100%' }}>
+                <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => onNavigate && onNavigate('tikatuka-game')}
+                    className="action-card tikatuka"
+                >
+                    <div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>AI 주사위 배틀 🎲</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🎲 티카투카
+                        </div>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>주사위 땅따먹기 🏆</div>
+                </motion.div>
+            </Tooltip>
             
             <Tooltip text="매일 주어지는 미션을 완료하고 크리스탈을 받으세요." style={{ display: 'block', width: '100%' }}>
                 <motion.div
