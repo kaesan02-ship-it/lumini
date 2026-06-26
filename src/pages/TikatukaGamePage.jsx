@@ -193,11 +193,16 @@ const OPPONENTS = {
     2: { name: '잠꾸러기 곰 코지', emoji: '🐻', difficulty: 'normal', desc: '푹신한 곰인형 코지! 느긋하지만 은근히 높은 주사위 눈을 잘 골라요.' },
     3: { name: '장난꾸러기 여우 치코', emoji: '🦊', difficulty: 'hard', desc: '꾀가 많은 여우 치코! 내 소중한 주사위를 호시탐탐 파괴하려 노려봅니다.' },
     4: { name: '아기 드래곤 슈슈', emoji: '🐉', difficulty: 'expert', desc: '영리한 미니 드래곤 슈슈! 마법 같은 지능으로 완벽한 침투 전술을 씁니다.' },
-    5: { name: '정령의 왕 루미엘', emoji: '🦄', difficulty: 'master', desc: '루미니 아케이드의 전설적인 정령왕 루미엘! 한 치의 오차도 없는 강력함을 자랑합니다.' }
+    5: { name: '정령의 왕 루미엘', emoji: '🦄', difficulty: 'master', desc: '루미니 아케이드의 전설적인 정령왕 루미엘! 한 치의 오차도 없는 강력함을 자랑합니다.' },
+    6: { name: '꼬마 마법사 티피', emoji: '🧙‍♀️', difficulty: 'hard', desc: '장난꾸러기 견습 마법사 티피! 기괴한 확률 연산으로 콤보를 만들어냅니다.' },
+    7: { name: '우주 래빗 스페이스', emoji: '🧑‍🚀', difficulty: 'expert', desc: '우주에서 온 아스트로 토끼! 최첨단 기계 지능으로 최적의 주사위 배치를 계산합니다.' },
+    8: { name: '수호기사 레오', emoji: '🦁', difficulty: 'master', desc: '용맹한 백수왕 레오! 철벽 같은 보호막 주사위 침투로 상대의 전술을 차단합니다.' },
+    9: { name: '달빛 고양이 냐옹', emoji: '🐈', difficulty: 'master', desc: '밤하늘의 기운을 담은 영묘 냐옹! 한 차원 다른 리롤 감각으로 실수를 절대 허용하지 않습니다.' },
+    10: { name: '수호신룡 레비아', emoji: '🐲', difficulty: 'god', desc: '루미니 세계의 최종 수호신 레비아! 한 수 한 수가 치명적인 전설의 신룡입니다.' }
 };
 
 const getOpponentInfo = (stageNum) => {
-    return OPPONENTS[stageNum] || { name: `심연의 군주 (Lv.${stageNum})`, emoji: '😈', difficulty: 'master', desc: '도전을 불허하는 강력한 적입니다.' };
+    return OPPONENTS[stageNum] || { name: `심연의 군주 (Lv.${stageNum})`, emoji: '😈', difficulty: 'god', desc: '도전을 불허하는 강력한 적입니다.' };
 };
 
 const canPlaceAnywhere = (board, oppBoard, diceVal, isShielded, isFirstMove) => {
@@ -278,13 +283,11 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacemen
         : 0;
     
     let destructionValue = 0;
-    let extraTurnValue = 0;
     if (destructibleCount > 0) {
         const oppCurrentScore = getColScore(oppCol);
         const oppNextCol = oppCol.filter(item => !(item.val === diceVal && !item.isShielded));
         const oppNextScore = getColScore(oppNextCol);
         destructionValue = oppCurrentScore - oppNextScore;
-        extraTurnValue = 12; // 추가 턴 획득 보상 가치
     }
 
     // 3. 칸 잠김 감쇄 페널티
@@ -304,9 +307,14 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacemen
         destWeight = 2.0;
         extraWeight = 14;
         spacePen = -2.0;
+    } else if (difficulty === 'god') {
+        destWeight = 3.2;
+        extraWeight = 22;
+        spacePen = -0.5;
     }
 
-    return scoreGain + (destructionValue * destWeight) + extraWeight + spacePen;
+    const finalExtraValue = destructibleCount > 0 ? extraWeight : 0;
+    return scoreGain + (destructionValue * destWeight) + finalExtraValue + spacePen;
 };
 
 const TikatukaGamePage = ({ onBack }) => {
@@ -411,12 +419,21 @@ const TikatukaGamePage = ({ onBack }) => {
                 supabase.from('tikatuka_game_scores')
                     .select('total_games')
                     .eq('user_id', user.id)
-                    .single()
+                    .maybeSingle()
                     .then(({ data, error }) => {
                         if (data && !error) {
                             supabase.from('tikatuka_game_scores')
                                 .update({ total_games: (data.total_games || 0) + 1 })
                                 .eq('user_id', user.id)
+                                .then(() => fetchLeaderboard());
+                        } else {
+                            supabase.from('tikatuka_game_scores')
+                                .insert({
+                                    user_id: user.id,
+                                    max_win_streak: 0,
+                                    total_wins: 0,
+                                    total_games: 1
+                                })
                                 .then(() => fetchLeaderboard());
                         }
                     });
@@ -682,37 +699,39 @@ const TikatukaGamePage = ({ onBack }) => {
                 setWinStreak(nextStreak);
                 earnCrystals(25);
 
-                if (nextStreak > bestWinStreak) {
+                const isNewRecord = nextStreak > bestWinStreak;
+                if (isNewRecord) {
                     setBestWinStreak(nextStreak);
                     localStorage.setItem(streakKey, nextStreak.toString());
+                }
 
-                    if (!USE_MOCK_DATA && user) {
-                        supabase.from('tikatuka_game_scores')
-                            .select('max_win_streak, total_wins, total_games')
-                            .eq('user_id', user.id)
-                            .single()
-                            .then(({ data, error }) => {
-                                if (data && !error) {
-                                    supabase.from('tikatuka_game_scores')
-                                        .update({ 
-                                            max_win_streak: nextStreak,
-                                            total_wins: (data.total_wins || 0) + 1,
-                                            total_games: (data.total_games || 0) + 1
-                                        })
-                                        .eq('user_id', user.id)
-                                        .then(() => fetchLeaderboard());
-                                } else {
-                                    supabase.from('tikatuka_game_scores')
-                                        .insert({ 
-                                            user_id: user.id, 
-                                            max_win_streak: nextStreak,
-                                            total_wins: 1,
-                                            total_games: 1
-                                        })
-                                        .then(() => fetchLeaderboard());
-                                }
-                            });
-                    }
+                if (!USE_MOCK_DATA && user) {
+                    supabase.from('tikatuka_game_scores')
+                        .select('max_win_streak, total_wins, total_games')
+                        .eq('user_id', user.id)
+                        .maybeSingle()
+                        .then(({ data, error }) => {
+                            if (data && !error) {
+                                const currentMax = data.max_win_streak || 0;
+                                supabase.from('tikatuka_game_scores')
+                                    .update({ 
+                                        max_win_streak: Math.max(currentMax, nextStreak),
+                                        total_wins: (data.total_wins || 0) + 1,
+                                        total_games: (data.total_games || 0) + 1
+                                    })
+                                    .eq('user_id', user.id)
+                                    .then(() => fetchLeaderboard());
+                            } else {
+                                supabase.from('tikatuka_game_scores')
+                                    .insert({ 
+                                        user_id: user.id, 
+                                        max_win_streak: nextStreak,
+                                        total_wins: 1,
+                                        total_games: 1
+                                    })
+                                    .then(() => fetchLeaderboard());
+                            }
+                        });
                 }
             } else if (result === 'lose') {
                 setWinStreak(0);
@@ -720,12 +739,22 @@ const TikatukaGamePage = ({ onBack }) => {
                     supabase.from('tikatuka_game_scores')
                         .select('total_games')
                         .eq('user_id', user.id)
-                        .single()
+                        .maybeSingle()
                         .then(({ data, error }) => {
                             if (data && !error) {
                                 supabase.from('tikatuka_game_scores')
                                     .update({ total_games: (data.total_games || 0) + 1 })
-                                    .eq('user_id', user.id);
+                                    .eq('user_id', user.id)
+                                    .then(() => fetchLeaderboard());
+                            } else {
+                                supabase.from('tikatuka_game_scores')
+                                    .insert({
+                                        user_id: user.id,
+                                        max_win_streak: 0,
+                                        total_wins: 0,
+                                        total_games: 1
+                                    })
+                                    .then(() => fetchLeaderboard());
                             }
                         });
                 }
@@ -779,8 +808,14 @@ const TikatukaGamePage = ({ onBack }) => {
                             }
                         }
 
-                        // 가치가 낮아 리롤을 해야 할 경우
-                        if (maxValNormal < 4 && !aiReRollUsed) {
+                        // 가치가 낮아 리롤을 해야 할 경우 (난이도별 리롤 임계치 고도화)
+                        let reRollThreshold = 4;
+                        if (opponentInfo.difficulty === 'hard') reRollThreshold = 6;
+                        else if (opponentInfo.difficulty === 'expert') reRollThreshold = 7;
+                        else if (opponentInfo.difficulty === 'master') reRollThreshold = 8;
+                        else if (opponentInfo.difficulty === 'god') reRollThreshold = 10;
+
+                        if (maxValNormal < reRollThreshold && !aiReRollUsed) {
                             setAiReRollUsed(true);
                             let aiReRollVal = Math.floor(Math.random() * 6) + 1;
                             
