@@ -19,6 +19,7 @@ const MiniDice = ({ value, color = '#10b981' }) => {
     };
 
     const dots = dotPositions[value] || [];
+    const isPlayerColor = color === '#10b981';
 
     return (
         <div style={{
@@ -34,7 +35,9 @@ const MiniDice = ({ value, color = '#10b981' }) => {
                 width: '26px',
                 height: '26px',
                 position: 'relative',
-                background: '#ffffff',
+                background: isPlayerColor
+                    ? 'radial-gradient(circle, #ffffff 0%, #f0fdf4 100%)'
+                    : 'radial-gradient(circle, #ffffff 0%, #fff5f5 100%)',
                 borderRadius: '6px',
                 boxShadow: `0 0 8px ${color}80, inset 0 1px 2px rgba(255,255,255,1)`,
                 border: `1.8px dashed ${color}`,
@@ -87,20 +90,46 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
 
     const dots = dotPositions[value] || [];
 
-    const comboColor = isPlayer ? '#10b981' : '#f97316';
-    
-    let borderColor = '#cbd5e1';
-    if (isShielded) {
-        borderColor = '#f43f5e';
-    } else if (isComboActive) {
-        borderColor = comboColor;
-    }
+    // 플레이어/AI 주사위 색상 정보 분기 정의
+    let bgStyle = '';
+    let borderColor = '';
+    let shadowStyle = '';
+    let dotColor = '';
 
-    let shadowStyle = 'inset 0 3px 6px rgba(255,255,255,1), 0 4px 10px rgba(148, 163, 184, 0.25)';
-    if (isShielded) {
-        shadowStyle = '0 0 15px rgba(244, 63, 94, 0.4), inset 0 3px 6px rgba(255,255,255,0.9)';
-    } else if (isComboActive) {
-        shadowStyle = `0 0 15px ${comboColor}80, inset 0 3px 6px rgba(255,255,255,0.9)`;
+    if (isPlayer) {
+        // 플레이어 주사위 (초록/민트 젤리 테마)
+        bgStyle = isShielded 
+            ? 'radial-gradient(circle, #ecfdf5 0%, #d1fae5 100%)'
+            : 'radial-gradient(circle, #ffffff 0%, #f0fdf4 100%)';
+        
+        borderColor = isShielded
+            ? '#34d399'
+            : isComboActive ? '#10b981' : '#a7f3d0';
+
+        shadowStyle = isShielded
+            ? '0 0 15px rgba(52, 211, 153, 0.5), inset 0 3px 6px rgba(255,255,255,0.9)'
+            : isComboActive
+                ? '0 0 15px rgba(16, 185, 129, 0.6), inset 0 3px 6px rgba(255,255,255,0.9)'
+                : 'inset 0 3px 6px rgba(255,255,255,1), 0 4px 10px rgba(16, 185, 129, 0.1)';
+
+        dotColor = isShielded ? '#047857' : '#10b981';
+    } else {
+        // AI 주사위 (빨강/살구 젤리 테마)
+        bgStyle = isShielded 
+            ? 'radial-gradient(circle, #fff1f2 0%, #ffe4e6 100%)'
+            : 'radial-gradient(circle, #ffffff 0%, #fff5f5 100%)';
+        
+        borderColor = isShielded
+            ? '#fb7185'
+            : isComboActive ? '#f43f5e' : '#fecdd3';
+
+        shadowStyle = isShielded
+            ? '0 0 15px rgba(251, 113, 133, 0.5), inset 0 3px 6px rgba(255,255,255,0.9)'
+            : isComboActive
+                ? '0 0 15px rgba(244, 63, 94, 0.6), inset 0 3px 6px rgba(255,255,255,0.9)'
+                : 'inset 0 3px 6px rgba(255,255,255,1), 0 4px 10px rgba(244, 63, 94, 0.1)';
+
+        dotColor = isShielded ? '#be123c' : '#ef4444';
     }
 
     return (
@@ -108,9 +137,7 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
             width: '100%',
             height: '100%',
             position: 'relative',
-            background: isShielded 
-                ? 'radial-gradient(circle, #fff1f2 0%, #ffe4e6 100%)'
-                : 'radial-gradient(circle, #ffffff 0%, #f8fafc 100%)',
+            background: bgStyle,
             borderRadius: '14px',
             boxShadow: shadowStyle,
             border: `2.5px solid ${borderColor}`,
@@ -123,7 +150,7 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
                     position: 'absolute',
                     inset: '-4px',
                     borderRadius: '18px',
-                    border: '1.5px solid rgba(244, 63, 94, 0.5)',
+                    border: `1.5px solid ${isPlayer ? 'rgba(52, 211, 153, 0.6)' : 'rgba(251, 113, 133, 0.6)'}`,
                     animation: 'pulse 1.5s infinite alternate',
                     pointerEvents: 'none'
                 }} />
@@ -150,7 +177,7 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
                             position: 'absolute',
                             width: '7.5px',
                             height: '7.5px',
-                            background: isShielded ? '#be123c' : '#334155',
+                            background: dotColor,
                             borderRadius: '50%',
                             boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.15)',
                             ...getStyle()
@@ -983,9 +1010,9 @@ const TikatukaGamePage = ({ onBack }) => {
             }}>
                 {/* 메인 게임판 (나무 질감과 황금 몰딩) */}
                 <div style={{
-                    background: '#ffffff', // 화이트 젤리 보드
-                    border: '4.5px solid #fecdd3', // 부드러운 핑크 테두리
-                    boxShadow: '0 20px 40px rgba(244, 63, 94, 0.08), inset 0 0 20px rgba(244, 63, 94, 0.03)',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #fffbfe 100%)', // 부드러운 화이트 핑크 그라데이션
+                    border: '5px solid #ffe4e6', // 더 도톰하고 뽀송한 핑크 테두리
+                    boxShadow: '0 25px 50px -12px rgba(244, 63, 94, 0.15), inset 0 0 30px rgba(244, 63, 94, 0.02)',
                     borderRadius: '35px', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center',
                     position: 'relative',
                     maxWidth: '720px',
@@ -1029,11 +1056,11 @@ const TikatukaGamePage = ({ onBack }) => {
                                         display: 'flex', 
                                         alignItems: 'center', 
                                         justifyContent: 'space-between',
-                                        background: 'rgba(0,0,0,0.25)',
+                                        background: 'linear-gradient(135deg, #ffffff 0%, #fffbfc 100%)', // 뽀얀 순수 화이트 핑크
                                         padding: '15px 25px',
                                         borderRadius: '20px',
-                                        border: '1.5px solid #4a3325',
-                                        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
+                                        border: '2px solid #ffeef0', // 산뜻한 연핑크 테두리
+                                        boxShadow: '0 10px 25px rgba(244, 63, 94, 0.05)'
                                     }}
                                 >
                                     {/* 왼쪽: 플레이어 보드 라인 */}
@@ -1046,38 +1073,65 @@ const TikatukaGamePage = ({ onBack }) => {
                                             onClick={() => canPlacePlayer && placeDiceOnBoard(idx, 'player')}
                                             title={canPlacePlayer ? "클릭하여 주사위를 배치합니다" : "주사위를 배치할 수 없습니다"}
                                             style={{
-                                                width: '190px', height: '70px',
-                                                background: canPlacePlayer ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.45)',
+                                                width: '235px', height: '70px',
+                                                background: canPlacePlayer ? 'rgba(16, 185, 129, 0.12)' : 'rgba(240, 253, 244, 0.45)',
                                                 borderRadius: '16px',
-                                                border: canPlacePlayer ? '2px dashed #10b981' : '1.5px solid #3d261b',
+                                                border: canPlacePlayer ? '2.5px dashed #10b981' : '1.5px solid rgba(16, 185, 129, 0.15)',
                                                 padding: '6px 12px',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '10px',
                                                 cursor: canPlacePlayer ? 'pointer' : 'default',
                                                 transition: 'all 0.2s',
-                                                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.6)'
+                                                boxShadow: 'inset 0 2px 6px rgba(16, 185, 129, 0.05)'
                                             }}
                                         >
-                                            <AnimatePresence>
-                                                {playerBoard[idx].map((item) => (
-                                                    <motion.div
-                                                        key={item.id}
-                                                        initial={{ scale: 0.1, x: -100, rotate: -45 }}
-                                                        animate={{ scale: 1, x: 0, rotate: 0 }}
-                                                        exit={{ 
-                                                            scale: 0.3, 
-                                                            y: (Math.random() - 0.5) * 150, 
-                                                            x: -250, 
-                                                            rotate: -360, 
-                                                            opacity: 0 
-                                                        }}
-                                                        transition={{ type: 'spring', stiffness: 220, damping: 13 }}
-                                                        style={{ width: '48px', height: '48px' }}
-                                                    >
-                                                        <DiceDot value={item.val} isShielded={item.isShielded} />
-                                                    </motion.div>
-                                                ))}
+                                            <AnimatePresence mode="popLayout">
+                                                {(() => {
+                                                    const counts = {};
+                                                    playerBoard[idx].forEach(item => {
+                                                        counts[item.val] = (counts[item.val] || 0) + 1;
+                                                    });
+
+                                                    const elements = [];
+                                                    playerBoard[idx].forEach((item, itemIdx) => {
+                                                        const isCombo = counts[item.val] >= 2;
+                                                        
+                                                        if (itemIdx > 0 && playerBoard[idx][itemIdx - 1].val === item.val) {
+                                                            elements.push(
+                                                                <div key={`link_${item.id}`} style={{ display: 'flex', alignItems: 'center' }}>
+                                                                    <MiniDice value={item.val} color="#10b981" />
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        elements.push(
+                                                            <motion.div
+                                                                key={item.id}
+                                                                initial={{ scale: 0.1, x: -100, rotate: -45 }}
+                                                                animate={{ scale: 1, x: 0, rotate: 0 }}
+                                                                exit={{ 
+                                                                    scale: 0.3, 
+                                                                    y: (Math.random() - 0.5) * 150, 
+                                                                    x: -250, 
+                                                                    rotate: -360, 
+                                                                    opacity: 0 
+                                                                }}
+                                                                transition={{ type: 'spring', stiffness: 220, damping: 13 }}
+                                                                style={{ 
+                                                                    width: '48px', 
+                                                                    height: '48px',
+                                                                    borderRadius: '14px',
+                                                                    boxShadow: isCombo ? '0 0 15px rgba(16, 185, 129, 0.95), 0 0 5px rgba(16, 185, 129, 0.5)' : 'none',
+                                                                    transition: 'box-shadow 0.3s'
+                                                                }}
+                                                            >
+                                                                <DiceDot value={item.val} isShielded={item.isShielded} isComboActive={isCombo} isPlayer={true} />
+                                                            </motion.div>
+                                                        );
+                                                    });
+                                                    return elements;
+                                                })()}
                                             </AnimatePresence>
                                         </div>
                                     </div>
@@ -1101,10 +1155,10 @@ const TikatukaGamePage = ({ onBack }) => {
                                             onClick={() => canPlaceAIIntrude && placeDiceOnBoard(idx, 'ai')}
                                             title={canPlaceAIIntrude ? "클릭하여 실드 주사위로 침투 배치합니다" : "침투 배치할 수 없습니다 (실드 주사위가 필요합니다)"}
                                             style={{
-                                                width: '190px', height: '70px',
-                                                background: canPlaceAIIntrude ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0,0,0,0.45)',
+                                                width: '235px', height: '70px',
+                                                background: canPlaceAIIntrude ? 'rgba(244, 63, 94, 0.12)' : 'rgba(255, 241, 242, 0.45)',
                                                 borderRadius: '16px',
-                                                border: canPlaceAIIntrude ? '2px dashed #0284c7' : '1.5px solid #3d261b',
+                                                border: canPlaceAIIntrude ? '2.5px dashed #f43f5e' : '1.5px solid rgba(244, 63, 94, 0.15)',
                                                 padding: '6px 12px',
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -1112,31 +1166,58 @@ const TikatukaGamePage = ({ onBack }) => {
                                                 gap: '10px',
                                                 cursor: canPlaceAIIntrude ? 'pointer' : 'default',
                                                 transition: 'all 0.2s',
-                                                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.6)'
+                                                boxShadow: 'inset 0 2px 6px rgba(244, 63, 94, 0.05)'
                                             }}
                                         >
-                                            <AnimatePresence>
-                                                {aiBoard[idx].map((item) => (
-                                                    <motion.div
-                                                        key={item.id}
-                                                        initial={{ scale: 0.1, x: 100, rotate: 45 }}
-                                                        animate={{ scale: 1, x: 0, rotate: 0 }}
-                                                        exit={{ 
-                                                            scale: 0.3, 
-                                                            y: (Math.random() - 0.5) * 150, 
-                                                            x: 250, 
-                                                            rotate: 360, 
-                                                            opacity: 0 
-                                                        }}
-                                                        transition={{ type: 'spring', stiffness: 220, damping: 13 }}
-                                                        style={{ width: '48px', height: '48px' }}
-                                                    >
-                                                        <DiceDot value={item.val} isShielded={item.isShielded} />
-                                                    </motion.div>
-                                                ))}
+                                            <AnimatePresence mode="popLayout">
+                                                {(() => {
+                                                    const counts = {};
+                                                    aiBoard[idx].forEach(item => {
+                                                        counts[item.val] = (counts[item.val] || 0) + 1;
+                                                    });
+
+                                                    const elements = [];
+                                                    aiBoard[idx].forEach((item, itemIdx) => {
+                                                        const isCombo = counts[item.val] >= 2;
+
+                                                        if (itemIdx > 0 && aiBoard[idx][itemIdx - 1].val === item.val) {
+                                                            elements.push(
+                                                                <div key={`link_${item.id}`} style={{ display: 'flex', alignItems: 'center' }}>
+                                                                    <MiniDice value={item.val} color="#f97316" />
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        elements.push(
+                                                            <motion.div
+                                                                key={item.id}
+                                                                initial={{ scale: 0.1, x: 100, rotate: 45 }}
+                                                                animate={{ scale: 1, x: 0, rotate: 0 }}
+                                                                exit={{ 
+                                                                    scale: 0.3, 
+                                                                    y: (Math.random() - 0.5) * 150, 
+                                                                    x: 250, 
+                                                                    rotate: 360, 
+                                                                    opacity: 0 
+                                                                }}
+                                                                transition={{ type: 'spring', stiffness: 220, damping: 13 }}
+                                                                style={{ 
+                                                                    width: '48px', 
+                                                                    height: '48px',
+                                                                    borderRadius: '14px',
+                                                                    boxShadow: isCombo ? '0 0 15px rgba(249, 115, 22, 0.95), 0 0 5px rgba(249, 115, 22, 0.5)' : 'none',
+                                                                    transition: 'box-shadow 0.3s'
+                                                                }}
+                                                            >
+                                                                <DiceDot value={item.val} isShielded={item.isShielded} isComboActive={isCombo} isPlayer={false} />
+                                                            </motion.div>
+                                                        );
+                                                    });
+                                                    return elements;
+                                                })()}
                                             </AnimatePresence>
                                         </div>
-                                        <div style={{ width: '48px', textAlign: 'left', fontWeight: 900, color: '#a78bfa', fontSize: '1.1rem' }}>
+                                        <div style={{ width: '48px', textAlign: 'left', fontWeight: 900, color: '#a855f7', fontSize: '1.1rem' }}>
                                             {getColScore(aiBoard[idx])}점
                                         </div>
                                     </div>
@@ -1149,8 +1230,10 @@ const TikatukaGamePage = ({ onBack }) => {
                     <div style={{ 
                         marginTop: '25px', width: '100%', display: 'flex', 
                         justifyContent: 'center', gap: '30px', alignItems: 'center',
-                        background: '#f8fafc', padding: '20px', borderRadius: '24px',
-                        border: '1.5px solid #e2e8f0', position: 'relative'
+                        background: 'linear-gradient(135deg, #ffffff 0%, #fff5f6 100%)',
+                        padding: '20px', borderRadius: '24px',
+                        border: '2px solid #fff1f2', position: 'relative',
+                        boxShadow: '0 10px 25px rgba(244, 63, 94, 0.04)'
                     }}>
                         {/* 굴려진 주사위 디스플레이 */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
@@ -1220,9 +1303,11 @@ const TikatukaGamePage = ({ onBack }) => {
                                         disabled={playerReRollUsed || currentDice === null || isRolling || isReRolling}
                                         style={{
                                             padding: '12px 20px', 
-                                            background: playerReRollUsed ? 'rgba(0,0,0,0.3)' : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-                                            border: playerReRollUsed ? '1.5px solid #4a3325' : 'none', 
-                                            color: playerReRollUsed ? '#64748b' : 'white', 
+                                            background: playerReRollUsed 
+                                                ? '#e2e8f0' 
+                                                : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                                            border: playerReRollUsed ? '1.5px solid #cbd5e1' : 'none', 
+                                            color: playerReRollUsed ? '#94a3b8' : 'white', 
                                             fontWeight: 900, borderRadius: '12px', fontSize: '0.88rem',
                                             cursor: (playerReRollUsed || currentDice === null || isRolling) ? 'not-allowed' : 'pointer',
                                             boxShadow: playerReRollUsed ? 'none' : '0 6px 15px rgba(239, 68, 68, 0.3)'
@@ -1232,7 +1317,17 @@ const TikatukaGamePage = ({ onBack }) => {
                                     </button>
                                 </div>
                             ) : (
-                                <div style={{ padding: '12px 35px', background: 'rgba(0,0,0,0.5)', border: '1.5px solid #8b5cf6', color: '#a78bfa', fontWeight: 800, borderRadius: '12px', fontSize: '0.9rem', textAlign: 'center' }}>
+                                <div style={{ 
+                                    padding: '12px 35px', 
+                                    background: 'rgba(168, 85, 247, 0.08)', 
+                                    border: '2px dashed #c084fc', 
+                                    color: '#7e22ce', 
+                                    fontWeight: 900, 
+                                    borderRadius: '12px', 
+                                    fontSize: '0.9rem', 
+                                    textAlign: 'center',
+                                    boxShadow: 'inset 0 2px 4px rgba(168, 85, 247, 0.05)'
+                                }}>
                                     {aiThinking ? '🤖 AI가 전술 계산 중...' : '🤖 상대가 행동 준비 중...'}
                                 </div>
                             )}
