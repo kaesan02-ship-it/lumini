@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowLeft, Gem, Volume2, VolumeX, Sparkles, RefreshCw, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Trophy, ArrowLeft, Gem, Volume2, VolumeX, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
@@ -39,7 +39,7 @@ const DiceDot = ({ value, isShielded }) => {
             padding: '8px',
             transition: 'all 0.3s'
         }}>
-            {/* 보호막 막 보호 아우라 시각화 */}
+            {/* 보호막 아우라 시각화 */}
             {isShielded && (
                 <div style={{
                     position: 'absolute',
@@ -84,7 +84,7 @@ const DiceDot = ({ value, isShielded }) => {
     );
 };
 
-// 열(Column)별 점수 합산 룰 (isShielded 객체 지원)
+// 열(Column)별 점수 합산 룰
 const getColScore = (colArray) => {
     const counts = {};
     colArray.forEach(item => {
@@ -112,17 +112,13 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacemen
     if (isShieldPlacement) {
         if (opponentBoard[col].length >= 3) return -Infinity;
 
-        // 상대 보드에 놓는 것이므로, 상대의 점수 변화를 최소화(혹은 방해)하려 함.
-        // 상대 라인에 내 주사위를 박아서 콤보가 깨지거나 잉여 칸이 차게 만드는 가치 계산
         const currentOppScore = getColScore(opponentBoard[col]);
         const nextOppCol = [...opponentBoard[col], { id: 'temp', val: diceVal, isShielded: true }];
         const nextOppScore = getColScore(nextOppCol);
         const scoreDifference = nextOppScore - currentOppScore;
 
-        // 상대방 라인을 가득 채워서 게임을 끝내려 하는 페널티/보너스 (상대 보드를 꽉 채우는 이득)
         const lineFullBonus = nextOppCol.length === 3 ? 4 : 0;
         
-        // 상대의 점수가 낮게 증가할수록 좋으며, 콤보를 꼬아버리는 배치 선호
         return -scoreDifference + lineFullBonus + 2; 
     }
 
@@ -146,13 +142,13 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard, isShieldPlacemen
         const oppNextCol = oppCol.filter(item => !(item.val === diceVal && !item.isShielded));
         const oppNextScore = getColScore(oppNextCol);
         destructionValue = oppCurrentScore - oppNextScore;
-        extraTurnValue = 12; // 추가 턴 획득에 의한 막강한 보상 점수
+        extraTurnValue = 12; // 추가 턴 획득 보상 가치
     }
 
     // 3. 칸 잠김 감쇄 페널티
-    const spacePenalty = nextCol.length === 3 ? -3 : 0;
+    const spacePenalty = nextCol.length === 3 ? -2.5 : 0;
 
-    return scoreGain + (destructionValue * 1.7) + extraTurnValue + spacePenalty;
+    return scoreGain + (destructionValue * 1.65) + extraTurnValue + spacePenalty;
 };
 
 const TikatukaGamePage = ({ onBack }) => {
@@ -338,9 +334,10 @@ const TikatukaGamePage = ({ onBack }) => {
         setShowReRollSelect(false);
     };
 
-    // 주사위 배치 핵심 함수 (동귀어진 및 실드 침투 룰 반영)
-    const placeDiceOnBoard = (lineIdx, targetOwner) => {
-        if (currentDice === null || isRolling || showReRollSelect) return;
+    // 주사위 배치 핵심 함수 (동귀어진 및 실드 침투 룰 반영, React 비동기 보정용 세 번째 인자 탑재)
+    const placeDiceOnBoard = (lineIdx, targetOwner, customDiceVal = null) => {
+        const diceToPlace = customDiceVal !== null ? customDiceVal : currentDice;
+        if (diceToPlace === null || isRolling || showReRollSelect) return;
 
         // targetOwner: 'player' (내 보드) or 'ai' (상대 보드)
         const isTargetPlayerBoard = targetOwner === 'player';
@@ -359,7 +356,7 @@ const TikatukaGamePage = ({ onBack }) => {
         placeSfx.volume = 0.2;
         if (!isMuted) placeSfx.play().catch(() => {});
 
-        const targetVal = currentDice;
+        const targetVal = diceToPlace;
         const oppLine = oppBoard[lineIdx];
         
         // 상대 라인에서 '보호막이 없는' 일치 주사위가 존재하는지 확인
@@ -373,7 +370,7 @@ const TikatukaGamePage = ({ onBack }) => {
         if (matchExists && !isOpponentPlacement) {
             hasDestroyed = true;
             
-            // 파티클 생성
+            // 파티클 생성 (수평 가로 라인 ID 적용)
             const colId = isTargetPlayerBoard ? `ai-line-${lineIdx}` : `player-line-${lineIdx}`;
             const rect = document.getElementById(colId)?.getBoundingClientRect();
             if (rect) {
@@ -390,7 +387,7 @@ const TikatukaGamePage = ({ onBack }) => {
             newOppBoard[lineIdx] = oppLine.filter(item => !(item.val === targetVal && !item.isShielded));
             
             // 동귀어진(Mutual Destruction): 내 주사위도 보드에 올라가지 않고 증발
-            // (즉, newTargetBoard[lineIdx]에 currentDice를 추가하지 않고 넘어감)
+            // (즉, newTargetBoard[lineIdx]에 주사위를 추가하지 않음)
         } else {
             // 알까기가 일어나지 않았거나 침투 배치일 때: 정상 배치
             const newItem = {
@@ -546,11 +543,11 @@ const TikatukaGamePage = ({ onBack }) => {
         }
     };
 
-    // AI 지능형 의사결정 및 턴 루프 처리 (AI 멈춤 버그 완벽 수정)
+    // AI 행동 턴 처리 및 멈춤 버그 핫픽스 (상태 의존성 클로저 보강 완료)
     useEffect(() => {
         if (gameState !== 'playing' || currentTurn !== 'ai' || gameResult || aiThinking || isRolling) return;
 
-        // AI 컵에 주사위가 없을 때 주사위 굴리기 자동 개시
+        // AI 차례인데 아직 굴려진 주사위가 없는 경우 주사위 자동 롤링 격발
         if (currentDice === null && !showReRollSelect) {
             setAiThinking(true);
             let aiDiceVal = Math.floor(Math.random() * 6) + 1;
@@ -564,7 +561,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     if (count > 8) {
                         clearInterval(diceAnimInterval);
                         
-                        // 1. AI 주사위 리롤 여부 연산 (가치 하위일 때 1회 리롤 기회 소모)
+                        // 1. 리롤 조건 확인
                         let bestColNormal = -1;
                         let maxValNormal = -Infinity;
                         for (let c = 0; c < 3; c++) {
@@ -575,14 +572,12 @@ const TikatukaGamePage = ({ onBack }) => {
                             }
                         }
 
-                        // 가치가 지나치게 낮고 리롤 기회가 있다면 리롤 시도
+                        // 가치가 낮아 리롤을 해야 할 경우
                         if (maxValNormal < 4 && !aiReRollUsed) {
                             setAiReRollUsed(true);
                             let aiReRollVal = Math.floor(Math.random() * 6) + 1;
                             
-                            // 리롤 굴림 지연
                             setTimeout(() => {
-                                // 기존 값과 리롤 값 중 더 유리한 주사위 선택
                                 let maxValReRoll = -Infinity;
                                 for (let c = 0; c < 3; c++) {
                                     const val = evaluateMove(c, aiReRollVal, aiBoard, playerBoard, false);
@@ -610,17 +605,16 @@ const TikatukaGamePage = ({ onBack }) => {
             };
         }
 
-        // AI 주사위 장착 실행 함수
-        const executeAiPlacement = (diceVal) => {
+        // AI 주사위 장착 실행 함수 (매개변수로 주사위 값을 전달받아 비동기 상태 지연 해결)
+        function executeAiPlacement(diceVal) {
             setTimeout(() => {
                 let bestCol = -1;
                 let maxVal = -Infinity;
-                let shouldPlaceOpponent = false; // 상대 보드 침투 여부
+                let shouldPlaceOpponent = false;
 
-                // 실드 주사위이고 첫 턴이 아닐 경우 상대 보드 배치 가치도 비교
                 const canIntrude = isCurrentDiceShielded && !isFirstMove;
 
-                // 내 보드 가치 비교
+                // 내 보드 배치 가치 분석
                 for (let c = 0; c < 3; c++) {
                     const val = evaluateMove(c, diceVal, aiBoard, playerBoard, false);
                     if (val > maxVal) {
@@ -630,11 +624,10 @@ const TikatukaGamePage = ({ onBack }) => {
                     }
                 }
 
-                // 상대 보드 침투 가치 비교
+                // 상대 보드 침투 배치 가치 분석
                 if (canIntrude) {
                     for (let c = 0; c < 3; c++) {
                         const val = evaluateMove(c, diceVal, aiBoard, playerBoard, true);
-                        // 침투 배치는 추가 가치 가산점 부여
                         if (val > maxVal) {
                             maxVal = val;
                             bestCol = c;
@@ -643,7 +636,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     }
                 }
 
-                // 비상 덤핑 처리
+                // 가용 비상 덤핑
                 if (bestCol === -1) {
                     for (let c = 0; c < 3; c++) {
                         if (aiBoard[c].length < 3) {
@@ -656,14 +649,23 @@ const TikatukaGamePage = ({ onBack }) => {
 
                 if (bestCol !== -1) {
                     setAiThinking(false);
-                    // 결정된 위치에 주사위 배치 격발
-                    placeDiceOnBoard(bestCol, shouldPlaceOpponent ? 'player' : 'ai');
+                    // 핫픽스: 세 번째 매개변수로 결정된 주사위 값을 다이렉트로 전달해 멈춤 현상 차단
+                    placeDiceOnBoard(bestCol, shouldPlaceOpponent ? 'player' : 'ai', diceVal);
                 } else {
                     setAiThinking(false);
                 }
             }, 600);
-        };
-    }, [currentTurn, gameState, currentDice, aiThinking, isRolling, showReRollSelect]);
+        }
+    }, [currentTurn, gameState, currentDice, aiThinking, isRolling, showReRollSelect, aiBoard, playerBoard, isCurrentDiceShielded, isFirstMove, aiReRollUsed]);
+
+    // 라인 0,1,2의 대결 상황 판정 (깃발 인디케이터용)
+    const getLineWinnerSymbol = (lineIdx) => {
+        const pScore = getColScore(playerBoard[lineIdx]);
+        const aScore = getColScore(aiBoard[lineIdx]);
+        if (pScore > aScore) return '👑';
+        if (aScore > pScore) return '💀';
+        return '⚔️';
+    };
 
     return (
         <div style={{
@@ -682,7 +684,7 @@ const TikatukaGamePage = ({ onBack }) => {
                         top: p.y,
                         width: p.size,
                         height: p.size,
-                        background: '#38bdf8', // 실드 전파 빛바랜 파란 조각 파티클
+                        background: '#38bdf8', // 파란 조각 파티클
                         borderRadius: '2px',
                         pointerEvents: 'none',
                         zIndex: 99,
@@ -759,7 +761,7 @@ const TikatukaGamePage = ({ onBack }) => {
             }}>
                 {/* 메인 게임판 (나무 질감과 황금 몰딩) */}
                 <div style={{
-                    background: 'radial-gradient(circle, #2e1e18 0%, #170f0b 100%)', // 깊고 중후한 어두운 나무 질감
+                    background: 'radial-gradient(circle, #2e1e18 0%, #170f0b 100%)',
                     border: '4px solid #b8860b',
                     boxShadow: '0 25px 55px rgba(0,0,0,0.8), inset 0 0 25px rgba(0,0,0,0.7)',
                     borderRadius: '35px', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -779,7 +781,7 @@ const TikatukaGamePage = ({ onBack }) => {
                         </div>
                     </div>
 
-                    {/* 대칭 대결 플레이 필드 (가로 행(Row) 기반 전면 재구조화) */}
+                    {/* 대칭 대결 플레이 필드 (가로 행(Row) 기반 대치 구조) */}
                     <div style={{
                         width: '100%', 
                         display: 'flex', 
@@ -789,11 +791,8 @@ const TikatukaGamePage = ({ onBack }) => {
                         alignItems: 'center',
                         justifyContent: 'center'
                     }}>
-                        {/* 3개 가로 라인 대치 렌더링 루프 */}
                         {[0, 1, 2].map((idx) => {
                             const canPlacePlayer = currentTurn === 'player' && currentDice !== null && !isRolling && !showReRollSelect && playerBoard[idx].length < 3;
-                            
-                            // 상대 보드 침투 배치 가능 여부 (플레이어의 실드 주사위이고, 첫 배치가 아닐 때만 AI 보드에 심기 가능)
                             const canPlaceAIIntrude = currentTurn === 'player' && currentDice !== null && !isRolling && !showReRollSelect && isCurrentDiceShielded && !isFirstMove && aiBoard[idx].length < 3;
 
                             return (
@@ -881,7 +880,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                                 padding: '6px 12px',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                flexDirection: 'row-reverse', // 시각 대칭 정렬
+                                                flexDirection: 'row-reverse',
                                                 gap: '10px',
                                                 cursor: canPlaceAIIntrude ? 'pointer' : 'default',
                                                 transition: 'all 0.2s',
@@ -947,8 +946,8 @@ const TikatukaGamePage = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* 리롤 2지선다 팝업 UI */}
-                        {showReRollSelect && (
+                        {/* 리롤 2지선다 팝업 UI (세이프가드 강화) */}
+                        {showReRollSelect && currentTurn === 'player' && currentDice !== null && reRolledDice !== null && (
                             <div style={{
                                 position: 'absolute', inset: 0, borderRadius: '24px',
                                 background: 'radial-gradient(circle, #2d1a12 0%, #150d0a 100%)',
@@ -1020,7 +1019,7 @@ const TikatukaGamePage = ({ onBack }) => {
                             <p style={{ color: '#d8c5b0', fontSize: '0.85rem', fontWeight: 600, maxWidth: '440px', lineHeight: 1.55, textAlign: 'center', marginBottom: '30px' }}>
                                 **로스트아크 티카투카 미니게임 공식 룰 완벽 적용!**<br/>
                                 1. **동귀어진 파괴**: 알까기 성공 시 내 주사위와 상대 주사위가 둘 다 소멸합니다.<br/>
-                                2. **보호막(Shield) 주사위**: 첫 턴 및 추가 턴의 주사위는 보호막이 씌워져 파괴가 불가능해지며, 상대 보드에도 강제 침투시킬 수 있습니다.<br/>
+                                2. **보호막(Shield) 주사위**: 첫 턴 및 추가 턴의 주사위는 보호막이 적용되어 상대에게 파괴되지 않으며, 내 보드 및 상대방 보드 빈칸에 강제 침투시킬 수 있습니다.<br/>
                                 3. **리롤 찬스**: 판당 1번 리롤하여 원래 눈과 새로운 눈 중 원하는 것을 고를 수 있습니다.<br/>
                                 4. **승리 조건**: 3개 가로 라인 중 2개 이상을 선점하는 측이 승리합니다!
                             </p>
@@ -1030,7 +1029,7 @@ const TikatukaGamePage = ({ onBack }) => {
                         </div>
                     )}
 
-                    {/* 게임 완료 모달 */}
+                    {/* Game finished modal */}
                     {gameState === 'finished' && (
                         <div style={{ position: 'absolute', inset: 0, borderRadius: '35px', background: 'radial-gradient(circle, #251812 0%, #0d0705 100%)', border: '4px solid #b8860b', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
                             <div style={{ fontSize: '5rem', marginBottom: '15px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))' }}>
@@ -1058,7 +1057,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                 <button onClick={() => {
                                     useUserStore.getState().setActiveRankingTab('tikatuka');
                                     window.dispatchEvent(new CustomEvent('changeStep', { detail: 'ranking' }));
-                                }} title="전체 연승 랭킹을 확인하러 이동합니다" style={{ width: '100%', padding: '12px 20px', background: 'rgba(0,0,0,0.4)', border: '1px solid #d4af37', color: '#fbbf24', fontWeight: 800, borderRadius: '15px', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+                                }} title="전체 연승 랭킹을 확인하러 이동합니다" style={{ width: '100%', padding: '12px 20px', background: 'rgba(0,0,0,0.4)', border: '1px solid #d4af37', color: '#fbbf24', fontWeight: 800, borderRadius: '15px', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(168, 85, 247, 0.05)' }}>
                                     <Trophy size={16} color="#fbbf24" fill="#fbbf24" /> 전체 연승 랭킹 보기
                                 </button>
                             </div>
@@ -1111,6 +1110,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     }}>
                         <h4 style={{ fontWeight: 900, fontSize: '0.95rem', color: '#fbbf24', marginBottom: '12px' }}>📜 에스더 룰북 (가로형)</h4>
                         <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.8rem', color: '#d8c5b0', fontWeight: 600, lineHeight: 1.65, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <li>**동일 눈금 콤보**: 동일한 주사위를 한 라인에 나란히 놓으면 점수 배수가 중첩됩니다. (1개 1배, 2개 4배, 3개 9배)</li>
                             <li>**동귀어진(파괴)**: 내 주사위가 상대 눈금을 파괴하면, 상대 주사위뿐만 아니라 내 주사위도 보드에 깔리지 않고 소멸(동귀어진)합니다.</li>
                             <li>**실드 주사위 (하늘색)**: 최초 시작 및 추가 턴의 주사위는 보호막이 적용되어 상대에게 파괴되지 않으며, 내 보드 및 상대방 보드 빈칸에 강제 침투시킬 수 있습니다.</li>
                             <li>**추가 턴 (Extra Turn)**: 상대방 주사위 파괴 시 보너스 턴을 받지만, 추가 턴 상태에서는 다시 추가 턴을 얻을 수 없습니다(밸런싱).</li>
