@@ -105,6 +105,7 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard) => {
     }).length;
     
     let destructionValue = 0;
+    let extraTurnValue = 0; // 추가 턴 획득에 따른 보너스 가치
     if (matchCount > 0) {
         const oppCurrentScore = getColScore(oppCol);
         const oppNextCol = oppCol.filter(item => {
@@ -113,13 +114,14 @@ const evaluateMove = (col, diceVal, playerBoard, opponentBoard) => {
         });
         const oppNextScore = getColScore(oppNextCol);
         destructionValue = oppCurrentScore - oppNextScore;
+        extraTurnValue = 9; // 추가 턴 획득 시 보너스로 가치에 큰 점수(+9) 부여
     }
 
     // 3. 칸 잠김 감쇄 페널티
-    const spacePenalty = nextCol.length === 3 ? -2 : 0;
+    const spacePenalty = nextCol.length === 3 ? -2.5 : 0;
 
-    // 파괴 시 견제 우선 가중치(1.35배) 부여
-    return scoreGain + (destructionValue * 1.35) + spacePenalty;
+    // 파괴 시 추가 턴 획득의 어마어마한 전술적 이점을 고려해 가중치 1.65배 부여
+    return scoreGain + (destructionValue * 1.65) + extraTurnValue + spacePenalty;
 };
 
 const TikatukaGamePage = ({ onBack }) => {
@@ -143,6 +145,10 @@ const TikatukaGamePage = ({ onBack }) => {
     const [gameResult, setGameResult] = useState(null); // 'win', 'lose', 'draw'
     const [gameRoundResult, setGameRoundResult] = useState({ playerWins: 0, aiWins: 0, ties: 0 });
     
+    // 추가 턴 (Extra Turn) 연출용 상태
+    const [showExtraTurnBanner, setShowExtraTurnBanner] = useState(false);
+    const [extraTurnOwner, setExtraTurnOwner] = useState(null); // 'player' or 'ai'
+
     // 파괴 이펙트(파티클) 및 AI 상태
     const [particles, setParticles] = useState([]);
     const [aiThinking, setAiThinking] = useState(false);
@@ -203,6 +209,8 @@ const TikatukaGamePage = ({ onBack }) => {
         setIsRolling(false);
         setGameResult(null);
         setGameRoundResult({ playerWins: 0, aiWins: 0, ties: 0 });
+        setShowExtraTurnBanner(false);
+        setExtraTurnOwner(null);
         setCurrentTurn('player');
         setGameState('playing');
 
@@ -272,7 +280,10 @@ const TikatukaGamePage = ({ onBack }) => {
         const matchExists = oppCol.some(item => item.val === targetVal);
 
         let newAiBoard = [...aiBoard];
+        let hasDestroyed = false;
+
         if (matchExists) {
+            hasDestroyed = true;
             // 화면 기준 AI 보드의 열 위치 계산 (반응형 대응)
             const rect = document.getElementById(`ai-col-${colIndex}`)?.getBoundingClientRect();
             if (rect) {
@@ -289,9 +300,24 @@ const TikatukaGamePage = ({ onBack }) => {
             setAiBoard(newAiBoard);
         }
 
-        // 3. 턴 교체
+        // 3. 주사위 리셋
         setCurrentDice(null);
-        checkGameStatus(newBoard, newAiBoard, 'ai');
+
+        // 4. 추가 턴 규칙 적용 여부 확인
+        if (hasDestroyed) {
+            // 파괴 성공 시 플레이어 추가 턴 획득
+            setExtraTurnOwner('player');
+            setShowExtraTurnBanner(true);
+            setTimeout(() => {
+                setShowExtraTurnBanner(false);
+            }, 1500);
+
+            // 턴 교체 없이 현재 보드로 게임 상태만 재검토 (턴은 player 유지)
+            checkGameStatus(newBoard, newAiBoard, 'player');
+        } else {
+            // 파괴 실패 시 정상적으로 AI 턴으로 교대
+            checkGameStatus(newBoard, newAiBoard, 'ai');
+        }
     };
 
     // 게임 종료 및 승패 조건 점검 (3판 2선승제 적용)
@@ -449,7 +475,10 @@ const TikatukaGamePage = ({ onBack }) => {
                             const matchExists = pCol.some(item => item.val === aiDiceVal);
                             
                             let newPlayerBoard = [...playerBoard];
+                            let hasDestroyed = false;
+
                             if (matchExists) {
+                                hasDestroyed = true;
                                 const rect = document.getElementById(`player-col-${bestCol}`)?.getBoundingClientRect();
                                 if (rect) {
                                     triggerDestroyParticle(rect.left + rect.width / 2, rect.top + rect.height / 2);
@@ -465,9 +494,25 @@ const TikatukaGamePage = ({ onBack }) => {
                                 setPlayerBoard(newPlayerBoard);
                             }
 
+                            // AI 주사위 컵 리셋
                             setCurrentDice(null);
                             setAiThinking(false);
-                            checkGameStatus(newPlayerBoard, newAiBoard, 'player');
+
+                            // 추가 턴 분기 적용
+                            if (hasDestroyed) {
+                                // 파괴 성공 시 AI 추가 턴 획득
+                                setExtraTurnOwner('ai');
+                                setShowExtraTurnBanner(true);
+                                setTimeout(() => {
+                                    setShowExtraTurnBanner(false);
+                                }, 1500);
+
+                                // 턴 변경 없이 AI 턴 유지
+                                checkGameStatus(newPlayerBoard, newAiBoard, 'ai');
+                            } else {
+                                // 파괴 실패 시 플레이어 턴으로 교대
+                                checkGameStatus(newPlayerBoard, newAiBoard, 'player');
+                            }
                         }
                     }, 600);
                 }
@@ -516,6 +561,44 @@ const TikatukaGamePage = ({ onBack }) => {
                     }}
                 />
             ))}
+
+            {/* 황금빛 앤틱 EXTRA TURN 배너 팝업 */}
+            <AnimatePresence>
+                {showExtraTurnBanner && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5, y: -40 }}
+                        animate={{ opacity: 1, scale: 1.1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 30 }}
+                        transition={{ type: 'spring', stiffness: 220, damping: 11 }}
+                        style={{
+                            position: 'absolute',
+                            top: '38%',
+                            left: '50%',
+                            x: '-50%',
+                            y: '-50%',
+                            background: 'linear-gradient(135deg, #d4af37 0%, #a27a18 100%)',
+                            color: '#1e1100',
+                            padding: '22px 50px',
+                            borderRadius: '24px',
+                            border: '3px solid #ffdf7a',
+                            boxShadow: '0 15px 45px rgba(212, 175, 55, 0.65), 0 0 60px rgba(212, 175, 55, 0.35)',
+                            zIndex: 100,
+                            textAlign: 'center',
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '3px', opacity: 0.95, color: '#3d2600' }}>
+                            {extraTurnOwner === 'player' ? '⚡ 용사의 기적 ⚡' : '🔮 마법의 견제 🔮'}
+                        </div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 950, marginTop: '4px', textShadow: '0 1px 2px rgba(255,255,255,0.4)', letterSpacing: '0.5px' }}>
+                            {extraTurnOwner === 'player' ? '추가 턴 획득!' : 'AI 추가 턴 획득!'}
+                        </div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, marginTop: '6px', color: '#1a0f00' }}>
+                            상대 주사위를 폭파하여 보너스 주사위를 굴립니다.
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <audio ref={bgmRef} loop src="https://assets.mixkit.co/music/preview/mixkit-retro-arcade-casino-key-515.mp3" />
 
@@ -751,6 +834,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                 주사위를 3개 라인에 배치하여 경쟁합니다.<br/>
                                 같은 주사위를 나란히 두면 **배수 보너스** 콤보!<br/>
                                 상대방과 동일한 눈금을 두면 상대 주사위를 **완전 폭파**시킵니다.<br/>
+                                **상대 주사위를 폭파하면 1회 추가 주사위 기회** 획득! ⚡<br/>
                                 **3개 라인 중 2개 라인을 선점**하는 측이 영토에 승리합니다!
                             </p>
                             <button onClick={startGame} title="대결을 시작합니다" style={{ padding: '14px 45px', background: 'linear-gradient(135deg, #d4af37 0%, #aa7c11 100%)', color: '#1a0d00', fontWeight: 900, borderRadius: '15px', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(212, 175, 55, 0.45)', border: '1px solid #ffdf7a' }}>
@@ -759,7 +843,7 @@ const TikatukaGamePage = ({ onBack }) => {
                         </div>
                     )}
 
-                    {/* 게임 완료 모달 (판타지 전장 통계 정보) */}
+                    {/* Game finished modal (판타지 전장 통계 정보) */}
                     {gameState === 'finished' && (
                         <div style={{ position: 'absolute', inset: 0, borderRadius: '35px', background: 'radial-gradient(circle, #251812 0%, #0d0705 100%)', border: '4px solid #b8860b', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
                             <div style={{ fontSize: '5rem', marginBottom: '15px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))' }}>
@@ -841,7 +925,7 @@ const TikatukaGamePage = ({ onBack }) => {
                         <h4 style={{ fontWeight: 900, fontSize: '0.95rem', color: '#fbbf24', marginBottom: '12px' }}>📜 에스더 룰북</h4>
                         <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.8rem', color: '#d8c5b0', fontWeight: 600, lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <li>**동일 눈금 콤보**: 동일한 주사위를 한 라인에 나란히 놓으면 점수 배수가 중첩됩니다. (1개 1배, 2개 4배, 3개 9배)</li>
-                            <li>**폭파 매커니즘**: 내가 주사위를 놓은 자리에 상대방의 동일한 숫자가 존재하면, 상대방의 주사위가 빙글빙글 날아가며 붕괴됩니다.</li>
+                            <li>**폭파 및 추가 턴**: 내가 주사위를 놓은 자리에 상대방의 동일한 숫자가 존재하면, 상대방의 주사위가 날아가며 파괴되고 **내게 1회 추가 주사위 굴리기 기회(Extra Turn)**가 주어집니다! ⚡</li>
                             <li>**승리 기준**: 한 사람의 보드가 꽉 차면 종료되며, 3개 라인 중 더 높은 라인을 **2개 이상 선점**한 자가 승리합니다.</li>
                         </ul>
                     </div>
