@@ -96,40 +96,30 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
     let shadowStyle = '';
     let dotColor = '';
 
-    if (isPlayer) {
-        // 플레이어 주사위 (초록/민트 젤리 테마)
-        bgStyle = isShielded 
-            ? 'radial-gradient(circle, #ecfdf5 0%, #d1fae5 100%)'
-            : 'radial-gradient(circle, #ffffff 0%, #f0fdf4 100%)';
-        
-        borderColor = isShielded
-            ? '#34d399'
-            : isComboActive ? '#10b981' : '#a7f3d0';
-
-        shadowStyle = isShielded
-            ? '0 0 15px rgba(52, 211, 153, 0.5), inset 0 3px 6px rgba(255,255,255,0.9)'
-            : isComboActive
+    if (isShielded) {
+        // 신성한 황금 보호막 주사위 테마 (초록색/분홍색 보드 위에서 눈에 띄도록 황금색으로 단일화)
+        bgStyle = 'radial-gradient(circle, #fffbeb 0%, #fef08a 100%)';
+        borderColor = '#eab308';
+        shadowStyle = '0 0 18px rgba(234, 179, 8, 0.85), inset 0 3px 6px rgba(255,255,255,0.95)';
+        dotColor = isPlayer ? '#047857' : '#be123c'; // 눈금 색상으로 소유자 판별
+    } else {
+        if (isPlayer) {
+            // 플레이어 주사위 (초록/민트 젤리 테마)
+            bgStyle = 'radial-gradient(circle, #ffffff 0%, #f0fdf4 100%)';
+            borderColor = isComboActive ? '#10b981' : '#a7f3d0';
+            shadowStyle = isComboActive
                 ? '0 0 15px rgba(16, 185, 129, 0.6), inset 0 3px 6px rgba(255,255,255,0.9)'
                 : 'inset 0 3px 6px rgba(255,255,255,1), 0 4px 10px rgba(16, 185, 129, 0.1)';
-
-        dotColor = isShielded ? '#047857' : '#10b981';
-    } else {
-        // AI 주사위 (빨강/살구 젤리 테마)
-        bgStyle = isShielded 
-            ? 'radial-gradient(circle, #fff1f2 0%, #ffe4e6 100%)'
-            : 'radial-gradient(circle, #ffffff 0%, #fff5f5 100%)';
-        
-        borderColor = isShielded
-            ? '#fb7185'
-            : isComboActive ? '#f43f5e' : '#fecdd3';
-
-        shadowStyle = isShielded
-            ? '0 0 15px rgba(251, 113, 133, 0.5), inset 0 3px 6px rgba(255,255,255,0.9)'
-            : isComboActive
+            dotColor = '#10b981';
+        } else {
+            // AI 주사위 (빨강/살구 젤리 테마)
+            bgStyle = 'radial-gradient(circle, #ffffff 0%, #fff5f5 100%)';
+            borderColor = isComboActive ? '#f43f5e' : '#fecdd3';
+            shadowStyle = isComboActive
                 ? '0 0 15px rgba(244, 63, 94, 0.6), inset 0 3px 6px rgba(255,255,255,0.9)'
                 : 'inset 0 3px 6px rgba(255,255,255,1), 0 4px 10px rgba(244, 63, 94, 0.1)';
-
-        dotColor = isShielded ? '#be123c' : '#ef4444';
+            dotColor = '#ef4444';
+        }
     }
 
     return (
@@ -150,7 +140,7 @@ const DiceDot = ({ value, isShielded, isComboActive, isPlayer }) => {
                     position: 'absolute',
                     inset: '-4px',
                     borderRadius: '18px',
-                    border: `1.5px solid ${isPlayer ? 'rgba(52, 211, 153, 0.6)' : 'rgba(251, 113, 133, 0.6)'}`,
+                    border: '1.5px solid rgba(234, 179, 8, 0.7)',
                     animation: 'pulse 1.5s infinite alternate',
                     pointerEvents: 'none'
                 }} />
@@ -402,6 +392,30 @@ const TikatukaGamePage = ({ onBack }) => {
         fetchLeaderboard();
     }, [user, streakKey, fetchLeaderboard]);
 
+    // 게임 포기 및 이탈 처리 (랭킹 연승 리셋 및 판수 누적)
+    const handleAbandonGame = () => {
+        if (bgmRef.current) bgmRef.current.pause();
+        
+        if (gameState === 'playing') {
+            setWinStreak(0);
+            if (!USE_MOCK_DATA && user) {
+                supabase.from('tikatuka_game_scores')
+                    .select('total_games')
+                    .eq('user_id', user.id)
+                    .single()
+                    .then(({ data, error }) => {
+                        if (data && !error) {
+                            supabase.from('tikatuka_game_scores')
+                                .update({ total_games: (data.total_games || 0) + 1 })
+                                .eq('user_id', user.id)
+                                .then(() => fetchLeaderboard());
+                        }
+                    });
+            }
+        }
+        onBack();
+    };
+
     // 게임 시작 (resetStage 파라미터 적용)
     const startGame = (resetStage = false) => {
         if (resetStage) {
@@ -423,7 +437,10 @@ const TikatukaGamePage = ({ onBack }) => {
         setAiReRollUsed(false);
         setReRolledDice(null);
         setShowReRollSelect(false);
-        setCurrentTurn('player');
+        
+        // 선턴 랜덤 결정 (플레이어 또는 AI)
+        const firstTurn = Math.random() < 0.5 ? 'player' : 'ai';
+        setCurrentTurn(firstTurn);
         setGameState('playing');
 
         setTimeout(() => {
@@ -987,7 +1004,7 @@ const TikatukaGamePage = ({ onBack }) => {
 
             {/* Header */}
             <div style={{ width: '100%', maxWidth: '1180px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', zIndex: 10 }}>
-                <button onClick={() => { if (bgmRef.current) bgmRef.current.pause(); onBack(); }} title="대시보드로 돌아갑니다" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f43f5e', fontWeight: 800, background: '#ffffff', padding: '10px 20px', borderRadius: '15px', border: '1.5px solid #fecdd3', cursor: 'pointer', boxShadow: '0 4px 12px rgba(244,63,94,0.1)', transition: 'all 0.2s' }}>
+                <button onClick={handleAbandonGame} title="대시보드로 돌아갑니다" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f43f5e', fontWeight: 800, background: '#ffffff', padding: '10px 20px', borderRadius: '15px', border: '1.5px solid #fecdd3', cursor: 'pointer', boxShadow: '0 4px 12px rgba(244,63,94,0.1)', transition: 'all 0.2s' }}>
                     <ArrowLeft size={20} /> 로비로
                 </button>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#f43f5e', textShadow: '0 0 10px rgba(244,63,94,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1019,18 +1036,48 @@ const TikatukaGamePage = ({ onBack }) => {
                     width: '100%'
                 }}>
                     {/* 상단 깃발 정보 */}
-                    <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', marginBottom: '25px', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffe4e6', padding: '8px 16px', borderRadius: '14px', border: '1px solid #fecdd3' }}>
-                            <Sparkles size={16} color="#f43f5e" />
-                            <span style={{ fontWeight: 900, color: '#e11d48', fontSize: '0.95rem' }}>현재 {winStreak}연승 유지 중</span>
+                    <div style={{ 
+                        width: '100%', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '12px', 
+                        marginBottom: '25px', 
+                        background: '#fff5f6', 
+                        padding: '16px 20px', 
+                        borderRadius: '20px', 
+                        border: '1.5px solid #ffe4e6' 
+                    }}>
+                        {/* 첫 번째 줄: 연승 상태 & 턴 진행 상태 */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '6px 14px', borderRadius: '12px', border: '1px solid #fecdd3', boxShadow: '0 2px 5px rgba(244,63,94,0.03)' }}>
+                                <Sparkles size={16} color="#f43f5e" />
+                                <span style={{ fontWeight: 900, color: '#e11d48', fontSize: '0.88rem' }}>현재 {winStreak}연승 유지 중</span>
+                            </div>
+                            <div style={{ fontWeight: 900, fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ color: '#ec4899' }}>{opponentInfo.emoji} {opponentInfo.name}</span>
+                                <span style={{ color: '#cbd5e1' }}>|</span>
+                                <span style={{ color: currentTurn === 'player' ? '#10b981' : '#a855f7' }}>
+                                    {currentTurn === 'player' ? '🟢 내 턴 (주사위를 굴리세요)' : '🟣 AI 행동 설계 중...'}
+                                </span>
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f43f5e', fontSize: '0.82rem', fontWeight: 800 }}>
-                            <AlertTriangle size={14} /> 보호막 주사위(실드)는 파괴되지 않으며 상대 보드에도 심을 수 있습니다.
-                        </div>
-                        <div style={{ fontWeight: 800, color: currentTurn === 'player' ? '#10b981' : '#a855f7', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: '#ec4899' }}>{opponentInfo.emoji} {opponentInfo.name}</span>
-                            <span>|</span>
-                            <span>{currentTurn === 'player' ? '🟢 내 턴 (주사위를 굴리세요)' : '🟣 AI 행동 설계 중...'}</span>
+                        
+                        {/* 두 번째 줄: 룰북 팁 메시지 */}
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            gap: '6px', 
+                            color: '#e11d48', 
+                            fontSize: '0.82rem', 
+                            fontWeight: 800,
+                            background: 'rgba(255, 255, 255, 0.6)',
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            textAlign: 'center'
+                        }}>
+                            <AlertTriangle size={13} color="#f43f5e" /> 
+                            보호막 주사위(실드)는 파괴되지 않으며 상대 보드에도 심을 수 있습니다.
                         </div>
                     </div>
 
@@ -1073,7 +1120,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                             onClick={() => canPlacePlayer && placeDiceOnBoard(idx, 'player')}
                                             title={canPlacePlayer ? "클릭하여 주사위를 배치합니다" : "주사위를 배치할 수 없습니다"}
                                             style={{
-                                                width: '235px', height: '70px',
+                                                width: '285px', height: '70px',
                                                 background: canPlacePlayer ? 'rgba(16, 185, 129, 0.12)' : 'rgba(240, 253, 244, 0.45)',
                                                 borderRadius: '16px',
                                                 border: canPlacePlayer ? '2.5px dashed #10b981' : '1.5px solid rgba(16, 185, 129, 0.15)',
@@ -1099,7 +1146,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                                         
                                                         if (itemIdx > 0 && playerBoard[idx][itemIdx - 1].val === item.val) {
                                                             elements.push(
-                                                                <div key={`link_${item.id}`} style={{ display: 'flex', alignItems: 'center' }}>
+                                                                <div key={`link_${item.id}`} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                                     <MiniDice value={item.val} color="#10b981" />
                                                                 </div>
                                                             );
@@ -1122,8 +1169,13 @@ const TikatukaGamePage = ({ onBack }) => {
                                                                     width: '48px', 
                                                                     height: '48px',
                                                                     borderRadius: '14px',
-                                                                    boxShadow: isCombo ? '0 0 15px rgba(16, 185, 129, 0.95), 0 0 5px rgba(16, 185, 129, 0.5)' : 'none',
-                                                                    transition: 'box-shadow 0.3s'
+                                                                    boxShadow: item.isShielded 
+                                                                        ? '0 0 18px rgba(234, 179, 8, 0.85)' 
+                                                                        : isCombo 
+                                                                            ? '0 0 15px rgba(16, 185, 129, 0.95), 0 0 5px rgba(16, 185, 129, 0.5)' 
+                                                                            : 'none',
+                                                                    transition: 'box-shadow 0.3s',
+                                                                    flexShrink: 0
                                                                 }}
                                                             >
                                                                 <DiceDot value={item.val} isShielded={item.isShielded} isComboActive={isCombo} isPlayer={true} />
@@ -1155,7 +1207,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                             onClick={() => canPlaceAIIntrude && placeDiceOnBoard(idx, 'ai')}
                                             title={canPlaceAIIntrude ? "클릭하여 실드 주사위로 침투 배치합니다" : "침투 배치할 수 없습니다 (실드 주사위가 필요합니다)"}
                                             style={{
-                                                width: '235px', height: '70px',
+                                                width: '285px', height: '70px',
                                                 background: canPlaceAIIntrude ? 'rgba(244, 63, 94, 0.12)' : 'rgba(255, 241, 242, 0.45)',
                                                 borderRadius: '16px',
                                                 border: canPlaceAIIntrude ? '2.5px dashed #f43f5e' : '1.5px solid rgba(244, 63, 94, 0.15)',
@@ -1182,7 +1234,7 @@ const TikatukaGamePage = ({ onBack }) => {
 
                                                         if (itemIdx > 0 && aiBoard[idx][itemIdx - 1].val === item.val) {
                                                             elements.push(
-                                                                <div key={`link_${item.id}`} style={{ display: 'flex', alignItems: 'center' }}>
+                                                                <div key={`link_${item.id}`} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                                     <MiniDice value={item.val} color="#f97316" />
                                                                 </div>
                                                             );
@@ -1205,8 +1257,13 @@ const TikatukaGamePage = ({ onBack }) => {
                                                                     width: '48px', 
                                                                     height: '48px',
                                                                     borderRadius: '14px',
-                                                                    boxShadow: isCombo ? '0 0 15px rgba(249, 115, 22, 0.95), 0 0 5px rgba(249, 115, 22, 0.5)' : 'none',
-                                                                    transition: 'box-shadow 0.3s'
+                                                                    boxShadow: item.isShielded 
+                                                                        ? '0 0 18px rgba(234, 179, 8, 0.85)' 
+                                                                        : isCombo 
+                                                                            ? '0 0 15px rgba(249, 115, 22, 0.95), 0 0 5px rgba(249, 115, 22, 0.5)' 
+                                                                            : 'none',
+                                                                    transition: 'box-shadow 0.3s',
+                                                                    flexShrink: 0
                                                                 }}
                                                             >
                                                                 <DiceDot value={item.val} isShielded={item.isShielded} isComboActive={isCombo} isPlayer={false} />
@@ -1247,7 +1304,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                         transition={isRolling ? { repeat: Infinity, duration: 0.3, ease: 'linear' } : { type: 'spring', stiffness: 300, damping: 10 }} 
                                         style={{ width: '100%', height: '100%' }}
                                     >
-                                        <DiceDot value={currentDice} isShielded={isCurrentDiceShielded} isComboActive={false} isPlayer={true} />
+                                        <DiceDot value={currentDice} isShielded={isCurrentDiceShielded} isComboActive={false} isPlayer={currentTurn === 'player'} />
                                     </motion.div>
                                 ) : (
                                     <div style={{ width: '100%', height: '100%', border: '2.5px dashed #fecdd3', borderRadius: '14px', background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fca55d', fontSize: '1.4rem', fontWeight: 900 }}>
@@ -1374,7 +1431,7 @@ const TikatukaGamePage = ({ onBack }) => {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '300px' }}>
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button onClick={onBack} title="대시보드로 돌아갑니다" style={{ flex: 1, padding: '12px 20px', borderRadius: '15px', fontWeight: 800, background: '#ffffff', color: '#64748b', border: '1.5px solid #cbd5e1', cursor: 'pointer', fontSize: '0.9rem' }}>로비로</button>
+                                    <button onClick={handleAbandonGame} title="대시보드로 돌아갑니다" style={{ flex: 1, padding: '12px 20px', borderRadius: '15px', fontWeight: 800, background: '#ffffff', color: '#64748b', border: '1.5px solid #cbd5e1', cursor: 'pointer', fontSize: '0.9rem' }}>로비로</button>
                                     {gameResult === 'win' ? (
                                         <button onClick={() => { setStage(prev => prev + 1); startGame(false); }} title="다음 단계 에스더에게 도전합니다" style={{ flex: 1.2, padding: '12px 20px', borderRadius: '15px', fontWeight: 900, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)', fontSize: '0.95rem' }}>다음 단계</button>
                                     ) : (
