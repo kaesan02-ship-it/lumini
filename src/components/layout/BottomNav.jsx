@@ -1,19 +1,22 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Home, Users, Gamepad2, Heart, ShoppingBag } from 'lucide-react';
 import Tooltip from '../Tooltip';
 
 // ─── 네비게이션 아이템 ─────────────────────────────────────────────
 const NavItem = ({ icon, label, active, onClick }) => (
-    <div
+    <motion.div
+        whileHover={{ scale: 1.06, y: -2 }}
+        whileTap={{ scale: 0.94 }}
         className={`nav-item ${active ? 'active' : ''}`}
         onClick={onClick}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
     >
         {icon}
         <span style={{ fontSize: '0.75rem', marginTop: '4px', fontWeight: active ? 700 : 500 }}>
             {label}
         </span>
-    </div>
+    </motion.div>
 );
 
 // ─── 커뮤니티 탭에 속하는 하위 페이지 목록 ────────────────────────
