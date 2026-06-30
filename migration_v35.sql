@@ -43,7 +43,8 @@ BEGIN
     END IF;
 END $$;
 
--- 3. 사천성, 2048, 주사위 게임의 기존 테이블 누적 데이터를 'season_1' (명예의 전당)으로 일괄 이전
+-- 3. 모든 게임(사과, 사천성, 2048, 주사위)의 기존 테이블 누적 데이터를 'season_1' (명예의 전당)으로 일괄 안전 이전
+UPDATE public.apple_game_scores SET season = 'season_1';
 UPDATE public.shisen_sho_scores SET season = 'season_1';
 UPDATE public.game_2048_scores SET season = 'season_1';
 UPDATE public.tikatuka_game_scores SET season = 'season_1';
