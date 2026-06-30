@@ -34,6 +34,7 @@ import CommunityHubPage from '../pages/CommunityHubPage';
 import ValueGamePage from '../pages/ValueGamePage';
 import AppleGamePage from '../pages/AppleGamePage';
 import SacheonseongGamePage from '../pages/SacheonseongGamePage';
+import Game2048Page from '../pages/Game2048Page';
 import WatermelonGamePage from '../pages/WatermelonGamePage';
 import TikatukaGamePage from '../pages/TikatukaGamePage';
 import ArcadePage from '../pages/ArcadePage';
