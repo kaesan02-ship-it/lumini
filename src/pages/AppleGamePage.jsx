@@ -24,6 +24,7 @@ const AppleGamePage = ({ onBack, userName }) => {
     const [dailyPlays, setDailyPlays] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
+    const [activeSeason, setActiveSeason] = useState('season_2'); // 'season_2' (현재), 'season_1' (명예의 전당)
     const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
  
     const FREE_PLAYS = 3;
@@ -31,11 +32,29 @@ const AppleGamePage = ({ onBack, userName }) => {
     const lastDateKey = `apple_game_last_date_${userId}`;
  
     // 리더보드 데이터를 서버에서 새로 가져오는 함수 (중복 허용 고득점 Top 10)
-    const fetchLeaderboard = useCallback(() => {
-        if (USE_MOCK_DATA) return;
+    const fetchLeaderboard = useCallback((targetSeason = activeSeason) => {
+        if (USE_MOCK_DATA) {
+            if (targetSeason === 'season_1') {
+                setLeaderboard([
+                    { username: '🍎 명예의 사과꾼', apple_game_best_score: 1500 },
+                    { username: '사과 헌터', apple_game_best_score: 1200 },
+                    { username: '뉴턴의 후예', apple_game_best_score: 950 }
+                ]);
+            } else {
+                setLeaderboard([
+                    { username: '김현우', apple_game_best_score: 1000 },
+                    { username: '원채김', apple_game_best_score: 990 },
+                    { username: '원채김', apple_game_best_score: 930 },
+                    { username: '원채김', apple_game_best_score: 920 },
+                    { username: '김민지', apple_game_best_score: 920 }
+                ]);
+            }
+            return;
+        }
 
         supabase.from('apple_game_scores')
             .select('score, profiles(username)')
+            .eq('season', targetSeason)
             .order('score', { ascending: false })
             .limit(10)
             .then(({ data, error }) => {
@@ -46,26 +65,34 @@ const AppleGamePage = ({ onBack, userName }) => {
                     }));
                     setLeaderboard(mappedData);
                 } else {
-                    console.error('Failed to fetch apple game leaderboard:', error);
+                    setLeaderboard([]);
                 }
             });
-    }, []);
+    }, [activeSeason]);
  
     // Supabase에서 최고 기록 로드 및 리더보드 로드
     useEffect(() => {
         if (!USE_MOCK_DATA) {
             if (user) {
-                supabase.from('profiles').select('apple_game_best_score').eq('id', user.id).single()
+                supabase.from('apple_game_scores')
+                    .select('score')
+                    .eq('user_id', user.id)
+                    .eq('season', 'season_2')
+                    .order('score', { ascending: false })
+                    .limit(1)
                     .then(({ data, error }) => {
-                        if (data && !error) {
-                            setBestScore(data.apple_game_best_score || 0);
-                            localStorage.setItem(scoreKey, (data.apple_game_best_score || 0).toString());
+                        if (data && data[0]) {
+                            setBestScore(data[0].score);
+                            localStorage.setItem(scoreKey, data[0].score.toString());
+                        } else {
+                            setBestScore(0);
+                            localStorage.setItem(scoreKey, '0');
                         }
                     });
             }
-            fetchLeaderboard();
+            fetchLeaderboard(activeSeason);
         }
-    }, [user, scoreKey, fetchLeaderboard]);
+    }, [user, scoreKey, fetchLeaderboard, activeSeason]);
  
     // Drag states
     const [selection, setSelection] = useState(null);
@@ -193,7 +220,7 @@ const AppleGamePage = ({ onBack, userName }) => {
                 if (!USE_MOCK_DATA && user?.id) {
                     // 1. apple_game_scores에 누적 점수로 신규 인서트 시도
                     supabase.from('apple_game_scores')
-                        .insert({ user_id: user.id, score: score })
+                        .insert({ user_id: user.id, score: score, season: 'season_2' })
                         .then(({ error }) => {
                             if (error) {
                                 console.warn('apple_game_scores 테이블에 접근 불가하여 profiles 최고점 컬럼 업데이트 폴백을 진행합니다:', error.message);
@@ -568,9 +595,41 @@ const AppleGamePage = ({ onBack, userName }) => {
                         borderRadius: '30px', padding: '25px', border: '1px solid rgba(255, 255, 255, 1)',
                         boxShadow: '0 10px 30px rgba(0, 0, 0, 0.05)'
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px' }}>
-                            <Trophy size={24} color="#f59e0b" fill="#f59e0b" />
-                            <h3 style={{ fontWeight: 900, fontSize: '1.2rem', color: '#1e293b' }}>명예의 전당</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '25px', flexWrap: 'wrap', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Trophy size={24} color="#f59e0b" fill="#f59e0b" />
+                                <h3 style={{ fontWeight: 900, fontSize: '1.2rem', color: '#1e293b', margin: 0 }}>최고 랭킹</h3>
+                            </div>
+                            <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '100px', border: '1px solid #e2e8f0' }}>
+                                <button 
+                                    onClick={() => setActiveSeason('season_2')}
+                                    style={{
+                                        padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                        background: activeSeason === 'season_2' ? '#f59e0b' : 'transparent',
+                                        color: activeSeason === 'season_2' ? 'white' : '#64748b',
+                                        boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(245,158,11,0.2)' : 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    시즌 2
+                                </button>
+                                <button 
+                                    onClick={() => setActiveSeason('season_1')}
+                                    style={{
+                                        padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                        background: activeSeason === 'season_1' ? '#f59e0b' : 'transparent',
+                                        color: activeSeason === 'season_1' ? 'white' : '#64748b',
+                                        boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(245,158,11,0.2)' : 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    명예의 전당 (시즌 1)
+                                </button>
+                            </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             {leaderboard.length > 0 ? (

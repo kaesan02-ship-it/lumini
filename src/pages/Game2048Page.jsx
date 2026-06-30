@@ -39,17 +39,34 @@ const Game2048Page = ({ onBack }) => {
     const [bestScore, setBestScore] = useState(() => parseInt(localStorage.getItem(bestScoreKey) || '0'));
     const [gameState, setGameState] = useState('ready'); // ready, playing, finished, won
     const [leaderboard, setLeaderboard] = useState([]);
+    const [activeSeason, setActiveSeason] = useState('season_2'); // 'season_2' (현재), 'season_1' (명예의 전당)
     
     // 모바일 터치 및 마우스 드래그 좌표 상태
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [isMouseDown, setIsMouseDown] = useState(false);
 
     // 리더보드 로드 (중복 허용 고득점 Top 10)
-    const fetchLeaderboard = useCallback(() => {
-        if (USE_MOCK_DATA) return;
+    const fetchLeaderboard = useCallback((targetSeason = activeSeason) => {
+        if (USE_MOCK_DATA) {
+            if (targetSeason === 'season_1') {
+                setLeaderboard([
+                    { username: '👑 명예의 판다', score: 8540, max_tile: 1024 },
+                    { username: '2048정복자', score: 7120, max_tile: 512 },
+                    { username: '성장한루미', score: 6080, max_tile: 256 }
+                ]);
+            } else {
+                setLeaderboard([
+                    { username: '진화마스터', score: 4820, max_tile: 128 },
+                    { username: '이지우', score: 3840, max_tile: 64 },
+                    { username: '김민지', score: 2900, max_tile: 32 }
+                ]);
+            }
+            return;
+        }
 
         supabase.from('game_2048_scores')
             .select('score, max_tile, profiles(username)')
+            .eq('season', targetSeason)
             .order('score', { ascending: false })
             .limit(10)
             .then(({ data, error }) => {
@@ -60,9 +77,11 @@ const Game2048Page = ({ onBack }) => {
                         max_tile: item.max_tile
                     }));
                     setLeaderboard(mappedData);
+                } else {
+                    setLeaderboard([]);
                 }
             });
-    }, []);
+    }, [activeSeason]);
 
     // 초기 최고기록 및 리더보드 동기화
     useEffect(() => {
@@ -71,19 +90,22 @@ const Game2048Page = ({ onBack }) => {
                 supabase.from('game_2048_scores')
                     .select('score')
                     .eq('user_id', user.id)
+                    .eq('season', 'season_2')
                     .order('score', { ascending: false })
                     .limit(1)
-                    .single()
                     .then(({ data, error }) => {
-                        if (data && !error) {
-                            setBestScore(data.score);
-                            localStorage.setItem(bestScoreKey, data.score.toString());
+                        if (data && data[0]) {
+                            setBestScore(data[0].score);
+                            localStorage.setItem(bestScoreKey, data[0].score.toString());
+                        } else {
+                            setBestScore(0);
+                            localStorage.setItem(bestScoreKey, '0');
                         }
                     });
             }
-            fetchLeaderboard();
+            fetchLeaderboard(activeSeason);
         }
-    }, [user, bestScoreKey, fetchLeaderboard]);
+    }, [user, bestScoreKey, fetchLeaderboard, activeSeason]);
 
     // 빈 공간에 무작위 2 or 4 배치
     const addRandomTile = (currentBoard) => {
@@ -238,7 +260,7 @@ const Game2048Page = ({ onBack }) => {
             // Supabase 랭킹 등록
             if (!USE_MOCK_DATA && user?.id) {
                 supabase.from('game_2048_scores')
-                    .insert({ user_id: user.id, score: finalScore, max_tile: maxTile })
+                    .insert({ user_id: user.id, score: finalScore, max_tile: maxTile, season: 'season_2' })
                     .then(({ error }) => {
                         if (!error) fetchLeaderboard();
                     });
@@ -521,14 +543,41 @@ const Game2048Page = ({ onBack }) => {
                 )}
             </div>
 
-            {/* 리더보드 */}
             <div style={{ background: '#ffffff', border: '1px solid #ffd3db', borderRadius: '24px', padding: '20px', boxShadow: '0 8px 30px rgba(255, 107, 139, 0.03)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2d3748', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Trophy size={18} color="#ff6b8b" /> 명예의 전당 (최고 점수)
-                    </h3>
-                    <div style={{ fontSize: '0.75rem', color: '#718096' }}>
-                        내 최고 기록: <strong style={{ color: '#ff6b8b' }}>{bestScore}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Trophy size={18} color="#ff6b8b" /> 
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2d3748', margin: 0 }}>최고 랭킹</h3>
+                    </div>
+                    <div style={{ display: 'flex', background: '#ffeef1', padding: '3px', borderRadius: '100px', border: '1px solid #ffd3db' }}>
+                        <button 
+                            onClick={() => setActiveSeason('season_2')}
+                            style={{
+                                padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                background: activeSeason === 'season_2' ? '#ff6b8b' : 'transparent',
+                                color: activeSeason === 'season_2' ? 'white' : '#ff6b8b',
+                                boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            시즌 2
+                        </button>
+                        <button 
+                            onClick={() => setActiveSeason('season_1')}
+                            style={{
+                                padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                background: activeSeason === 'season_1' ? '#ff6b8b' : 'transparent',
+                                color: activeSeason === 'season_1' ? 'white' : '#ff6b8b',
+                                boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            명예의 전당 (시즌 1)
+                        </button>
                     </div>
                 </div>
 

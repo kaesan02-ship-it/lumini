@@ -36,21 +36,38 @@ const SacheonseongGamePage = ({ onBack }) => {
     const [maxCombo, setMaxCombo] = useState(0);
     const [shufflesRemaining, setShufflesRemaining] = useState(3);
     const [hintsRemaining, setHintsRemaining] = useState(3);
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [activeSeason, setActiveSeason] = useState('season_2'); // 'season_2' (현재), 'season_1' (명예의 전당)
     const [gameState, setGameState] = useState('ready'); // ready, playing, finished, timeout
     const [bestScore, setBestScore] = useState(() => parseInt(localStorage.getItem(bestScoreKey) || '0'));
-    const [leaderboard, setLeaderboard] = useState([]);
     const [highlightedTiles, setHighlightedTiles] = useState([]);
 
     const canvasRef = useRef(null);
     const boardRef = useRef(null);
     const timerRef = useRef(null);
 
-    // 랭킹 리더보드 가져오기 (중복 허용 고득점 Top 10)
-    const fetchLeaderboard = useCallback(() => {
-        if (USE_MOCK_DATA) return;
+    // 리더보드 로드 (중복 허용 고득점 Top 10)
+    const fetchLeaderboard = useCallback((targetSeason = activeSeason) => {
+        if (USE_MOCK_DATA) {
+            if (targetSeason === 'season_1') {
+                setLeaderboard([
+                    { username: '👑 사천성달인', score: 980 },
+                    { username: '동물수호자', score: 850 },
+                    { username: '스피더', score: 790 }
+                ]);
+            } else {
+                setLeaderboard([
+                    { username: '김지민', score: 620 },
+                    { username: '정하은', score: 580 },
+                    { username: '이지우', score: 540 }
+                ]);
+            }
+            return;
+        }
 
         supabase.from('shisen_sho_scores')
             .select('score, profiles(username)')
+            .eq('season', targetSeason)
             .order('score', { ascending: false }) // 점수 높은 순 정렬
             .limit(10)
             .then(({ data, error }) => {
@@ -60,9 +77,11 @@ const SacheonseongGamePage = ({ onBack }) => {
                         score: item.score
                     }));
                     setLeaderboard(mappedData);
+                } else {
+                    setLeaderboard([]);
                 }
             });
-    }, []);
+    }, [activeSeason]);
 
     // 초기 데이터 연동
     useEffect(() => {
@@ -71,19 +90,22 @@ const SacheonseongGamePage = ({ onBack }) => {
                 supabase.from('shisen_sho_scores')
                     .select('score')
                     .eq('user_id', user.id)
+                    .eq('season', 'season_2')
                     .order('score', { ascending: false })
                     .limit(1)
-                    .single()
                     .then(({ data, error }) => {
-                        if (data && !error) {
-                            setBestScore(data.score);
-                            localStorage.setItem(bestScoreKey, data.score.toString());
+                        if (data && data[0]) {
+                            setBestScore(data[0].score);
+                            localStorage.setItem(bestScoreKey, data[0].score.toString());
+                        } else {
+                            setBestScore(0);
+                            localStorage.setItem(bestScoreKey, '0');
                         }
                     });
             }
-            fetchLeaderboard();
+            fetchLeaderboard(activeSeason);
         }
-    }, [user, bestScoreKey, fetchLeaderboard]);
+    }, [user, bestScoreKey, fetchLeaderboard, activeSeason]);
 
     // 캔버스 사이즈 자동조절
     const resizeCanvas = useCallback(() => {
@@ -440,7 +462,7 @@ const SacheonseongGamePage = ({ onBack }) => {
                 // Supabase 랭킹 등록
                 if (!USE_MOCK_DATA && user?.id) {
                     supabase.from('shisen_sho_scores')
-                        .insert({ user_id: user.id, score: score })
+                        .insert({ user_id: user.id, score: score, season: 'season_2' })
                         .then(({ error }) => {
                             if (error) console.error('Failed to submit Shisen-sho score on timeout:', error);
                             else fetchLeaderboard();
@@ -468,7 +490,7 @@ const SacheonseongGamePage = ({ onBack }) => {
             // Supabase 랭킹 등록
             if (!USE_MOCK_DATA && user?.id) {
                 supabase.from('shisen_sho_scores')
-                    .insert({ user_id: user.id, score: finalScore })
+                    .insert({ user_id: user.id, score: finalScore, season: 'season_2' })
                     .then(({ error }) => {
                         if (error) console.error('Failed to submit Shisen-sho score:', error);
                         else fetchLeaderboard();
@@ -764,15 +786,45 @@ const SacheonseongGamePage = ({ onBack }) => {
                 )}
             </div>
 
-            {/* 리더보드 */}
             <div style={{ background: '#ffffff', border: '1px solid #ffd3db', borderRadius: '24px', padding: '20px', boxShadow: '0 8px 30px rgba(255, 107, 139, 0.03)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2d3748', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Trophy size={18} color="#ff6b8b" /> 명예의 전당 (최고 점수)
-                    </h3>
-                    <div style={{ fontSize: '0.75rem', color: '#718096' }}>
-                        개인 최고 기록: <strong style={{ color: '#ff6b8b' }}>{bestScore}점</strong>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Trophy size={18} color="#ff6b8b" /> 
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2d3748', margin: 0 }}>최고 랭킹</h3>
                     </div>
+                    <div style={{ display: 'flex', background: '#ffeef1', padding: '3px', borderRadius: '100px', border: '1px solid #ffd3db' }}>
+                        <button 
+                            onClick={() => setActiveSeason('season_2')}
+                            style={{
+                                padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                background: activeSeason === 'season_2' ? '#ff6b8b' : 'transparent',
+                                color: activeSeason === 'season_2' ? 'white' : '#ff6b8b',
+                                boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            시즌 2
+                        </button>
+                        <button 
+                            onClick={() => setActiveSeason('season_1')}
+                            style={{
+                                padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                background: activeSeason === 'season_1' ? '#ff6b8b' : 'transparent',
+                                color: activeSeason === 'season_1' ? 'white' : '#ff6b8b',
+                                boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            명예의 전당 (시즌 1)
+                        </button>
+                    </div>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#718096', marginBottom: '14px', textAlign: 'right' }}>
+                    개인 최고 기록: <strong style={{ color: '#ff6b8b' }}>{bestScore}점</strong>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
