@@ -1,88 +1,30 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Target, Zap } from 'lucide-react';
+import { Target, Zap, Gamepad2 } from 'lucide-react';
 import Tooltip from '../Tooltip';
 
 const QuickActionsGrid = ({ onNavigate, completedChallenges, streak, showValueGame = true }) => {
     return (
-        <div className="quick-actions-grid">
-            <Tooltip text="중독성 강한 숫자 퍼즐 게임!" style={{ display: 'block', width: '100%' }}>
+        <div className="quick-actions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', width: '100%' }}>
+            <Tooltip text="재미있는 캐주얼 미니게임 오락실로 즉시 이동합니다." style={{ display: 'block', width: '100%' }}>
                 <motion.div
                     whileHover={{ scale: 1.02 }}
-                    onClick={() => onNavigate && onNavigate('apple-game')}
-                    className="action-card apple"
-                >
-                    <div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>역대급 중독성 🔥</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🍎 사과 게임
-                        </div>
-                    </div>
-                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>드래그 10 만들기 🏆</div>
-                </motion.div>
-            </Tooltip>
-
-            <Tooltip text="동물 짝을 2번 꺾임 선 이내로 맞추는 스피드 퍼즐!" style={{ display: 'block', width: '100%' }}>
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => onNavigate && onNavigate('shisen-sho')}
-                    className="action-card sacheonseong"
-                >
-                    <div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>타임어택 경쟁 ⏱️</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🐾 사천성 게임
-                        </div>
-                    </div>
-                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>루미니 짝 맞추기 🏆</div>
-                </motion.div>
-            </Tooltip>
-
-            <Tooltip text="슬라이딩하여 소울펫을 합쳐 진화시키세요!" style={{ display: 'block', width: '100%' }}>
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => onNavigate && onNavigate('game-2048')}
-                    className="action-card game2048"
-                >
-                    <div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>진화의 끝은? 👑</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🥚 2048 진화
-                        </div>
-                    </div>
-                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>소울펫 진화 합성 🏆</div>
-                </motion.div>
-            </Tooltip>
-
-            <Tooltip text="시간 제한 안에 과일을 떨어뜨려 수박을 완성하세요!" style={{ display: 'block', width: '100%' }}>
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => onNavigate && onNavigate('watermelon-game')}
-                    className="action-card watermelon"
-                >
-                    <div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>타임어택 합성 🍉</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🍉 수박 게임
-                        </div>
-                    </div>
-                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>수박 대수확 퍼즐 🏆</div>
-                </motion.div>
-            </Tooltip>
-
-            <Tooltip text="상대 AI와 주사위를 굴려 점수를 겨루고, 상대를 깨부숴 연승에 도전하세요!" style={{ display: 'block', width: '100%' }}>
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => onNavigate && onNavigate('tikatuka-game')}
+                    onClick={() => onNavigate && onNavigate('arcade')}
                     className="action-card tikatuka"
+                    style={{ background: 'linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%)', border: '1px solid #fda4af', color: '#e11d48', position: 'relative', overflow: 'hidden' }}
                 >
                     <div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>AI 주사위 배틀 🎲</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🎲 티카투카
+                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px', color: '#be123c' }}>캐주얼 미니게임 존 🎮</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Gamepad2 size={20} /> 루미 아케이드
                         </div>
                     </div>
-                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>주사위 땅따먹기 🏆</div>
+                    <div style={{ fontSize: '0.68rem', opacity: 0.9, color: '#9f1239' }}>💎 크리스탈 획득처 🏆</div>
+                    <motion.div
+                        animate={{ x: [0, 200], opacity: [0, 0.4, 0] }}
+                        transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                        style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '100%', background: 'white', filter: 'blur(10px)', skewX: '-20deg' }}
+                    />
                 </motion.div>
             </Tooltip>
             
@@ -91,14 +33,15 @@ const QuickActionsGrid = ({ onNavigate, completedChallenges, streak, showValueGa
                     whileHover={{ scale: 1.02 }}
                     onClick={() => onNavigate && onNavigate('daily-challenges')}
                     className="action-card challenge"
+                    style={{ background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', border: '1px solid #86efac', color: '#16a34a' }}
                 >
                     <div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>오늘의 챌린지</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Target size={16} /> {completedChallenges}/3
+                        <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px', color: '#15803d' }}>오늘의 미션</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Target size={18} /> 일일 챌린지
                         </div>
                     </div>
-                    <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>🔥 {streak}일 연속</div>
+                    <div style={{ fontSize: '0.68rem', opacity: 0.9, color: '#166534' }}>{completedChallenges}/3 완료 (🔥 {streak}일 연속)</div>
                 </motion.div>
             </Tooltip>
 
@@ -108,19 +51,15 @@ const QuickActionsGrid = ({ onNavigate, completedChallenges, streak, showValueGa
                         whileHover={{ scale: 1.02 }}
                         onClick={() => onNavigate && onNavigate('value-game')}
                         className="action-card value"
+                        style={{ background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)', border: '1px solid #7dd3fc', color: '#0284c7' }}
                     >
                         <div>
-                            <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px' }}>가치관 밸런스</div>
-                            <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <Zap size={16} /> 시작하기
+                            <div style={{ fontSize: '0.7rem', opacity: 0.85, marginBottom: '4px', color: '#0369a1' }}>성향 분석</div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Zap size={18} /> 가치관 밸런스
                             </div>
                         </div>
-                        <div style={{ fontSize: '0.68rem', opacity: 0.9 }}>매칭 확률 UP 🚀</div>
-                        <motion.div
-                            animate={{ x: [0, 100], opacity: [0, 0.5, 0] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                            style={{ position: 'absolute', top: 0, left: 0, width: '30px', height: '100%', background: 'white', filter: 'blur(10px)', skewX: '-20deg' }}
-                        />
+                        <div style={{ fontSize: '0.68rem', opacity: 0.9, color: '#075985' }}>매칭 확률 UP 🚀</div>
                     </motion.div>
                 </Tooltip>
             )}

@@ -36,6 +36,7 @@ import AppleGamePage from '../pages/AppleGamePage';
 import SacheonseongGamePage from '../pages/SacheonseongGamePage';
 import WatermelonGamePage from '../pages/WatermelonGamePage';
 import TikatukaGamePage from '../pages/TikatukaGamePage';
+import ArcadePage from '../pages/ArcadePage';
 
 // Stores
 import useAuthStore from '../store/authStore';
@@ -48,7 +49,7 @@ import useUserStore from '../store/userStore';
 // ─────────────────────────────────────────────────────────────────
 export const PROTECTED_ROUTES = new Set([
     'dashboard', 'profile-edit', 'favorites', 'chat',
-    'profile', 'admin', 'soul-pet', 'value-game',
+    'profile', 'admin', 'soul-pet', 'value-game', 'arcade',
 ]);
 
 export const PUBLIC_ROUTES = new Set([
@@ -59,7 +60,7 @@ export const PUBLIC_ROUTES = new Set([
     'create-event', 'community', 'groups', 'group-chat',
     'ranking', 'magazine', 'compatibility-game', 'weekly-report',
     'insights', 'ai-insights', 'stats', 'growth',
-    'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game', 'tikatuka-game',
+    'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game', 'tikatuka-game', 'arcade',
 ]);
 
 /**
@@ -265,24 +266,28 @@ const AppRouter = ({
                 <DeepSoulResultPage key="deep-soul-result" onBack={() => navigate('dashboard')} onRetake={() => navigate('deep-soul-test')} onNavigate={navigate} />
             )}
 
+            {step === 'arcade' && (
+                <ArcadePage key="arcade" onNavigate={navigate} />
+            )}
+
             {step === 'apple-game' && (
-                <AppleGamePage key="apple-game" onBack={() => navigate('dashboard')} />
+                <AppleGamePage key="apple-game" onBack={() => navigate('arcade')} />
             )}
 
             {step === 'shisen-sho' && (
-                <SacheonseongGamePage key="shisen-sho" onBack={() => navigate('dashboard')} />
+                <SacheonseongGamePage key="shisen-sho" onBack={() => navigate('arcade')} />
             )}
 
             {step === 'game-2048' && (
-                <Game2048Page key="game-2048" onBack={() => navigate('dashboard')} />
+                <Game2048Page key="game-2048" onBack={() => navigate('arcade')} />
             )}
 
             {step === 'watermelon-game' && (
-                <WatermelonGamePage key="watermelon-game" onBack={() => navigate('dashboard')} />
+                <WatermelonGamePage key="watermelon-game" onBack={() => navigate('arcade')} />
             )}
 
             {step === 'tikatuka-game' && (
-                <TikatukaGamePage key="tikatuka-game" onBack={() => navigate('dashboard')} />
+                <TikatukaGamePage key="tikatuka-game" onBack={() => navigate('arcade')} />
             )}
 
             {/* ── 보호 페이지 (로그인 필수) ────────────────────── */}

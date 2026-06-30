@@ -117,18 +117,9 @@ function App() {
         }
 
         // 일반 사용자
-        if (!hasPersonalityData) {
-            // 성향 데이터가 없는 경우, 테스트 관련 페이지가 아닌 곳에 접근하면 자동으로 test로 리다이렉트
-            const isTestPermittedRoute = ['test', 'result', 'deep-soul-test', 'deep-soul-result'].includes(step);
-            
-            if (!isTestPermittedRoute) {
-                setStep('test');
-            }
-        } else {
-            // 성향 데이터가 있는 경우, 초기 화면이나 테스트 화면 진입 시 최적 화면으로 빠른 이동
-            if (step === 'welcome' || step === 'auth' || step === 'test') {
-                setStep('dashboard');
-            }
+        // 온보딩 가드 완화: 성향 데이터 유무와 상관없이 대시보드 및 아케이드를 자유롭게 탐색할 수 있도록 허용
+        if (step === 'welcome' || step === 'auth') {
+            setStep('dashboard');
         }
     }, [user, session, authLoading, profileLoading, isAdmin, step, userData, mbtiType, profile]);
 
