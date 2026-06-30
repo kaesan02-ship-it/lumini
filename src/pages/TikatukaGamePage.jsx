@@ -340,6 +340,7 @@ const TikatukaGamePage = ({ onBack }) => {
     const [isRolling, setIsRolling] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
+    const [activeSeason, setActiveSeason] = useState('season_2'); // 'season_2' (현재), 'season_1' (명예의 전당)
     const [gameResult, setGameResult] = useState(null); // 'win', 'lose', 'draw'
     const [gameRoundResult, setGameRoundResult] = useState({ playerWins: 0, aiWins: 0, ties: 0 });
 
@@ -364,20 +365,31 @@ const TikatukaGamePage = ({ onBack }) => {
     const bgmRef = useRef(null);
 
     // 랭킹 리더보드 동기화
-    const fetchLeaderboard = useCallback(() => {
+    const fetchLeaderboard = useCallback((targetSeason = activeSeason) => {
         if (USE_MOCK_DATA) {
-            setLeaderboard([
-                { username: '김민지', win_streak: 11 },
-                { username: '원채김', win_streak: 8 },
-                { username: '김민지', win_streak: 5 },
-                { username: '윤선희', win_streak: 4 },
-                { username: '지후', win_streak: 3 }
-            ]);
+            if (targetSeason === 'season_1') {
+                setLeaderboard([
+                    { username: '👑 명예의 루미', win_streak: 15 },
+                    { username: '주사위 마스터', win_streak: 12 },
+                    { username: '에스더 전사', win_streak: 10 },
+                    { username: '치코 잡는 포수', win_streak: 9 },
+                    { username: '행운아', win_streak: 7 }
+                ]);
+            } else {
+                setLeaderboard([
+                    { username: '김민지', win_streak: 11 },
+                    { username: '원채김', win_streak: 8 },
+                    { username: '김민지', win_streak: 5 },
+                    { username: '윤선희', win_streak: 4 },
+                    { username: '지후', win_streak: 3 }
+                ]);
+            }
             return;
         }
 
         supabase.from('tikatuka_game_scores')
             .select('max_win_streak, profiles(username)')
+            .eq('season', targetSeason)
             .order('max_win_streak', { ascending: false })
             .limit(10)
             .then(({ data, error }) => {
@@ -387,27 +399,32 @@ const TikatukaGamePage = ({ onBack }) => {
                         win_streak: item.max_win_streak
                     }));
                     setLeaderboard(mapped);
+                } else {
+                    setLeaderboard([]);
                 }
             });
-    }, []);
+    }, [activeSeason]);
 
     useEffect(() => {
         if (!USE_MOCK_DATA && user) {
             supabase.from('tikatuka_game_scores')
                 .select('max_win_streak, total_wins, total_games')
                 .eq('user_id', user.id)
+                .eq('season', 'season_2')
                 .order('max_win_streak', { ascending: false })
                 .limit(1)
-                .single()
                 .then(({ data, error }) => {
-                    if (data && !error) {
-                        setBestWinStreak(data.max_win_streak);
-                        localStorage.setItem(streakKey, data.max_win_streak.toString());
+                    if (data && data[0]) {
+                        setBestWinStreak(data[0].max_win_streak);
+                        localStorage.setItem(streakKey, data[0].max_win_streak.toString());
+                    } else {
+                        setBestWinStreak(0);
+                        localStorage.setItem(streakKey, '0');
                     }
                 });
         }
-        fetchLeaderboard();
-    }, [user, streakKey, fetchLeaderboard]);
+        fetchLeaderboard(activeSeason);
+    }, [user, streakKey, fetchLeaderboard, activeSeason]);
 
     // 게임 포기 및 이탈 처리 (랭킹 연승 리셋 및 판수 누적)
     const handleAbandonGame = () => {
@@ -419,12 +436,14 @@ const TikatukaGamePage = ({ onBack }) => {
                 supabase.from('tikatuka_game_scores')
                     .select('total_games')
                     .eq('user_id', user.id)
+                    .eq('season', 'season_2')
                     .maybeSingle()
                     .then(({ data, error }) => {
                         if (data && !error) {
                             supabase.from('tikatuka_game_scores')
                                 .update({ total_games: (data.total_games || 0) + 1 })
                                 .eq('user_id', user.id)
+                                .eq('season', 'season_2')
                                 .then(() => fetchLeaderboard());
                         } else {
                             supabase.from('tikatuka_game_scores')
@@ -432,7 +451,8 @@ const TikatukaGamePage = ({ onBack }) => {
                                     user_id: user.id,
                                     max_win_streak: 0,
                                     total_wins: 0,
-                                    total_games: 1
+                                    total_games: 1,
+                                    season: 'season_2'
                                 })
                                 .then(() => fetchLeaderboard());
                         }
@@ -709,6 +729,7 @@ const TikatukaGamePage = ({ onBack }) => {
                     supabase.from('tikatuka_game_scores')
                         .select('max_win_streak, total_wins, total_games')
                         .eq('user_id', user.id)
+                        .eq('season', 'season_2')
                         .maybeSingle()
                         .then(({ data, error }) => {
                             if (data && !error) {
@@ -720,6 +741,7 @@ const TikatukaGamePage = ({ onBack }) => {
                                         total_games: (data.total_games || 0) + 1
                                     })
                                     .eq('user_id', user.id)
+                                    .eq('season', 'season_2')
                                     .then(() => fetchLeaderboard());
                             } else {
                                 supabase.from('tikatuka_game_scores')
@@ -727,7 +749,8 @@ const TikatukaGamePage = ({ onBack }) => {
                                         user_id: user.id, 
                                         max_win_streak: nextStreak,
                                         total_wins: 1,
-                                        total_games: 1
+                                        total_games: 1,
+                                        season: 'season_2'
                                     })
                                     .then(() => fetchLeaderboard());
                             }
@@ -739,12 +762,14 @@ const TikatukaGamePage = ({ onBack }) => {
                     supabase.from('tikatuka_game_scores')
                         .select('total_games')
                         .eq('user_id', user.id)
+                        .eq('season', 'season_2')
                         .maybeSingle()
                         .then(({ data, error }) => {
                             if (data && !error) {
                                 supabase.from('tikatuka_game_scores')
                                     .update({ total_games: (data.total_games || 0) + 1 })
                                     .eq('user_id', user.id)
+                                    .eq('season', 'season_2')
                                     .then(() => fetchLeaderboard());
                             } else {
                                 supabase.from('tikatuka_game_scores')
@@ -752,7 +777,8 @@ const TikatukaGamePage = ({ onBack }) => {
                                         user_id: user.id,
                                         max_win_streak: 0,
                                         total_wins: 0,
-                                        total_games: 1
+                                        total_games: 1,
+                                        season: 'season_2'
                                     })
                                     .then(() => fetchLeaderboard());
                             }
@@ -1498,9 +1524,41 @@ const TikatukaGamePage = ({ onBack }) => {
                         background: '#ffffff', borderRadius: '30px', padding: '25px',
                         border: '2.5px solid #fecdd3', boxShadow: '0 10px 30px rgba(244, 63, 94, 0.05)'
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                            <Trophy size={22} color="#f43f5e" fill="#f43f5e" />
-                            <h3 style={{ fontWeight: 900, fontSize: '1.1rem', color: '#f43f5e' }}>최고 연승 리더보드</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Trophy size={22} color="#f43f5e" fill="#f43f5e" />
+                                <h3 style={{ fontWeight: 900, fontSize: '1.1rem', color: '#f43f5e', margin: 0 }}>최고 연승 리더보드</h3>
+                            </div>
+                            <div style={{ display: 'flex', background: '#ffe4e6', padding: '3px', borderRadius: '100px', border: '1px solid #fecdd3' }}>
+                                <button 
+                                    onClick={() => setActiveSeason('season_2')}
+                                    style={{
+                                        padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                        background: activeSeason === 'season_2' ? '#f43f5e' : 'transparent',
+                                        color: activeSeason === 'season_2' ? 'white' : '#be123c',
+                                        boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(244,63,94,0.2)' : 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    시즌 2
+                                </button>
+                                <button 
+                                    onClick={() => setActiveSeason('season_1')}
+                                    style={{
+                                        padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                        background: activeSeason === 'season_1' ? '#f43f5e' : 'transparent',
+                                        color: activeSeason === 'season_1' ? 'white' : '#be123c',
+                                        boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(244,63,94,0.2)' : 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    명예의 전당 (시즌 1)
+                                </button>
+                            </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {leaderboard.length > 0 ? (
