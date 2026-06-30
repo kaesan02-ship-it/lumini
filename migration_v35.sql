@@ -43,33 +43,14 @@ BEGIN
     END IF;
 END $$;
 
--- 3. profiles 테이블에 보존되어 있던 기존 유저 최고 기록들을 시즌 1(명예의 전당) 랭킹 테이블로 이식 복원합니다.
+-- 3. 사천성, 2048, 주사위 게임의 기존 테이블 누적 데이터를 'season_1' (명예의 전당)으로 일괄 이전
+UPDATE public.shisen_sho_scores SET season = 'season_1';
+UPDATE public.game_2048_scores SET season = 'season_1';
+UPDATE public.tikatuka_game_scores SET season = 'season_1';
+
+-- 4. profiles 테이블의 apple_game_best_score에서 사과게임 시즌 1(명예의 전당)로 기록 이식 복원
 INSERT INTO public.apple_game_scores (user_id, score, season, created_at)
 SELECT id, apple_game_best_score, 'season_1', NOW() - INTERVAL '1 day'
 FROM public.profiles
 WHERE apple_game_best_score > 0
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.shisen_sho_scores (user_id, score, season, created_at)
-SELECT id, shisen_sho_best_score, 'season_1', NOW() - INTERVAL '1 day'
-FROM public.profiles
-WHERE shisen_sho_best_score > 0
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.game_2048_scores (user_id, score, max_tile, season, created_at)
-SELECT id, game_2048_best_score, 1024, 'season_1', NOW() - INTERVAL '1 day'
-FROM public.profiles
-WHERE game_2048_best_score > 0
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.watermelon_game_scores (user_id, score, max_fruit_level, season, created_at)
-SELECT id, watermelon_game_best_score, 8, 'season_1', NOW() - INTERVAL '1 day'
-FROM public.profiles
-WHERE watermelon_game_best_score > 0
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.tikatuka_game_scores (user_id, max_win_streak, total_wins, total_games, season, created_at)
-SELECT id, tikatuka_best_streak, tikatuka_best_streak, tikatuka_best_streak + 2, 'season_1', NOW() - INTERVAL '1 day'
-FROM public.profiles
-WHERE tikatuka_best_streak > 0
 ON CONFLICT DO NOTHING;
