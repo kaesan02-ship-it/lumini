@@ -4,6 +4,7 @@ import { Trophy, TrendingUp, Sparkles, Timer } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useUserStore from '../store/userStore';
 import useAuthStore from '../store/authStore';
+import Tooltip from '../components/Tooltip';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
 
@@ -25,7 +26,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const { userName, activeRankingTab } = useUserStore();
     const { user } = useAuthStore();
     const [activeTab, setActiveTab] = useState(activeRankingTab || 'apple'); // apple, shisen, game2048, watermelon, tikatuka
-    const [activeSeason, setActiveSeason] = useState('season_2'); // 'season_2' (현재), 'season_1' (명예의 전당)
+    const [activeSeason, setActiveSeason] = useState('season_3'); // 'season_3' (현재), 'season_2', 'season_1'
     const [showGuide, setShowGuide] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
@@ -38,84 +39,113 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
         setLoading(true);
         try {
             if (USE_MOCK_DATA) {
-                // Mock 데이터 폴백 (시즌 1과 시즌 2의 점수판을 각각 다르게 렌더링)
+                // Mock 데이터 폴백 (시즌 3, 시즌 2, 시즌 1 점수판 분리)
                 let mockList = [];
                 if (activeTab === 'apple') {
-                    if (targetSeason === 'season_1') {
+                    if (targetSeason === 'season_3') {
+                        mockList = [
+                            { rank: 1, name: '사과수확러', mbti: 'ENFJ', score: 320, badge: '🏆', isMe: false },
+                            { rank: 2, name: '햇살농부', mbti: 'INFP', score: 280, badge: '🥈', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else if (targetSeason === 'season_2') {
+                        mockList = [
+                            { rank: 1, name: '김현우', mbti: 'ENTJ', score: 1000, badge: '🏆', isMe: false },
+                            { rank: 2, name: '원채김', mbti: 'ENTJ', score: 990, badge: '🥈', isMe: false },
+                            { rank: 3, name: '김민지', mbti: 'ISFJ', score: 920, badge: '🥉', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else {
                         mockList = [
                             { rank: 1, name: '🍎 명예의 사과꾼', mbti: 'ENTJ', score: 1500, badge: '🏆', isMe: false },
                             { rank: 2, name: '사과 헌터', mbti: 'INFP', score: 1200, badge: '🥈', isMe: false },
                             { rank: 3, name: '뉴턴의 후예', mbti: 'ENFJ', score: 950, badge: '🥉', isMe: false }
                         ];
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '지후', mbti: 'ENFJ', score: 280, badge: '🏆', isMe: false },
-                            { rank: 2, name: '서연', mbti: 'INFP', score: 240, badge: '🥈', isMe: false },
-                            { rank: 3, name: '민준', mbti: 'ENTP', score: 190, badge: '🥉', isMe: false },
-                            { rank: 4, name: userName || '나', mbti: mbtiType || 'ENFP', score: 150, badge: '', isMe: true }
-                        ];
-                        setMyBestStat({ rank: 4, scoreVal: '150점' });
                     }
                 } else if (activeTab === 'shisen') {
-                    if (targetSeason === 'season_1') {
+                    if (targetSeason === 'season_3') {
+                        mockList = [
+                            { rank: 1, name: '사천성꿈나무', mbti: 'ENFJ', score: 620, badge: '🏆', isMe: false },
+                            { rank: 2, name: '동물친구', mbti: 'ENTP', score: 540, badge: '🥈', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else if (targetSeason === 'season_2') {
+                        mockList = [
+                            { rank: 1, name: '김지민', mbti: 'ENFJ', score: 620, badge: '🏆', isMe: false },
+                            { rank: 2, name: '정하은', mbti: 'ENTP', score: 580, badge: '🥈', isMe: false },
+                            { rank: 3, name: '이지우', mbti: 'ENFP', score: 540, badge: '🥉', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else {
                         mockList = [
                             { rank: 1, name: '👑 사천성달인', mbti: 'ESFP', score: 4500, badge: '🏆', isMe: false },
                             { rank: 2, name: '동물수호자', mbti: 'INTJ', score: 3900, badge: '🥈', isMe: false }
                         ];
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '지후', mbti: 'ENFJ', score: 620, badge: '🏆', isMe: false },
-                            { rank: 2, name: '민준', mbti: 'ENTP', score: 580, badge: '🥈', isMe: false },
-                            { rank: 3, name: userName || '나', mbti: mbtiType || 'ENFP', score: 540, badge: '🥉', isMe: true }
-                        ];
-                        setMyBestStat({ rank: 3, scoreVal: '540점' });
                     }
                 } else if (activeTab === 'game2048') {
-                    if (targetSeason === 'season_1') {
+                    if (targetSeason === 'season_3') {
+                        mockList = [
+                            { rank: 1, name: '새싹진화사', mbti: 'INFP', score: 3840, badge: '🏆', isMe: false },
+                            { rank: 2, name: '초보병아리', mbti: 'ENFJ', score: 2040, badge: '🥈', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else if (targetSeason === 'season_2') {
+                        mockList = [
+                            { rank: 1, name: '진화마스터', mbti: 'INFP', score: 4820, badge: '🏆', isMe: false },
+                            { rank: 2, name: '이지우', mbti: 'ENFP', score: 3840, badge: '🥈', isMe: false },
+                            { rank: 3, name: '김민지', mbti: 'ENFJ', score: 2900, badge: '🥉', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else {
                         mockList = [
                             { rank: 1, name: '👑 명예의 판다', mbti: 'INFP', score: 38400, badge: '🏆', isMe: false },
                             { rank: 2, name: '2048정복자', mbti: 'ENTJ', score: 24800, badge: '🥈', isMe: false }
                         ];
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '서연', mbti: 'INFP', score: 4820, badge: '🏆', isMe: false },
-                            { rank: 2, name: userName || '나', mbti: mbtiType || 'ENFP', score: 3840, badge: '🥈', isMe: true },
-                            { rank: 3, name: '지후', mbti: 'ENFJ', score: 2900, badge: '🥉', isMe: false }
-                        ];
-                        setMyBestStat({ rank: 2, scoreVal: '3,840점' });
                     }
                 } else if (activeTab === 'watermelon') {
-                    if (targetSeason === 'season_1') {
+                    if (targetSeason === 'season_3') {
+                        mockList = [
+                            { rank: 1, name: '수박씨앗', mbti: 'ENFJ', score: 2150, badge: '🏆', isMe: false },
+                            { rank: 2, name: '멜론새싹', mbti: 'INFP', score: 1840, badge: '🥈', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else if (targetSeason === 'season_2') {
+                        mockList = [
+                            { rank: 1, name: '원채김', mbti: 'ENFJ', score: 2850, badge: '🏆', isMe: false },
+                            { rank: 2, name: '김민지', mbti: 'INFP', score: 2420, badge: '🥈', isMe: false },
+                            { rank: 3, name: '윤선희', mbti: 'ENFP', score: 1650, badge: '🥉', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0점' });
+                    } else {
                         mockList = [
                             { rank: 1, name: '👑 수박왕', mbti: 'ESTJ', score: 4500, badge: '🏆', isMe: false },
                             { rank: 2, name: '멜론재배사', mbti: 'INFJ', score: 3820, badge: '🥈', isMe: false }
                         ];
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '지후', mbti: 'ENFJ', score: 2850, badge: '🏆', isMe: false },
-                            { rank: 2, name: '서연', mbti: 'INFP', score: 2420, badge: '🥈', isMe: false },
-                            { rank: 3, name: userName || '나', mbti: mbtiType || 'ENFP', score: 1150, badge: '🥉', isMe: true }
-                        ];
-                        setMyBestStat({ rank: 3, scoreVal: '1,150점' });
                     }
                 } else if (activeTab === 'tikatuka') {
-                    if (targetSeason === 'season_1') {
+                    if (targetSeason === 'season_3') {
+                        mockList = [
+                            { rank: 1, name: '주사위신성', mbti: 'ENFJ', score: 5, badge: '🏆', isMe: false },
+                            { rank: 2, name: '다이스초보', mbti: 'INFP', score: 3, badge: '🥈', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0연승' });
+                    } else if (targetSeason === 'season_2') {
+                        mockList = [
+                            { rank: 1, name: '김민지', mbti: 'ENFJ', score: 11, badge: '🏆', isMe: false },
+                            { rank: 2, name: '원채김', mbti: 'INFP', score: 8, badge: '🥈', isMe: false },
+                            { rank: 3, name: '윤선희', mbti: 'ENFP', score: 4, badge: '🥉', isMe: false }
+                        ];
+                        setMyBestStat({ rank: '-', scoreVal: '0연승' });
+                    } else {
                         mockList = [
                             { rank: 1, name: '👑 명예의 루미', mbti: 'ENTJ', score: 15, badge: '🏆', isMe: false },
                             { rank: 2, name: '주사위 마스터', mbti: 'INTP', score: 12, badge: '🥈', isMe: false }
                         ];
                         setMyBestStat({ rank: '-', scoreVal: '0연승' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '지후', mbti: 'ENFJ', score: 8, badge: '🏆', isMe: false },
-                            { rank: 2, name: '서연', mbti: 'INFP', score: 5, badge: '🥈', isMe: false },
-                            { rank: 3, name: userName || '나', mbti: mbtiType || 'ENFP', score: 3, badge: '🥉', isMe: true }
-                        ];
-                        setMyBestStat({ rank: 3, scoreVal: '3연승' });
                     }
                 }
                 setLeaderboard(mockList);
@@ -329,32 +359,45 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     
                     {/* 시즌 필터링용 세그먼트 버튼 */}
                     <div style={{ display: 'flex', background: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.2)' }}>
-                        <button 
-                            onClick={() => setActiveSeason('season_2')}
-                            style={{
-                                padding: '6px 16px', fontSize: '0.8rem', borderRadius: '100px', fontWeight: 900,
-                                background: activeSeason === 'season_2' ? 'white' : 'transparent',
-                                color: activeSeason === 'season_2' ? '#ff4d6e' : 'white',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            시즌 2
-                        </button>
-                        <button 
-                            onClick={() => setActiveSeason('season_1')}
-                            style={{
-                                padding: '6px 16px', fontSize: '0.8rem', borderRadius: '100px', fontWeight: 900,
-                                background: activeSeason === 'season_1' ? 'white' : 'transparent',
-                                color: activeSeason === 'season_1' ? '#ff4d6e' : 'white',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            명예의 전당 (시즌 1)
-                        </button>
+                        <Tooltip text="현재 진행 중인 시즌 3 랭킹입니다">
+                            <button 
+                                onClick={() => setActiveSeason('season_3')}
+                                style={{
+                                    padding: '6px 14px', fontSize: '0.8rem', borderRadius: '100px', fontWeight: 900,
+                                    background: activeSeason === 'season_3' ? 'white' : 'transparent',
+                                    color: activeSeason === 'season_3' ? '#ff4d6e' : 'white',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                시즌 3
+                            </button>
+                        </Tooltip>
+                        <Tooltip text="이전 시즌 2 기록을 확인합니다">
+                            <button 
+                                onClick={() => setActiveSeason('season_2')}
+                                style={{
+                                    padding: '6px 14px', fontSize: '0.8rem', borderRadius: '100px', fontWeight: 900,
+                                    background: activeSeason === 'season_2' ? 'white' : 'transparent',
+                                    color: activeSeason === 'season_2' ? '#ff4d6e' : 'white',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                시즌 2
+                            </button>
+                        </Tooltip>
+                        <Tooltip text="시즌 1 명예의 전당 기록입니다">
+                            <button 
+                                onClick={() => setActiveSeason('season_1')}
+                                style={{
+                                    padding: '6px 14px', fontSize: '0.8rem', borderRadius: '100px', fontWeight: 900,
+                                    background: activeSeason === 'season_1' ? 'white' : 'transparent',
+                                    color: activeSeason === 'season_1' ? '#ff4d6e' : 'white',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                시즌 1
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
                 

@@ -50,7 +50,7 @@ import useUserStore from '../store/userStore';
 // ─────────────────────────────────────────────────────────────────
 export const PROTECTED_ROUTES = new Set([
     'dashboard', 'profile-edit', 'favorites', 'chat',
-    'profile', 'admin', 'soul-pet', 'value-game', 'arcade',
+    'profile', 'admin', 'soul-pet', 'value-game',
 ]);
 
 export const PUBLIC_ROUTES = new Set([

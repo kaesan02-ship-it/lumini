@@ -39,7 +39,7 @@ const Game2048Page = ({ onBack }) => {
     const [bestScore, setBestScore] = useState(() => parseInt(localStorage.getItem(bestScoreKey) || '0'));
     const [gameState, setGameState] = useState('ready'); // ready, playing, finished, won
     const [leaderboard, setLeaderboard] = useState([]);
-    const [activeSeason, setActiveSeason] = useState('season_2'); // 'season_2' (현재), 'season_1' (명예의 전당)
+    const [activeSeason, setActiveSeason] = useState('season_3'); // 'season_3' (현재), 'season_2', 'season_1'
     
     // 모바일 터치 및 마우스 드래그 좌표 상태
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -48,17 +48,22 @@ const Game2048Page = ({ onBack }) => {
     // 리더보드 로드 (중복 허용 고득점 Top 10)
     const fetchLeaderboard = useCallback((targetSeason = activeSeason) => {
         if (USE_MOCK_DATA) {
-            if (targetSeason === 'season_1') {
+            if (targetSeason === 'season_3') {
                 setLeaderboard([
-                    { username: '👑 명예의 판다', score: 8540, max_tile: 1024 },
-                    { username: '2048정복자', score: 7120, max_tile: 512 },
-                    { username: '성장한루미', score: 6080, max_tile: 256 }
+                    { username: '새싹진화사', score: 3840, max_tile: 64 },
+                    { username: '초보병아리', score: 2040, max_tile: 32 }
                 ]);
-            } else {
+            } else if (targetSeason === 'season_2') {
                 setLeaderboard([
                     { username: '진화마스터', score: 4820, max_tile: 128 },
                     { username: '이지우', score: 3840, max_tile: 64 },
                     { username: '김민지', score: 2900, max_tile: 32 }
+                ]);
+            } else {
+                setLeaderboard([
+                    { username: '👑 명예의 판다', score: 8540, max_tile: 1024 },
+                    { username: '2048정복자', score: 7120, max_tile: 512 },
+                    { username: '성장한루미', score: 6080, max_tile: 256 }
                 ]);
             }
             return;
@@ -80,7 +85,8 @@ const Game2048Page = ({ onBack }) => {
                 } else {
                     setLeaderboard([]);
                 }
-            });
+            })
+            .catch(() => setLeaderboard([]));
     }, [activeSeason]);
 
     // 초기 최고기록 및 리더보드 동기화
@@ -90,7 +96,7 @@ const Game2048Page = ({ onBack }) => {
                 supabase.from('game_2048_scores')
                     .select('score')
                     .eq('user_id', user.id)
-                    .eq('season', 'season_2')
+                    .eq('season', 'season_3')
                     .order('score', { ascending: false })
                     .limit(1)
                     .then(({ data, error }) => {
@@ -101,7 +107,8 @@ const Game2048Page = ({ onBack }) => {
                             setBestScore(0);
                             localStorage.setItem(bestScoreKey, '0');
                         }
-                    });
+                    })
+                    .catch(() => setBestScore(0));
             }
             fetchLeaderboard(activeSeason);
         }
@@ -260,10 +267,11 @@ const Game2048Page = ({ onBack }) => {
             // Supabase 랭킹 등록
             if (!USE_MOCK_DATA && user?.id) {
                 supabase.from('game_2048_scores')
-                    .insert({ user_id: user.id, score: finalScore, max_tile: maxTile, season: 'season_2' })
+                    .insert({ user_id: user.id, score: finalScore, max_tile: maxTile, season: 'season_3' })
                     .then(({ error }) => {
                         if (!error) fetchLeaderboard();
-                    });
+                    })
+                    .catch(() => {});
             }
             return nextBest;
         });
@@ -335,7 +343,7 @@ const Game2048Page = ({ onBack }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '480px', margin: '0 auto' }}>
             {/* 상단 헤더 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                 <button
                     onClick={onBack}
                     style={{
@@ -346,9 +354,27 @@ const Game2048Page = ({ onBack }) => {
                 >
                     <ArrowLeft size={20} /> 대시보드
                 </button>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: '#ffeef1', padding: '6px 12px', borderRadius: '12px' }}>
-                    <Sparkles size={16} color="#ff6b8b" />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ff6b8b' }}>루미니 아케이드</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {user ? (
+                        <Tooltip text="로그인 계정으로 시즌 3 랭킹에 점수가 등록됩니다">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '5px 10px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 800, color: '#059669' }}>
+                                <span>🟢</span> {user.email?.split('@')[0] || '회원'} (시즌 3)
+                            </div>
+                        </Tooltip>
+                    ) : (
+                        <Tooltip text="로그인하지 않으면 랭킹에 기록되지 않습니다. 클릭하여 로그인!">
+                            <div 
+                                onClick={() => window.dispatchEvent(new CustomEvent('changeStep', { detail: 'auth' }))}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '5px 10px', borderRadius: '100px', fontSize: '0.72rem', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}
+                            >
+                                <span>🔒</span> 게스트 (로그인)
+                            </div>
+                        </Tooltip>
+                    )}
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: '#ffeef1', padding: '6px 12px', borderRadius: '12px' }}>
+                        <Sparkles size={16} color="#ff6b8b" />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ff6b8b' }}>2048</span>
+                    </div>
                 </div>
             </div>
 
@@ -550,34 +576,48 @@ const Game2048Page = ({ onBack }) => {
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2d3748', margin: 0 }}>최고 랭킹</h3>
                     </div>
                     <div style={{ display: 'flex', background: '#ffeef1', padding: '3px', borderRadius: '100px', border: '1px solid #ffd3db' }}>
-                        <button 
-                            onClick={() => setActiveSeason('season_2')}
-                            style={{
-                                padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
-                                background: activeSeason === 'season_2' ? '#ff6b8b' : 'transparent',
-                                color: activeSeason === 'season_2' ? 'white' : '#ff6b8b',
-                                boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            시즌 2
-                        </button>
-                        <button 
-                            onClick={() => setActiveSeason('season_1')}
-                            style={{
-                                padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
-                                background: activeSeason === 'season_1' ? '#ff6b8b' : 'transparent',
-                                color: activeSeason === 'season_1' ? 'white' : '#ff6b8b',
-                                boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            명예의 전당 (시즌 1)
-                        </button>
+                        <Tooltip text="현재 진행 중인 시즌 3 랭킹입니다">
+                            <button 
+                                onClick={() => setActiveSeason('season_3')}
+                                style={{
+                                    padding: '4px 10px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                    background: activeSeason === 'season_3' ? '#ff6b8b' : 'transparent',
+                                    color: activeSeason === 'season_3' ? 'white' : '#ff6b8b',
+                                    boxShadow: activeSeason === 'season_3' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                시즌 3
+                            </button>
+                        </Tooltip>
+                        <Tooltip text="이전 시즌 2 기록을 확인합니다">
+                            <button 
+                                onClick={() => setActiveSeason('season_2')}
+                                style={{
+                                    padding: '4px 10px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                    background: activeSeason === 'season_2' ? '#ff6b8b' : 'transparent',
+                                    color: activeSeason === 'season_2' ? 'white' : '#ff6b8b',
+                                    boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                시즌 2
+                            </button>
+                        </Tooltip>
+                        <Tooltip text="시즌 1 명예의 전당 기록입니다">
+                            <button 
+                                onClick={() => setActiveSeason('season_1')}
+                                style={{
+                                    padding: '4px 10px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                    background: activeSeason === 'season_1' ? '#ff6b8b' : 'transparent',
+                                    color: activeSeason === 'season_1' ? 'white' : '#ff6b8b',
+                                    boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(255,107,139,0.2)' : 'none',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                시즌 1
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
 

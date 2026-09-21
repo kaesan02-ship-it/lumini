@@ -4,6 +4,7 @@ import { Timer, Trophy, ArrowLeft, Play, Gem, Volume2, VolumeX, Sparkles } from 
 import useCrystalStore from '../store/crystalStore';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
+import Tooltip from '../components/Tooltip';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
 
@@ -54,24 +55,27 @@ const WatermelonGamePage = ({ onBack }) => {
     const deadlineTimerRef = useRef(null);
     const [isDeadlineWarning, setIsDeadlineWarning] = useState(false);
 
-    const [activeSeason, setActiveSeason] = useState('season_2'); // 'season_2' (현재), 'season_1' (명예의 전당)
+    const [activeSeason, setActiveSeason] = useState('season_3'); // 'season_3' (현재), 'season_2', 'season_1'
 
     // 랭킹 리더보드 로드 (중복 허용 탑 10)
     const fetchLeaderboard = useCallback((targetSeason = activeSeason) => {
         if (USE_MOCK_DATA) {
-            if (targetSeason === 'season_1') {
+            if (targetSeason === 'season_3') {
+                setLeaderboard([
+                    { username: '수박씨앗', score: 2150 },
+                    { username: '멜론새싹', score: 1840 }
+                ]);
+            } else if (targetSeason === 'season_2') {
+                setLeaderboard([
+                    { username: '원채김', score: 2850 },
+                    { username: '김민지', score: 2420 },
+                    { username: '김민지', score: 1980 }
+                ]);
+            } else {
                 setLeaderboard([
                     { username: '👑 수박왕', score: 4500 },
                     { username: '멜론재배사', score: 3820 },
                     { username: '과일장수', score: 3200 }
-                ]);
-            } else {
-                setLeaderboard([
-                    { username: '원채김', score: 2850 },
-                    { username: '김민지', score: 2420 },
-                    { username: '김민지', score: 1980 },
-                    { username: '윤선희', score: 1650 },
-                    { username: '지후', score: 1220 }
                 ]);
             }
             return;
@@ -92,7 +96,8 @@ const WatermelonGamePage = ({ onBack }) => {
                 } else {
                     setLeaderboard([]);
                 }
-            });
+            })
+            .catch(() => setLeaderboard([]));
     }, [activeSeason]);
 
     // 초기 최고 기록 및 리더보드 가져오기
@@ -101,7 +106,7 @@ const WatermelonGamePage = ({ onBack }) => {
             supabase.from('watermelon_game_scores')
                 .select('score')
                 .eq('user_id', user.id)
-                .eq('season', 'season_2')
+                .eq('season', 'season_3')
                 .order('score', { ascending: false })
                 .limit(1)
                 .then(({ data, error }) => {
@@ -112,7 +117,8 @@ const WatermelonGamePage = ({ onBack }) => {
                         setBestScore(0);
                         localStorage.setItem(bestScoreKey, '0');
                     }
-                });
+                })
+                .catch(() => setBestScore(0));
         }
         fetchLeaderboard(activeSeason);
     }, [user, bestScoreKey, fetchLeaderboard, activeSeason]);
@@ -181,11 +187,12 @@ const WatermelonGamePage = ({ onBack }) => {
                 const maxLevel = fruitsRef.current.reduce((max, f) => Math.max(max, f.level), 1);
 
                 supabase.from('watermelon_game_scores')
-                    .insert({ user_id: user.id, score: finalScore, max_fruit_level: maxLevel, season: 'season_2' })
+                    .insert({ user_id: user.id, score: finalScore, max_fruit_level: maxLevel, season: 'season_3' })
                     .then(({ error }) => {
                         if (error) console.error('Failed to save watermelon score:', error);
                         else fetchLeaderboard();
-                    });
+                    })
+                    .catch(() => {});
             }
             return newBest;
         });
@@ -578,7 +585,24 @@ const WatermelonGamePage = ({ onBack }) => {
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     🍉 루미니 수박 농장
                 </h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {/* 로그인 / 게스트 상태 배지 */}
+                    {user ? (
+                        <Tooltip text="로그인 계정으로 시즌 3 랭킹에 점수가 등록됩니다">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '6px 12px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800, color: '#059669' }}>
+                                <span>🟢</span> {userName || user.email?.split('@')[0] || '회원'} (시즌 3)
+                            </div>
+                        </Tooltip>
+                    ) : (
+                        <Tooltip text="로그인하지 않으면 랭킹에 기록되지 않습니다. 클릭하여 로그인!">
+                            <div 
+                                onClick={() => window.dispatchEvent(new CustomEvent('changeStep', { detail: 'auth' }))}
+                                style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '6px 12px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}
+                            >
+                                <span>🔒</span> 게스트 (로그인)
+                            </div>
+                        </Tooltip>
+                    )}
                     <button onClick={() => { setIsMuted(!isMuted); if (bgmRef.current) isMuted ? bgmRef.current.play() : bgmRef.current.pause(); }} title={isMuted ? "배경음악 켜기" : "배경음악 끄기"} style={{ background: 'white', padding: '12px', borderRadius: '50%', border: '1px solid #e2e8f0', cursor: 'pointer', color: '#64748b', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
                         {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                     </button>
@@ -712,34 +736,48 @@ const WatermelonGamePage = ({ onBack }) => {
                                 <h3 style={{ fontWeight: 900, fontSize: '1.15rem', color: '#1e293b', margin: 0 }}>최고 랭킹</h3>
                             </div>
                             <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '100px', border: '1px solid #e2e8f0' }}>
-                                <button 
-                                    onClick={() => setActiveSeason('season_2')}
-                                    style={{
-                                        padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
-                                        background: activeSeason === 'season_2' ? '#fbbf24' : 'transparent',
-                                        color: activeSeason === 'season_2' ? 'white' : '#64748b',
-                                        boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(251,191,36,0.2)' : 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    시즌 2
-                                </button>
-                                <button 
-                                    onClick={() => setActiveSeason('season_1')}
-                                    style={{
-                                        padding: '4px 12px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
-                                        background: activeSeason === 'season_1' ? '#fbbf24' : 'transparent',
-                                        color: activeSeason === 'season_1' ? 'white' : '#64748b',
-                                        boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(251,191,36,0.2)' : 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    명예의 전당 (시즌 1)
-                                </button>
+                                <Tooltip text="현재 진행 중인 시즌 3 랭킹입니다">
+                                    <button 
+                                        onClick={() => setActiveSeason('season_3')}
+                                        style={{
+                                            padding: '4px 10px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                            background: activeSeason === 'season_3' ? '#fbbf24' : 'transparent',
+                                            color: activeSeason === 'season_3' ? 'white' : '#64748b',
+                                            boxShadow: activeSeason === 'season_3' ? '0 2px 5px rgba(251,191,36,0.2)' : 'none',
+                                            border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        시즌 3
+                                    </button>
+                                </Tooltip>
+                                <Tooltip text="이전 시즌 2 기록을 확인합니다">
+                                    <button 
+                                        onClick={() => setActiveSeason('season_2')}
+                                        style={{
+                                            padding: '4px 10px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                            background: activeSeason === 'season_2' ? '#fbbf24' : 'transparent',
+                                            color: activeSeason === 'season_2' ? 'white' : '#64748b',
+                                            boxShadow: activeSeason === 'season_2' ? '0 2px 5px rgba(251,191,36,0.2)' : 'none',
+                                            border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        시즌 2
+                                    </button>
+                                </Tooltip>
+                                <Tooltip text="시즌 1 명예의 전당 기록입니다">
+                                    <button 
+                                        onClick={() => setActiveSeason('season_1')}
+                                        style={{
+                                            padding: '4px 10px', fontSize: '0.72rem', borderRadius: '100px', fontWeight: 800,
+                                            background: activeSeason === 'season_1' ? '#fbbf24' : 'transparent',
+                                            color: activeSeason === 'season_1' ? 'white' : '#64748b',
+                                            boxShadow: activeSeason === 'season_1' ? '0 2px 5px rgba(251,191,36,0.2)' : 'none',
+                                            border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        시즌 1
+                                    </button>
+                                </Tooltip>
                             </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
