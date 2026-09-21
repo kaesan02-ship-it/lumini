@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, Github, Chrome, ArrowRight, Loader, Sparkles, Eye, EyeOff, CalendarDays } from 'lucide-react';
+import { Mail, Lock, User, Github, Chrome, ArrowRight, Loader, Sparkles, Eye, EyeOff, CalendarDays, ExternalLink, AlertCircle, HelpCircle } from 'lucide-react';
+import Tooltip from '../components/Tooltip';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
 import useCrystalStore from '../store/crystalStore';
@@ -90,6 +91,7 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showWelcomeBonus, setShowWelcomeBonus] = useState(false);
     const [showRateLimitModal, setShowRateLimitModal] = useState(false);
+    const [showServerPausedModal, setShowServerPausedModal] = useState(false);
 
     const { signIn, signUp, signInWithGoogle } = useAuthStore();
     const { fetchProfile } = useUserStore();
@@ -178,10 +180,14 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
         } catch (error) {
             console.error('Auth Error:', error);
             let msg = error.message || '인증에 실패했습니다.';
-            if (msg.toLowerCase().includes('rate limit')) {
+            const lower = msg.toLowerCase();
+            if (lower.includes('rate limit')) {
                 setShowRateLimitModal(true);
-            } else if (msg.toLowerCase().includes('confirm') || msg.toLowerCase().includes('not confirmed')) {
+            } else if (lower.includes('confirm') || lower.includes('not confirmed')) {
                 toast.error('가입하신 이메일함에서 인증 링크를 클릭해 주셔야 로그인이 가능합니다! 📧\n(기관/연구원 메일은 차단되거나 스팸함에 들어갈 수 있으니, 테스트 편의를 위해 Supabase에서 "Confirm email" 설정을 꺼주시는 것을 권장합니다.)', { duration: 8000 });
+            } else if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('load failed') || lower.includes('networkerror')) {
+                setShowServerPausedModal(true);
+                toast.error('서버(Supabase)에 연결할 수 없습니다. 데이터베이스 절전 상태를 확인해 주세요.', { duration: 5000 });
             } else {
                 toast.error(msg);
             }
@@ -233,6 +239,65 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
                             >
                                 확인
                             </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+                {showServerPausedModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+                            style={{ background: 'var(--surface)', padding: '32px 28px', borderRadius: '24px', maxWidth: '440px', width: '100%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}
+                        >
+                            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>💤</div>
+                            <h3 style={{ fontSize: '1.35rem', fontWeight: 900, marginBottom: '10px', color: 'var(--text)' }}>
+                                데이터베이스가 잠들어 있어요
+                            </h3>
+                            <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '14px', padding: '14px', marginBottom: '16px', textAlign: 'left', fontSize: '0.85rem', color: '#b45309', lineHeight: 1.55 }}>
+                                <strong>🔌 왜 'Failed to fetch' 오류가 발생하나요?</strong><br />
+                                Supabase 무료 데이터베이스는 <strong>7일 동안 사용이 없으면 자동으로 전기 절약 모드(Pause)</strong>로 전환됩니다. 전원 차단기가 내려간 것과 같아 서버 주소를 찾을 수 없는 상태입니다.<br />
+                                <span style={{ fontSize: '0.8rem', opacity: 0.9, display: 'block', marginTop: '4px' }}>
+                                    ※ 회원님의 기존 계정 정보와 게임 점수 등 모든 데이터는 안전하게 보존되어 있으니 안심하세요!
+                                </span>
+                            </div>
+                            <div style={{ background: 'var(--background)', padding: '14px 16px', borderRadius: '14px', marginBottom: '20px', textAlign: 'left', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                                <strong style={{ color: 'var(--primary)', display: 'block', marginBottom: '6px' }}>⚡ 1분 만에 깨우는 방법:</strong>
+                                1. 아래 <strong>[Supabase 대시보드 열기]</strong> 클릭<br />
+                                2. 프로젝트 상단 <strong>[Restore project]</strong> (또는 Unpause) 클릭<br />
+                                3. 약 1~2분 후 새로고침하고 다시 로그인
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <Tooltip text="새 창에서 Supabase 프로젝트 관리 콘솔을 엽니다">
+                                    <a
+                                        href="https://supabase.com/dashboard/project/uotscostmadmnaypdxus"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                            width: '100%', padding: '14px', borderRadius: '14px',
+                                            background: 'linear-gradient(135deg, #10B981, #059669)',
+                                            color: 'white', textDecoration: 'none', fontWeight: 800, fontSize: '0.95rem',
+                                            boxShadow: '0 4px 12px rgba(16,185,129,0.3)', cursor: 'pointer'
+                                        }}
+                                    >
+                                        <ExternalLink size={18} /> Supabase 대시보드에서 깨우기
+                                    </a>
+                                </Tooltip>
+                                <Tooltip text="창을 닫고 로그인 화면으로 돌아갑니다">
+                                    <button
+                                        onClick={() => setShowServerPausedModal(false)}
+                                        style={{
+                                            width: '100%', padding: '12px', borderRadius: '14px',
+                                            background: 'var(--background)', color: 'var(--text-muted)',
+                                            border: '1px solid var(--glass-border)', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer'
+                                        }}
+                                    >
+                                        창 닫기
+                                    </button>
+                                </Tooltip>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}
@@ -346,6 +411,16 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
                             style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: 700, marginLeft: '8px', cursor: 'pointer', zIndex: 10, position: 'relative' }}
                         >{isLogin ? '회원가입' : '로그인'}</button>
                     </p>
+                    
+                    <Tooltip text="서버 연결 장애(Failed to fetch) 발생 시 복구 가이드를 확인합니다">
+                        <button 
+                            type="button"
+                            onClick={() => setShowServerPausedModal(true)}
+                            style={{ background: 'none', border: 'none', color: '#6366F1', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                        >
+                            <AlertCircle size={14} /> 서버 접속 장애(Failed to fetch) 해결 가이드
+                        </button>
+                    </Tooltip>
                     
                     <button 
                         onClick={onAdminClick}
