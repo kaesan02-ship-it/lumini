@@ -61,6 +61,66 @@ const ArcadePage = ({ onNavigate }) => {
             theme: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
             border: '#d8b4fe',
             color: '#7e22ce'
+        },
+        {
+            id: 'color-eye-game',
+            title: '🎨 컬러 아이 테스트',
+            badge: 'NEW · 절대색감 👀',
+            desc: '격자판에 깔린 소울펫 타일 중 미세하게 색깔이 다른 단 1개의 타일을 찾아 연속으로 터치하세요!',
+            tooltip: '단계가 올라갈수록 색 차이가 미세해지는 초집중 눈썰미·색감 랭킹 게임!',
+            theme: 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)',
+            border: '#f9a8d4',
+            color: '#db2777'
+        },
+        {
+            id: 'speed-number-game',
+            title: '⚡ 1~25 스피드 터치',
+            badge: 'NEW · 0.01초 승부 🔥',
+            desc: '5×5 보드에 무작위로 섞인 1부터 25까지의 숫자를 순서대로 가장 빠르게 터치해 없애는 타임어택!',
+            tooltip: '동체시력과 손가락 순발력으로 최단 기록을 경신하는 스피드 랭킹 게임!',
+            theme: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            border: '#fcd34d',
+            color: '#b45309'
+        },
+        {
+            id: 'blind-timer-game',
+            title: '⏱️ 인간 스톱워치 7.77초',
+            badge: 'NEW · 칼박자 감각 🎯',
+            desc: '1.5초 뒤 가려지는 블라인드 타이머! 마음속으로 숫자를 세어 목표 시간(3.33s·5.55s·7.77s) 정각에 멈추세요!',
+            tooltip: '오차 0.00초에 도전하는 초간단·고몰입 생체 시계 감각 테스트!',
+            theme: 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)',
+            border: '#67e8f9',
+            color: '#0e7490'
+        },
+        {
+            id: 'stack-tower-game',
+            title: '🥞 소울펫 팬케이크 탑',
+            badge: 'NEW · 원버튼 리듬 🥞',
+            desc: '좌우로 움직이는 팬케이크 블록을 타이밍 맞춰 터치해 차곡차곡 쌓아 올리세요. 정중앙 착지 시 퍼펙트 보너스!',
+            tooltip: '누구나 한 손가락으로 즐길 수 있는 중독성 만점 타워 쌓기 랭킹 게임!',
+            theme: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+            border: '#c4b5fd',
+            color: '#6d28d9'
+        },
+        {
+            id: 'reflex-battle-game',
+            title: '🧠 청개구리 반사신경',
+            badge: 'NEW · 두뇌 풀가동 🐸',
+            desc: '일반 지시는 그대로, 청개구리 지시는 정반대 방향을 터치하세요! 콤보가 쌓일수록 점수가 폭발합니다!',
+            tooltip: '청기백기 스타일의 순간 판단력과 반사신경을 겨루는 아케이드 배틀!',
+            theme: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+            border: '#6ee7b7',
+            color: '#047857'
+        },
+        {
+            id: 'memory-match-game',
+            title: '🃏 소울펫 기억력 카드',
+            badge: 'NEW · 포토 메모리 🧠',
+            desc: '1.8초간 공개되는 귀여운 소울펫 카드의 위치를 기억해 제한시간 내에 모든 짝을 맞추고 최고 스테이지에 오르세요!',
+            tooltip: '순간 기억력과 집중력으로 스테이지를 돌파하는 카드 매칭 타임어택!',
+            theme: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+            border: '#93c5fd',
+            color: '#1d4ed8'
         }
     ];
 
@@ -149,37 +209,49 @@ const ArcadePage = ({ onNavigate }) => {
                 ))}
             </div>
             
-            {/* 아케이드 장식용 배너 */}
-            <div style={{
-                marginTop: '30px',
-                background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
-                borderRadius: '24px',
-                padding: '20px 24px',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '15px',
-                boxShadow: '0 10px 20px rgba(244, 63, 94, 0.15)'
-            }}>
-                <div style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                }}>
-                    <Sparkles size={22} color="#ffffff" />
+            {/* 아케이드 장식용 배너 & 통합 명예의 전당 바로가기 */}
+            <Tooltip text="11종 전체 아케이드 게임의 통합 시즌 랭킹과 MBTI 통계를 확인합니다" style={{ display: 'block' }}>
+                <div
+                    onClick={() => onNavigate && onNavigate('ranking')}
+                    style={{
+                        marginTop: '30px',
+                        background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+                        borderRadius: '24px',
+                        padding: '20px 24px',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '15px',
+                        boxShadow: '0 10px 20px rgba(244, 63, 94, 0.15)',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <div style={{
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '50%',
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                        }}>
+                            <Trophy size={22} color="#ffffff" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 900 }}>🏆 통합 명예의 전당 바로가기</h4>
+                            <p style={{ margin: 0, fontSize: '0.78rem', color: '#ffe4e6', fontWeight: 600 }}>
+                                11종 전체 미니게임의 시즌 3 · 시즌 2 · 시즌 1 랭킹과 MBTI 성향별 순위를 한눈에 확인하세요!
+                            </p>
+                        </div>
+                    </div>
+                    <span style={{ fontWeight: 900, fontSize: '0.88rem', whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.2)', padding: '8px 14px', borderRadius: '100px' }}>
+                        랭킹 보기 →
+                    </span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900 }}>오늘의 랭킹 도전!</h4>
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#ffe4e6', fontWeight: 600 }}>
-                        모든 아케이드 미니게임은 일일 챌린지 점수로 누적 산정되어 연승 리더보드에 자동 등재됩니다.
-                    </p>
-                </div>
-            </div>
+            </Tooltip>
         </div>
     );
 };

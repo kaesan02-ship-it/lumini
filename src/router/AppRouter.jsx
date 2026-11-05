@@ -37,6 +37,12 @@ import SacheonseongGamePage from '../pages/SacheonseongGamePage';
 import Game2048Page from '../pages/Game2048Page';
 import WatermelonGamePage from '../pages/WatermelonGamePage';
 import TikatukaGamePage from '../pages/TikatukaGamePage';
+import ColorEyeGamePage from '../pages/ColorEyeGamePage';
+import SpeedNumberGamePage from '../pages/SpeedNumberGamePage';
+import BlindTimerGamePage from '../pages/BlindTimerGamePage';
+import StackTowerGamePage from '../pages/StackTowerGamePage';
+import ReflexBattleGamePage from '../pages/ReflexBattleGamePage';
+import MemoryMatchGamePage from '../pages/MemoryMatchGamePage';
 import ArcadePage from '../pages/ArcadePage';
 
 // Stores
@@ -61,7 +67,9 @@ export const PUBLIC_ROUTES = new Set([
     'create-event', 'community', 'groups', 'group-chat',
     'ranking', 'magazine', 'compatibility-game', 'weekly-report',
     'insights', 'ai-insights', 'stats', 'growth',
-    'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game', 'tikatuka-game', 'arcade',
+    'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game', 'tikatuka-game',
+    'color-eye-game', 'speed-number-game', 'blind-timer-game', 'stack-tower-game', 'reflex-battle-game', 'memory-match-game',
+    'arcade',
 ]);
 
 /**
@@ -289,6 +297,30 @@ const AppRouter = ({
 
             {step === 'tikatuka-game' && (
                 <TikatukaGamePage key="tikatuka-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'color-eye-game' && (
+                <ColorEyeGamePage key="color-eye-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'speed-number-game' && (
+                <SpeedNumberGamePage key="speed-number-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'blind-timer-game' && (
+                <BlindTimerGamePage key="blind-timer-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'stack-tower-game' && (
+                <StackTowerGamePage key="stack-tower-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'reflex-battle-game' && (
+                <ReflexBattleGamePage key="reflex-battle-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'memory-match-game' && (
+                <MemoryMatchGamePage key="memory-match-game" onBack={() => navigate('arcade')} />
             )}
 
             {/* ── 보호 페이지 (로그인 필수) ────────────────────── */}

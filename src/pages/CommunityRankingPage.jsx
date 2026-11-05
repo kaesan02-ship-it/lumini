@@ -7,6 +7,7 @@ import useAuthStore from '../store/authStore';
 import Tooltip from '../components/Tooltip';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
+import { NEW_ARCADE_GAMES, fetchArcadeLeaderboard } from '../utils/arcadeRankingService';
 
 const SCORE_GUIDE = [
     { action: '사천성 게임 클리어', points: '타임어택 경쟁', icon: '🐾' },
@@ -14,6 +15,12 @@ const SCORE_GUIDE = [
     { action: '사과게임 10 만들기', points: '고득점 누적 경쟁', icon: '🍎' },
     { action: '수박게임 120초 합성', points: '타임어택 합성 경쟁', icon: '🍉' },
     { action: '티카투카 주사위 대전', points: '연승 콤보 경쟁', icon: '🎲' },
+    { action: '컬러 아이 테스트', points: '단계·점수 경쟁', icon: '🎨' },
+    { action: '1~25 스피드 터치', points: '초고속 타임어택', icon: '⚡' },
+    { action: '인간 스톱워치 7.77초', points: '절대 시간감각 경쟁', icon: '⏱️' },
+    { action: '소울펫 팬케이크 탑', points: '최고 층수·퍼펙트 경쟁', icon: '🥞' },
+    { action: '청개구리 반사신경', points: '연속 콤보·순발력 경쟁', icon: '🧠' },
+    { action: '소울펫 기억력 카드', points: '스테이지·기억력 경쟁', icon: '🃏' },
 ];
 
 const FRUIT_EMOJIS = {
@@ -141,6 +148,23 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const fetchRankings = useCallback(async (targetSeason = activeSeason) => {
         setLoading(true);
         try {
+            // 신규 6종 아케이드 게임은 하이브리드 랭킹 엔진(원격 + 로컬 실시간 병합) 사용
+            if (NEW_ARCADE_GAMES[activeTab]) {
+                const list = await fetchArcadeLeaderboard(activeTab, targetSeason, user?.id || 'guest');
+                setLeaderboard(list);
+                const myIdx = list.findIndex(item => item.isMe);
+                if (myIdx !== -1) {
+                    setMyBestStat({
+                        rank: myIdx + 1,
+                        scoreVal: `${list[myIdx].score.toLocaleString()}점${list[myIdx].detail ? ` (${list[myIdx].detail})` : ''}`
+                    });
+                } else {
+                    setMyBestStat({ rank: '-', scoreVal: '0점' });
+                }
+                setLoading(false);
+                return;
+            }
+
             if (USE_MOCK_DATA) {
                 applyMockFallback(targetSeason);
                 setLoading(false);
@@ -409,7 +433,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                 {/* 내 기록 현황 카드 */}
                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '18px', padding: '18px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.25)' }}>
                     <div style={{ fontSize: '0.78rem', opacity: 0.85, marginBottom: '8px' }}>
-                        내 {activeTab === 'apple' ? '사과게임' : activeTab === 'shisen' ? '사천성' : activeTab === 'game2048' ? '2048' : activeTab === 'watermelon' ? '수박게임' : activeTab === 'tikatuka' ? '티카투카' : ''} 최고 기록
+                        내 {activeTab === 'apple' ? '사과게임' : activeTab === 'shisen' ? '사천성' : activeTab === 'game2048' ? '2048' : activeTab === 'watermelon' ? '수박게임' : activeTab === 'tikatuka' ? '티카투카' : NEW_ARCADE_GAMES[activeTab]?.shortTitle || ''} 최고 기록
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -438,31 +462,38 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
             </div>
 
             <div style={{ padding: '20px 5%' }}>
-                {/* 게임 전환 탭 */}
+                {/* 게임 전환 탭 (기존 5종 + 신규 6종 = 총 11종) */}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
                     {[
-                        { id: 'apple', label: '🍎 사과게임 랭킹' },
-                        { id: 'shisen', label: '🐾 사천성 랭킹' },
-                        { id: 'game2048', label: '🥚 2048 랭킹' },
-                        { id: 'watermelon', label: '🍉 수박게임 랭킹' },
-                        { id: 'tikatuka', label: '🎲 티카투카 랭킹' }
+                        { id: 'apple', label: '🍎 사과게임' },
+                        { id: 'shisen', label: '🐾 사천성' },
+                        { id: 'game2048', label: '🥚 2048' },
+                        { id: 'watermelon', label: '🍉 수박게임' },
+                        { id: 'tikatuka', label: '🎲 티카투카' },
+                        { id: 'color-eye', label: '🎨 컬러아이' },
+                        { id: 'speed-number', label: '⚡ 스피드터치' },
+                        { id: 'blind-timer', label: '⏱️ 7.77초' },
+                        { id: 'stack-tower', label: '🥞 팬케이크탑' },
+                        { id: 'reflex-battle', label: '🧠 반사신경' },
+                        { id: 'memory-match', label: '🃏 기억력카드' }
                     ].map(t => (
-                        <button
-                            key={t.id}
-                            onClick={() => {
-                                setActiveTab(t.id);
-                                useUserStore.getState().setActiveRankingTab(t.id);
-                            }}
-                            style={{
-                                padding: '10px 20px', borderRadius: '100px',
-                                border: activeTab !== t.id ? '1px solid var(--glass-border)' : 'none',
-                                background: activeTab === t.id ? '#ff6b8b' : 'var(--surface)',
-                                color: activeTab === t.id ? 'white' : 'var(--text-muted)',
-                                fontWeight: 800, cursor: 'pointer', fontSize: '0.85rem'
-                            }}
-                        >
-                            {t.label}
-                        </button>
+                        <Tooltip key={t.id} text={`${t.label} 랭킹 보드를 확인합니다`}>
+                            <button
+                                onClick={() => {
+                                    setActiveTab(t.id);
+                                    useUserStore.getState().setActiveRankingTab(t.id);
+                                }}
+                                style={{
+                                    padding: '9px 16px', borderRadius: '100px',
+                                    border: activeTab !== t.id ? '1px solid var(--glass-border)' : 'none',
+                                    background: activeTab === t.id ? '#ff6b8b' : 'var(--surface)',
+                                    color: activeTab === t.id ? 'white' : 'var(--text-muted)',
+                                    fontWeight: 800, cursor: 'pointer', fontSize: '0.82rem'
+                                }}
+                            >
+                                {t.label}
+                            </button>
+                        </Tooltip>
                     ))}
                     <button
                         onClick={() => setShowGuide(!showGuide)}
@@ -529,6 +560,11 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                                                         Max: {user.max_tile}
                                                     </span>
                                                 )}
+                                                {user.detail && (
+                                                    <span style={{ fontSize: '0.65rem', opacity: 0.85, fontWeight: 600 }}>
+                                                        {user.detail}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -572,6 +608,11 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                                             {user.max_fruit_level && (
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                     최대 수확 단계: {FRUIT_EMOJIS[user.max_fruit_level] || '🍉'}
+                                                </div>
+                                            )}
+                                            {user.detail && (
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    기록 상세: {user.detail}
                                                 </div>
                                             )}
                                         </div>
