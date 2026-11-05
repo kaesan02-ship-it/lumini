@@ -36,14 +36,10 @@ const useAuthStore = create((set, get) => ({
     signIn: async (email, password) => {
         const cleanEmail = email.trim().toLowerCase();
 
-        if (USE_MOCK_DATA) {
-            const account = DEMO_ACCOUNTS[cleanEmail];
-            if (!account || account.password !== password) {
-                throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.\n(데모: demo@lumini.me / lumini123)');
-            }
+        const runMockLogin = (account) => {
             const mockUser = {
-                id: `mock-${email}`,
-                email,
+                id: `mock-${cleanEmail}`,
+                email: cleanEmail,
                 username: account.username,
                 avatar_url: '',
                 user_metadata: { username: account.username, isAdmin: account.isAdmin },
@@ -61,38 +57,56 @@ const useAuthStore = create((set, get) => ({
 
             set({ user: mockUser, session: mockSession, loading: false, isAdmin: account.isAdmin });
             return { user: mockUser, session: mockSession };
-        }
+        };
 
-        const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-        if (error) {
-            console.error('Login error:', error);
-            throw error;
-        }
-        const isAdmin =
-            data.user?.email === 'admin@lumini.me' ||
-            data.user?.user_metadata?.isAdmin === true;
-            
-        // 로그인 성공 시 해당 유저의 성향 데이터를 리셋 (성향 검사 새로 받기 구현)
-        if (!isAdmin && data.user) {
-            localStorage.removeItem('lumini_user_data');
-            localStorage.removeItem('lumini_mbti_type');
-            localStorage.removeItem('lumini_deep_soul');
-            useUserStore.getState().setUserData(null);
-            useUserStore.getState().setMbtiType('?');
-            
-            try {
-                // profiles 테이블에서 해당 유저의 성향 데이터를 리셋
-                await supabase.from('profiles').update({
-                    personality_data: null,
-                    mbti_type: '?'
-                }).eq('id', data.user.id);
-            } catch (dbErr) {
-                console.error('Failed to reset DB profile personality data:', dbErr);
+        if (USE_MOCK_DATA) {
+            const account = DEMO_ACCOUNTS[cleanEmail];
+            if (!account || account.password !== password) {
+                throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.\n(데모: demo@lumini.me / lumini123)');
             }
+            return runMockLogin(account);
         }
 
-        set({ isAdmin, user: data.user, session: data.session, loading: false });
-        return data;
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+            if (error) {
+                console.error('Login error:', error);
+                throw error;
+            }
+            const isAdmin =
+                data.user?.email === 'admin@lumini.me' ||
+                data.user?.user_metadata?.isAdmin === true;
+                
+            // 로그인 성공 시 해당 유저의 성향 데이터를 리셋 (성향 검사 새로 받기 구현)
+            if (!isAdmin && data.user) {
+                localStorage.removeItem('lumini_user_data');
+                localStorage.removeItem('lumini_mbti_type');
+                localStorage.removeItem('lumini_deep_soul');
+                useUserStore.getState().setUserData(null);
+                useUserStore.getState().setMbtiType('?');
+                
+                try {
+                    // profiles 테이블에서 해당 유저의 성향 데이터를 리셋
+                    await supabase.from('profiles').update({
+                        personality_data: null,
+                        mbti_type: '?'
+                    }).eq('id', data.user.id);
+                } catch (dbErr) {
+                    console.error('Failed to reset DB profile personality data:', dbErr);
+                }
+            }
+
+            set({ isAdmin, user: data.user, session: data.session, loading: false });
+            return data;
+        } catch (err) {
+            // 서버 절전(Failed to fetch) 등 장애 시에도 데모/관리자 계정은 즉시 로컬 폴백 로그인 허용
+            const demoAccount = DEMO_ACCOUNTS[cleanEmail];
+            if (demoAccount && demoAccount.password === password) {
+                console.warn('Supabase unreachable or demo fallback triggered; logging in with local demo session.');
+                return runMockLogin(demoAccount);
+            }
+            throw err;
+        }
     },
 
     signUp: async (email, password, metadata) => {

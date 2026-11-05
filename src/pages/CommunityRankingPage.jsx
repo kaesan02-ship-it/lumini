@@ -34,121 +34,115 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const [loading, setLoading] = useState(true);
     const [myBestStat, setMyBestStat] = useState({ rank: '-', scoreVal: '0' });
 
+    // Mock 랭킹 폴백 생성 헬퍼 (서버 절전/오프라인 시에도 랭킹 보드 유지)
+    const applyMockFallback = useCallback((targetSeason) => {
+        let mockList = [];
+        if (activeTab === 'apple') {
+            if (targetSeason === 'season_3') {
+                mockList = [
+                    { rank: 1, name: '사과수확러', mbti: 'ENFJ', score: 320, badge: '🏆', isMe: false },
+                    { rank: 2, name: '햇살농부', mbti: 'INFP', score: 280, badge: '🥈', isMe: false }
+                ];
+            } else if (targetSeason === 'season_2') {
+                mockList = [
+                    { rank: 1, name: '김현우', mbti: 'ENTJ', score: 1000, badge: '🏆', isMe: false },
+                    { rank: 2, name: '원채김', mbti: 'ENTJ', score: 990, badge: '🥈', isMe: false },
+                    { rank: 3, name: '김민지', mbti: 'ISFJ', score: 920, badge: '🥉', isMe: false }
+                ];
+            } else {
+                mockList = [
+                    { rank: 1, name: '🍎 명예의 사과꾼', mbti: 'ENTJ', score: 1500, badge: '🏆', isMe: false },
+                    { rank: 2, name: '사과 헌터', mbti: 'INFP', score: 1200, badge: '🥈', isMe: false },
+                    { rank: 3, name: '뉴턴의 후예', mbti: 'ENFJ', score: 950, badge: '🥉', isMe: false }
+                ];
+            }
+            setMyBestStat({ rank: '-', scoreVal: '0점' });
+        } else if (activeTab === 'shisen') {
+            if (targetSeason === 'season_3') {
+                mockList = [
+                    { rank: 1, name: '사천성꿈나무', mbti: 'ENFJ', score: 620, badge: '🏆', isMe: false },
+                    { rank: 2, name: '동물친구', mbti: 'ENTP', score: 540, badge: '🥈', isMe: false }
+                ];
+            } else if (targetSeason === 'season_2') {
+                mockList = [
+                    { rank: 1, name: '김지민', mbti: 'ENFJ', score: 620, badge: '🏆', isMe: false },
+                    { rank: 2, name: '정하은', mbti: 'ENTP', score: 580, badge: '🥈', isMe: false },
+                    { rank: 3, name: '이지우', mbti: 'ENFP', score: 540, badge: '🥉', isMe: false }
+                ];
+            } else {
+                mockList = [
+                    { rank: 1, name: '👑 사천성달인', mbti: 'ESFP', score: 4500, badge: '🏆', isMe: false },
+                    { rank: 2, name: '동물수호자', mbti: 'INTJ', score: 3900, badge: '🥈', isMe: false }
+                ];
+            }
+            setMyBestStat({ rank: '-', scoreVal: '0점' });
+        } else if (activeTab === 'game2048') {
+            if (targetSeason === 'season_3') {
+                mockList = [
+                    { rank: 1, name: '새싹진화사', mbti: 'INFP', score: 3840, badge: '🏆', isMe: false },
+                    { rank: 2, name: '초보병아리', mbti: 'ENFJ', score: 2040, badge: '🥈', isMe: false }
+                ];
+            } else if (targetSeason === 'season_2') {
+                mockList = [
+                    { rank: 1, name: '진화마스터', mbti: 'INFP', score: 4820, badge: '🏆', isMe: false },
+                    { rank: 2, name: '이지우', mbti: 'ENFP', score: 3840, badge: '🥈', isMe: false },
+                    { rank: 3, name: '김민지', mbti: 'ENFJ', score: 2900, badge: '🥉', isMe: false }
+                ];
+            } else {
+                mockList = [
+                    { rank: 1, name: '👑 명예의 판다', mbti: 'INFP', score: 38400, badge: '🏆', isMe: false },
+                    { rank: 2, name: '2048정복자', mbti: 'ENTJ', score: 24800, badge: '🥈', isMe: false }
+                ];
+            }
+            setMyBestStat({ rank: '-', scoreVal: '0점' });
+        } else if (activeTab === 'watermelon') {
+            if (targetSeason === 'season_3') {
+                mockList = [
+                    { rank: 1, name: '수박씨앗', mbti: 'ENFJ', score: 2150, badge: '🏆', isMe: false },
+                    { rank: 2, name: '멜론새싹', mbti: 'INFP', score: 1840, badge: '🥈', isMe: false }
+                ];
+            } else if (targetSeason === 'season_2') {
+                mockList = [
+                    { rank: 1, name: '원채김', mbti: 'ENFJ', score: 2850, badge: '🏆', isMe: false },
+                    { rank: 2, name: '김민지', mbti: 'INFP', score: 2420, badge: '🥈', isMe: false },
+                    { rank: 3, name: '윤선희', mbti: 'ENFP', score: 1650, badge: '🥉', isMe: false }
+                ];
+            } else {
+                mockList = [
+                    { rank: 1, name: '👑 수박왕', mbti: 'ESTJ', score: 4500, badge: '🏆', isMe: false },
+                    { rank: 2, name: '멜론재배사', mbti: 'INFJ', score: 3820, badge: '🥈', isMe: false }
+                ];
+            }
+            setMyBestStat({ rank: '-', scoreVal: '0점' });
+        } else if (activeTab === 'tikatuka') {
+            if (targetSeason === 'season_3') {
+                mockList = [
+                    { rank: 1, name: '주사위신성', mbti: 'ENFJ', score: 5, badge: '🏆', isMe: false },
+                    { rank: 2, name: '다이스초보', mbti: 'INFP', score: 3, badge: '🥈', isMe: false }
+                ];
+            } else if (targetSeason === 'season_2') {
+                mockList = [
+                    { rank: 1, name: '김민지', mbti: 'ENFJ', score: 11, badge: '🏆', isMe: false },
+                    { rank: 2, name: '원채김', mbti: 'INFP', score: 8, badge: '🥈', isMe: false },
+                    { rank: 3, name: '윤선희', mbti: 'ENFP', score: 4, badge: '🥉', isMe: false }
+                ];
+            } else {
+                mockList = [
+                    { rank: 1, name: '👑 명예의 루미', mbti: 'ENTJ', score: 15, badge: '🏆', isMe: false },
+                    { rank: 2, name: '주사위 마스터', mbti: 'INTP', score: 12, badge: '🥈', isMe: false }
+                ];
+            }
+            setMyBestStat({ rank: '-', scoreVal: '0연승' });
+        }
+        setLeaderboard(mockList);
+    }, [activeTab]);
+
     // 각 게임 탭별로 Supabase 실시간 랭킹 쿼리 호출
     const fetchRankings = useCallback(async (targetSeason = activeSeason) => {
         setLoading(true);
         try {
             if (USE_MOCK_DATA) {
-                // Mock 데이터 폴백 (시즌 3, 시즌 2, 시즌 1 점수판 분리)
-                let mockList = [];
-                if (activeTab === 'apple') {
-                    if (targetSeason === 'season_3') {
-                        mockList = [
-                            { rank: 1, name: '사과수확러', mbti: 'ENFJ', score: 320, badge: '🏆', isMe: false },
-                            { rank: 2, name: '햇살농부', mbti: 'INFP', score: 280, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else if (targetSeason === 'season_2') {
-                        mockList = [
-                            { rank: 1, name: '김현우', mbti: 'ENTJ', score: 1000, badge: '🏆', isMe: false },
-                            { rank: 2, name: '원채김', mbti: 'ENTJ', score: 990, badge: '🥈', isMe: false },
-                            { rank: 3, name: '김민지', mbti: 'ISFJ', score: 920, badge: '🥉', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '🍎 명예의 사과꾼', mbti: 'ENTJ', score: 1500, badge: '🏆', isMe: false },
-                            { rank: 2, name: '사과 헌터', mbti: 'INFP', score: 1200, badge: '🥈', isMe: false },
-                            { rank: 3, name: '뉴턴의 후예', mbti: 'ENFJ', score: 950, badge: '🥉', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    }
-                } else if (activeTab === 'shisen') {
-                    if (targetSeason === 'season_3') {
-                        mockList = [
-                            { rank: 1, name: '사천성꿈나무', mbti: 'ENFJ', score: 620, badge: '🏆', isMe: false },
-                            { rank: 2, name: '동물친구', mbti: 'ENTP', score: 540, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else if (targetSeason === 'season_2') {
-                        mockList = [
-                            { rank: 1, name: '김지민', mbti: 'ENFJ', score: 620, badge: '🏆', isMe: false },
-                            { rank: 2, name: '정하은', mbti: 'ENTP', score: 580, badge: '🥈', isMe: false },
-                            { rank: 3, name: '이지우', mbti: 'ENFP', score: 540, badge: '🥉', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '👑 사천성달인', mbti: 'ESFP', score: 4500, badge: '🏆', isMe: false },
-                            { rank: 2, name: '동물수호자', mbti: 'INTJ', score: 3900, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    }
-                } else if (activeTab === 'game2048') {
-                    if (targetSeason === 'season_3') {
-                        mockList = [
-                            { rank: 1, name: '새싹진화사', mbti: 'INFP', score: 3840, badge: '🏆', isMe: false },
-                            { rank: 2, name: '초보병아리', mbti: 'ENFJ', score: 2040, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else if (targetSeason === 'season_2') {
-                        mockList = [
-                            { rank: 1, name: '진화마스터', mbti: 'INFP', score: 4820, badge: '🏆', isMe: false },
-                            { rank: 2, name: '이지우', mbti: 'ENFP', score: 3840, badge: '🥈', isMe: false },
-                            { rank: 3, name: '김민지', mbti: 'ENFJ', score: 2900, badge: '🥉', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '👑 명예의 판다', mbti: 'INFP', score: 38400, badge: '🏆', isMe: false },
-                            { rank: 2, name: '2048정복자', mbti: 'ENTJ', score: 24800, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    }
-                } else if (activeTab === 'watermelon') {
-                    if (targetSeason === 'season_3') {
-                        mockList = [
-                            { rank: 1, name: '수박씨앗', mbti: 'ENFJ', score: 2150, badge: '🏆', isMe: false },
-                            { rank: 2, name: '멜론새싹', mbti: 'INFP', score: 1840, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else if (targetSeason === 'season_2') {
-                        mockList = [
-                            { rank: 1, name: '원채김', mbti: 'ENFJ', score: 2850, badge: '🏆', isMe: false },
-                            { rank: 2, name: '김민지', mbti: 'INFP', score: 2420, badge: '🥈', isMe: false },
-                            { rank: 3, name: '윤선희', mbti: 'ENFP', score: 1650, badge: '🥉', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '👑 수박왕', mbti: 'ESTJ', score: 4500, badge: '🏆', isMe: false },
-                            { rank: 2, name: '멜론재배사', mbti: 'INFJ', score: 3820, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0점' });
-                    }
-                } else if (activeTab === 'tikatuka') {
-                    if (targetSeason === 'season_3') {
-                        mockList = [
-                            { rank: 1, name: '주사위신성', mbti: 'ENFJ', score: 5, badge: '🏆', isMe: false },
-                            { rank: 2, name: '다이스초보', mbti: 'INFP', score: 3, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0연승' });
-                    } else if (targetSeason === 'season_2') {
-                        mockList = [
-                            { rank: 1, name: '김민지', mbti: 'ENFJ', score: 11, badge: '🏆', isMe: false },
-                            { rank: 2, name: '원채김', mbti: 'INFP', score: 8, badge: '🥈', isMe: false },
-                            { rank: 3, name: '윤선희', mbti: 'ENFP', score: 4, badge: '🥉', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0연승' });
-                    } else {
-                        mockList = [
-                            { rank: 1, name: '👑 명예의 루미', mbti: 'ENTJ', score: 15, badge: '🏆', isMe: false },
-                            { rank: 2, name: '주사위 마스터', mbti: 'INTP', score: 12, badge: '🥈', isMe: false }
-                        ];
-                        setMyBestStat({ rank: '-', scoreVal: '0연승' });
-                    }
-                }
-                setLeaderboard(mockList);
+                applyMockFallback(targetSeason);
                 setLoading(false);
                 return;
             }
@@ -180,6 +174,8 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
+                } else {
+                    applyMockFallback(targetSeason);
                 }
             } else if (activeTab === 'shisen') {
                 // 2. 사천성 랭킹 로드 (shisen_sho_scores 테이블 - 중복 허용)
@@ -208,6 +204,8 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
+                } else {
+                    applyMockFallback(targetSeason);
                 }
             } else if (activeTab === 'game2048') {
                 // 3. 2048 랭킹 로드 (game_2048_scores 테이블 - 중복 허용)
@@ -237,6 +235,8 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
+                } else {
+                    applyMockFallback(targetSeason);
                 }
             } else if (activeTab === 'watermelon') {
                 // 4. 수박게임 랭킹 로드 (watermelon_game_scores 테이블 - 중복 허용)
@@ -266,6 +266,8 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0점' });
                     }
+                } else {
+                    applyMockFallback(targetSeason);
                 }
             } else if (activeTab === 'tikatuka') {
                 // 5. 티카투카 랭킹 로드 (tikatuka_game_scores 테이블)
@@ -294,14 +296,17 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     } else {
                         setMyBestStat({ rank: '-', scoreVal: '0연승' });
                     }
+                } else {
+                    applyMockFallback(targetSeason);
                 }
             }
         } catch (err) {
             console.error('Error fetching rankings:', err);
+            applyMockFallback(targetSeason);
         } finally {
             setLoading(false);
         }
-    }, [activeTab, activeSeason, user]);
+    }, [activeTab, activeSeason, user, applyMockFallback]);
 
     useEffect(() => {
         fetchRankings(activeSeason);
