@@ -1,8 +1,8 @@
 // 환경 설정
 export const IS_DEVELOPMENT = import.meta.env.DEV;
 
-// Supabase 설정이 없거나 명시적으로 모크 모드일 때만 true
-const HAS_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Supabase 설정이 없거나 명시적으로 모크 모드일 때만 true (GitHub Actions 배포 시에도 실제 DB 연결 보장)
+const HAS_SUPABASE = !!(import.meta.env.VITE_SUPABASE_URL || 'https://uotscostmadmnaypdxus.supabase.co') && !!(import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_mHGxmjB5owN6nW4yGf6N7g_m4TovL_t');
 export const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true' || import.meta.env.VITE_USE_MOCK === 'true' || !HAS_SUPABASE;
 
 // API 설정
