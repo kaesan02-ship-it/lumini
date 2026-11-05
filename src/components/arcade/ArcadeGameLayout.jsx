@@ -294,6 +294,25 @@ const ArcadeGameLayout = ({
 
                         {/* 리더보드 리스트 */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {leaderboard.length === 0 && (
+                                <div
+                                    style={{
+                                        textAlign: 'center',
+                                        padding: '32px 16px',
+                                        background: '#f8fafc',
+                                        borderRadius: '18px',
+                                        border: '1px dashed #cbd5e1',
+                                        color: '#64748b',
+                                        fontSize: '0.86rem',
+                                        fontWeight: 700,
+                                        lineHeight: 1.6,
+                                    }}
+                                >
+                                    <div style={{ fontSize: '2rem', marginBottom: '6px' }}>🏆</div>
+                                    아직 등록된 기록이 없습니다.<br />
+                                    게임을 플레이하고 <strong>첫 1위 주인공</strong>이 되어보세요!
+                                </div>
+                            )}
                             {leaderboard.slice(0, 10).map((item, idx) => (
                                 <div
                                     key={`${item.name}-${item.score}-${idx}`}

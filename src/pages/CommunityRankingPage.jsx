@@ -532,12 +532,38 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     </div>
                 ) : (
                     <>
-                        {/* 포디움 TOP 3 연출 */}
+                        {/* 포디움 TOP 3 연출 (1~2명만 기록되어 있어도 즉시 노출되도록 개선) */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '28px', alignItems: 'end' }}>
-                            {leaderboard.length >= 3 ? (
-                                [leaderboard[1], leaderboard[0], leaderboard[2]].map((user, i) => {
+                            {leaderboard.length >= 1 ? (
+                                [leaderboard[1] || null, leaderboard[0] || null, leaderboard[2] || null].map((user, i) => {
                                     const heights = ['80px', '108px', '68px'];
                                     const colors = ['#CBD5E1', '#ffd700', '#CD7C2F'];
+                                    const placeLabels = ['2위 🥈', '1위 🏆', '3위 🥉'];
+                                    if (!user) {
+                                        return (
+                                            <div key={`empty-${i}`} style={{ textAlign: 'center', opacity: 0.45 }}>
+                                                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                                    {placeLabels[i]} 대기중
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        background: 'var(--surface)',
+                                                        border: '1px dashed var(--glass-border)',
+                                                        height: heights[i],
+                                                        borderRadius: '12px 12px 0 0',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: 'var(--text-muted)',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.78rem'
+                                                    }}
+                                                >
+                                                    빈자리
+                                                </div>
+                                            </div>
+                                        );
+                                    }
                                     return (
                                         <div key={user.rank} style={{ textAlign: 'center' }}>
                                             <div style={{ fontSize: i === 1 ? '2rem' : '1.5rem', marginBottom: '6px' }}>{user.badge}</div>
@@ -572,9 +598,9 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                             ) : (
                                 <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '40px', background: 'var(--surface)', borderRadius: '20px', color: 'var(--text-muted)' }}>
                                     <Trophy size={40} style={{ marginBottom: '10px', opacity: 0.2, margin: '0 auto' }} />
-                                    <div style={{ marginTop: '8px' }}>
-                                        아직 등록된 랭킹 정보가 적습니다.<br />
-                                        게임을 플레이하고 첫 기록을 등록하세요! 🌟
+                                    <div style={{ marginTop: '8px', fontWeight: 700 }}>
+                                        아직 등록된 실제 플레이 기록이 없습니다.<br />
+                                        게임을 플레이하고 첫 번째 1등 주인공이 되어보세요! 🌟
                                     </div>
                                 </div>
                             )}

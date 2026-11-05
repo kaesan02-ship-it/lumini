@@ -9,7 +9,24 @@ import useCrystalStore from '../store/crystalStore';
 import { submitArcadeScore } from '../utils/arcadeRankingService';
 import { toast } from 'react-hot-toast';
 
-const CARD_POOL = ['🦊', '🐰', '🐼', '🐱', '🐻', '🦄', '🐶', '🐣', '🐹', '🦁'];
+// 최대 18쌍(36장 = 6x6 보드)까지 지원하는 18종 소울펫 아이콘 풀
+const CARD_POOL = [
+    '🦊', '🐰', '🐼', '🐱', '🐻', '🦄',
+    '🐶', '🐣', '🐹', '🦁', '🐯', '🐨',
+    '🐸', '🐙', '🦋', '🐬', '🦉', '🐧',
+];
+
+// 스테이지별 카드 쌍(Pair) 개수 — 최대 18쌍(36장)까지 대폭 확장!
+const getPairCountForStage = (st) => {
+    if (st === 1) return 3;   // 6장 (3x2)
+    if (st === 2) return 4;   // 8장 (4x2)
+    if (st === 3) return 6;   // 12장 (4x3)
+    if (st === 4) return 8;   // 16장 (4x4)
+    if (st === 5) return 10;  // 20장 (5x4)
+    if (st === 6) return 12;  // 24장 (6x4)
+    if (st === 7) return 15;  // 30장 (6x5)
+    return 18;                // Stage 8+: 36장 (6x6 초대형 판!)
+};
 
 const MemoryMatchGamePage = ({ onBack }) => {
     const { user } = useAuthStore();
@@ -19,7 +36,7 @@ const MemoryMatchGamePage = ({ onBack }) => {
     const [gameState, setGameState] = useState('ready'); // ready | preview | playing | finished
     const [stage, setStage] = useState(1);
     const [score, setScore] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(40.0);
+    const [timeLeft, setTimeLeft] = useState(45.0);
     const [cards, setCards] = useState([]);
     const [flippedIds, setFlippedIds] = useState([]);
     const [isLocked, setIsLocked] = useState(false);
@@ -27,10 +44,10 @@ const MemoryMatchGamePage = ({ onBack }) => {
 
     const scoreRef = useRef(0);
     const stageRef = useRef(1);
+    const previewTimerRef = useRef(null);
 
     const setupStage = useCallback((st) => {
-        // Stage 1: 3쌍(6장), Stage 2: 4쌍(8장), Stage 3: 6쌍(12장), Stage 4+: 8쌍(16장)
-        const pairCount = st === 1 ? 3 : st === 2 ? 4 : st === 3 ? 6 : 8;
+        const pairCount = getPairCountForStage(st);
         const icons = CARD_POOL.slice(0, pairCount);
         const deck = [...icons, ...icons]
             .sort(() => Math.random() - 0.5)
@@ -41,32 +58,40 @@ const MemoryMatchGamePage = ({ onBack }) => {
             }));
 
         setCards(deck);
-        setFlippedIds(deck.map((c) => c.id)); // 처음 1.8초 동안 앞면 공개
+        setFlippedIds(deck.map((c) => c.id)); // 스테이지 시작 시 앞면 공개
         setGameState('preview');
 
-        setTimeout(() => {
+        // 카드가 많아질수록 암기 시간도 비례해서 부여 (1.8초 ~ 최대 4.2초)
+        const previewMs = Math.min(4200, 1400 + pairCount * 160);
+        clearTimeout(previewTimerRef.current);
+        previewTimerRef.current = setTimeout(() => {
             setFlippedIds([]);
             setGameState('playing');
             setIsLocked(false);
-        }, 1800);
+        }, previewMs);
+    }, []);
+
+    useEffect(() => {
+        return () => clearTimeout(previewTimerRef.current);
     }, []);
 
     const finishGame = useCallback(async () => {
         setGameState('finished');
         const finalScore = scoreRef.current;
         const finalSt = stageRef.current;
+        const maxCards = getPairCountForStage(finalSt) * 2;
 
         if (finalScore > 0) {
             await submitArcadeScore({
                 gameId: 'memory-match',
                 score: finalScore,
-                detail: `Stage ${finalSt} 달성`,
+                detail: `Stage ${finalSt} (${maxCards}장 판)`,
                 user,
                 userName,
                 mbtiType,
                 season: 'season_3',
             });
-            const reward = Math.min(35, Math.max(6, Math.floor(finalScore / 90)));
+            const reward = Math.min(40, Math.max(6, Math.floor(finalScore / 90)));
             earnCrystals(reward, '소울펫 기억력 카드 보상');
             toast.success(`Stage ${finalSt} 기록 등록! +${reward}💎 획득!`);
             setRefreshTrigger((v) => v + 1);
@@ -93,7 +118,7 @@ const MemoryMatchGamePage = ({ onBack }) => {
         stageRef.current = 1;
         setScore(0);
         setStage(1);
-        setTimeLeft(40.0);
+        setTimeLeft(45.0);
         setupStage(1);
     };
 
@@ -114,7 +139,7 @@ const MemoryMatchGamePage = ({ onBack }) => {
                 const updated = cards.map((c) =>
                     c.id === firstId || c.id === secondId ? { ...c, matched: true } : c
                 );
-                const gained = 120 + stageRef.current * 30;
+                const gained = 100 + stageRef.current * 35;
                 const nextS = scoreRef.current + gained;
                 scoreRef.current = nextS;
                 setScore(nextS);
@@ -125,48 +150,55 @@ const MemoryMatchGamePage = ({ onBack }) => {
                 // 모든 카드 매칭 완료 시 다음 스테이지로!
                 if (updated.every((c) => c.matched)) {
                     const nextSt = stageRef.current + 1;
-                    const stageBonus = 200;
+                    const stageBonus = 200 + stageRef.current * 50;
+                    const bonusSec = Math.min(22, 8 + stageRef.current * 2);
                     scoreRef.current += stageBonus;
                     stageRef.current = nextSt;
                     setScore(scoreRef.current);
                     setStage(nextSt);
-                    setTimeLeft((t) => Math.min(45.0, +(t + 8.0).toFixed(1)));
-                    toast.success(`Stage ${nextSt - 1} 클리어! (+8초 보너스)`);
-                    setTimeout(() => setupStage(nextSt), 400);
+                    setTimeLeft((t) => Math.min(75.0, +(t + bonusSec).toFixed(1)));
+                    toast.success(
+                        `Stage ${nextSt - 1} 클리어! (+${bonusSec}초 보너스 · 다음 판 ${getPairCountForStage(nextSt) * 2}장!)`
+                    );
+                    setTimeout(() => setupStage(nextSt), 450);
                 }
             } else {
                 setTimeout(() => {
                     setFlippedIds([]);
                     setIsLocked(false);
-                }, 550);
+                }, 500);
             }
         }
     };
 
-    const cols = cards.length <= 6 ? 3 : 4;
+    // 카드 장수에 맞춰 열(Column) 개수 자동 최적화 (6장: 3열, 8~16장: 4열, 20장: 5열, 24~36장: 6열)
+    const cols =
+        cards.length <= 6 ? 3 : cards.length <= 16 ? 4 : cards.length <= 20 ? 5 : 6;
+    const iconFontSize =
+        cols >= 6 ? '1.3rem' : cols === 5 ? '1.55rem' : '1.95rem';
 
     return (
         <ArcadeGameLayout
             gameId="memory-match"
             title="🃏 소울펫 기억력 카드"
-            subtitle="1.8초간 공개되는 소울펫의 위치를 기억해 빠르게 짝을 맞추세요!"
+            subtitle="스테이지가 올라갈수록 최대 36장(6×6)까지 카드가 늘어납니다!"
             accentColor="#3b82f6"
             accentBg="#eff6ff"
             onBack={onBack}
             score={score}
-            extraStatLabel="스테이지 / 남은 시간"
-            extraStatValue={`Stage ${stage} · ${timeLeft.toFixed(1)}초`}
+            extraStatLabel="스테이지 (카드 수) / 남은 시간"
+            extraStatValue={`Stage ${stage} (${cards.length || 6}장) · ${timeLeft.toFixed(1)}s`}
             refreshTrigger={refreshTrigger}
         >
             {gameState === 'ready' && (
                 <div style={{ textAlign: 'center', padding: '32px 16px' }}>
                     <div style={{ fontSize: '4rem', marginBottom: '12px' }}>🃏🦊</div>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', marginBottom: '8px' }}>
-                        순간 기억력 타임어택!
+                        6장부터 최대 36장(6×6)까지! 극한 기억력 도전
                     </h2>
                     <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.6, marginBottom: '24px' }}>
-                        스테이지 시작 시 <strong>1.8초 동안 모든 카드의 소울펫</strong>을 보여줍니다.<br />
-                        모든 짝을 맞추면 <strong>+8초 시간 보너스</strong>와 함께 다음 스테이지로 진출합니다!
+                        스테이지를 클리어할 때마다 카드가 <strong>6장 → 8장 → 12장 → 16장 → 20장 → 24장 → 30장 → 36장</strong>으로 대폭 늘어납니다!<br />
+                        처음 공개되는 암기 시간 동안 소울펫 위치를 외워 최고 스테이지를 돌파하세요!
                     </p>
                     <Tooltip text="소울펫 기억력 카드 게임을 시작합니다">
                         <motion.button
@@ -206,16 +238,16 @@ const MemoryMatchGamePage = ({ onBack }) => {
                         }}
                     >
                         {gameState === 'preview'
-                            ? '👀 위치를 외우세요! (곧 카드가 뒤집힙니다)'
-                            : `Stage ${stage} 진행 중 — 같은 소울펫 짝을 찾으세요!`}
+                            ? `👀 ${cards.length}장 위치를 외우세요! (곧 카드가 뒤집힙니다)`
+                            : `Stage ${stage} (${cards.length}장 판) — 같은 소울펫 짝을 모두 찾으세요!`}
                     </div>
 
                     <div
                         style={{
                             display: 'grid',
                             gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                            gap: '10px',
-                            maxWidth: '380px',
+                            gap: cols >= 6 ? '6px' : '9px',
+                            maxWidth: '410px',
                             margin: '0 auto',
                         }}
                     >
@@ -228,24 +260,25 @@ const MemoryMatchGamePage = ({ onBack }) => {
                                     onClick={() => handleCardClick(card)}
                                     title="카드를 뒤집어 짝을 확인합니다"
                                     style={{
-                                        aspectRatio: '1 / 1.1',
-                                        borderRadius: '16px',
+                                        aspectRatio: '1 / 1.05',
+                                        borderRadius: cols >= 6 ? '10px' : '14px',
                                         border: card.matched
                                             ? '2px solid #10b981'
                                             : isOpen
                                             ? '2px solid #3b82f6'
-                                            : '2px solid #cbd5e1',
+                                            : '1.5px solid #cbd5e1',
                                         background: card.matched
                                             ? '#ecfdf5'
                                             : isOpen
                                             ? '#eff6ff'
                                             : 'linear-gradient(135deg, #1e293b, #334155)',
-                                        fontSize: '2rem',
+                                        fontSize: iconFontSize,
+                                        padding: 0,
                                         cursor: card.matched ? 'default' : 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        boxShadow: '0 4px 10px rgba(0,0,0,0.06)',
+                                        boxShadow: '0 3px 8px rgba(0,0,0,0.06)',
                                     }}
                                 >
                                     {isOpen ? card.icon : '✨'}
@@ -260,16 +293,16 @@ const MemoryMatchGamePage = ({ onBack }) => {
                 <div style={{ textAlign: 'center', padding: '28px 16px' }}>
                     <div style={{ fontSize: '3.6rem', marginBottom: '10px' }}>🃏🏆</div>
                     <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: '6px' }}>
-                        Stage {stage} 달성! ({score.toLocaleString()}점)
+                        Stage {stage} ({getPairCountForStage(stage) * 2}장 판) 도달! ({score.toLocaleString()}점)
                     </h2>
                     <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '22px' }}>
-                        {stage >= 6
-                            ? '사진 찍듯 외우는 포토그래픽 메모리! 대단합니다 🧠'
+                        {stage >= 7
+                            ? '30장 이상의 초대형 보드까지 돌파한 초인적인 기억력입니다! 🧠'
                             : stage >= 4
-                            ? '기억력이 아주 뛰어나시네요! 최고 기록에 도전해 보세요!'
-                            : '처음 1.8초 동안 모서리 카드부터 외우면 훨씬 쉬워요!'}
+                            ? '기억력이 아주 뛰어나시네요! 24장·36장 판에도 도전해 보세요!'
+                            : '처음 공개 시간 동안 같은 동물 위치부터 눈도장을 찍어두면 쉬워요!'}
                     </p>
-                    <Tooltip text="다시 도전하여 더 높은 스테이지에 오릅니다">
+                    <Tooltip text="다시 도전하여 더 많은 카드 스테이지에 오릅니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
