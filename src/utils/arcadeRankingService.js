@@ -81,6 +81,53 @@ export const NEW_ARCADE_GAMES = {
     },
 };
 
+/**
+ * 게임별 상세 기록 문자열(detail)을 정수(max_tile 컬럼용)로 변환
+ */
+function encodeDetailToNumber(gameId, detail = '') {
+    if (!detail) return 0;
+    const str = String(detail);
+    if (gameId === 'speed-number' || gameId === 'blind-timer') {
+        const floatMatch = str.match(/(\d+(?:\.\d+)?)/);
+        return floatMatch ? Math.round(parseFloat(floatMatch[1]) * 100) : 0;
+    }
+    const intMatch = str.match(/(\d+)/);
+    return intMatch ? parseInt(intMatch[1], 10) : 0;
+}
+
+/**
+ * DB에 저장된 정수(max_tile)를 다시 게임별 보기 좋은 상세 문자열로 복원
+ */
+function decodeNumberToDetail(gameId, numVal) {
+    if (numVal === null || numVal === undefined || numVal <= 0) return '';
+    switch (gameId) {
+        case 'color-eye':
+            return `Lv.${numVal}`;
+        case 'speed-number':
+            return `${(numVal / 100).toFixed(2)}초`;
+        case 'blind-timer':
+            return `평균오차 ${(numVal / 100).toFixed(2)}초`;
+        case 'stack-tower':
+            return `${numVal}층`;
+        case 'reflex-battle':
+            return `${numVal}콤보`;
+        case 'memory-match': {
+            const pairs = Math.min(3 + numVal, 18);
+            return `${numVal}단계 (${pairs * 2}장)`;
+        }
+        default:
+            return '';
+    }
+}
+
+/**
+ * 클라우드 DB(game_2048_scores)에서 게임과 시즌을 구분하기 위한 전용 시즌 키
+ * 예: 'color-eye_season_3' (기존 2048 게임의 'season_3'과 절대 충돌하지 않음)
+ */
+function getCloudSeasonKey(gameId, season = 'season_3') {
+    return `${gameId}_${season}`;
+}
+
 function getLocalStore() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -107,7 +154,14 @@ export function getMyBestScore(gameId, userId = 'guest') {
 }
 
 /**
- * 게임 점수 저장 (실제 플레이 기록만 저장)
+ * 유효한 UUID 형식인지 검사
+ */
+function isValidUuid(id) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ''));
+}
+
+/**
+ * 게임 점수 저장 (로컬 + Supabase 클라우드 전체 공유)
  */
 export async function submitArcadeScore({
     gameId,
@@ -120,6 +174,7 @@ export async function submitArcadeScore({
 }) {
     if (!score || score <= 0) return;
 
+    const roundedScore = Math.round(score);
     const userId = user?.id || 'guest';
     const displayName =
         userName ||
@@ -131,8 +186,8 @@ export async function submitArcadeScore({
     // 1. 내 최고 점수 갱신
     const bestKey = `lumini_real_best_${gameId}_${userId}_${season}`;
     const prevBest = parseInt(localStorage.getItem(bestKey) || '0', 10);
-    if (score > prevBest) {
-        localStorage.setItem(bestKey, String(score));
+    if (roundedScore > prevBest) {
+        localStorage.setItem(bestKey, String(roundedScore));
     }
 
     // 2. 로컬 실제 기록 저장소에 추가
@@ -144,35 +199,88 @@ export async function submitArcadeScore({
         userId,
         name: displayName,
         mbti: displayMbti,
-        score: Math.round(score),
+        score: roundedScore,
         detail,
         createdAt: Date.now(),
+        synced: false,
     });
 
     store[gameId][season].sort((a, b) => b.score - a.score);
     store[gameId][season] = store[gameId][season].slice(0, 30);
     saveLocalStore(store);
 
-    // 3. 로그인 유저이고 Supabase 사용 가능 시 원격 DB에도 저장
-    if (user?.id && !String(user.id).startsWith('mock-') && !USE_MOCK_DATA) {
+    // 3. 로그인 유저일 경우 Supabase 클라우드 DB에 즉시 저장 (모든 기기·모든 유저와 랭킹 공유)
+    if (isValidUuid(user?.id) && !USE_MOCK_DATA) {
+        const cloudSeason = getCloudSeasonKey(gameId, season);
+        const encodedDetail = encodeDetailToNumber(gameId, detail);
+
         try {
-            await supabase.from('arcade_game_scores').insert({
+            const { error } = await supabase.from('game_2048_scores').insert({
                 user_id: user.id,
-                game_id: gameId,
-                score: Math.round(score),
-                detail,
-                season,
+                score: roundedScore,
+                max_tile: encodedDetail,
+                season: cloudSeason,
             });
+
+            if (!error) {
+                const updatedStore = getLocalStore();
+                const list = updatedStore[gameId]?.[season] || [];
+                const found = list.find((item) => item.score === roundedScore && !item.synced);
+                if (found) {
+                    found.synced = true;
+                    saveLocalStore(updatedStore);
+                }
+            }
         } catch (err) {
-            console.warn('Remote score sync skipped:', err?.message);
+            console.warn('Cloud score sync error:', err?.message);
         }
     }
 }
 
 /**
- * 특정 게임 & 시즌의 실제 랭킹 조회 (가짜 데이터 없이 실제 원격 + 실제 로컬 기록만 표시)
+ * 로컬에 저장되어 있던 내 기록 중 아직 클라우드에 올라가지 않은 기록이 있으면 로그인 세션으로 자동 동기화
+ */
+async function syncUnsyncedLocalScores(gameId, season, currentUserId) {
+    if (USE_MOCK_DATA || !isValidUuid(currentUserId)) return;
+    const store = getLocalStore();
+    const list = store[gameId]?.[season] || [];
+    const unsynced = list.filter((item) => !item.synced && (item.userId === currentUserId || item.userId === 'guest'));
+    if (unsynced.length === 0) return;
+
+    const cloudSeason = getCloudSeasonKey(gameId, season);
+    let changed = false;
+
+    for (const item of unsynced) {
+        try {
+            const { error } = await supabase.from('game_2048_scores').insert({
+                user_id: currentUserId,
+                score: Math.round(item.score),
+                max_tile: encodeDetailToNumber(gameId, item.detail),
+                season: cloudSeason,
+            });
+            if (!error) {
+                item.synced = true;
+                item.userId = currentUserId;
+                changed = true;
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    if (changed) {
+        saveLocalStore(store);
+    }
+}
+
+/**
+ * 특정 게임 & 시즌의 전체 유저 통합 랭킹 조회 (Supabase 클라우드 + 로컬 병합)
  */
 export async function fetchArcadeLeaderboard(gameId, season = 'season_3', currentUserId = null) {
+    if (isValidUuid(currentUserId)) {
+        await syncUnsyncedLocalScores(gameId, season, currentUserId);
+    }
+
     const store = getLocalStore();
     const localEntries = (store[gameId]?.[season] || []).map((item) => ({
         name: item.name,
@@ -181,38 +289,50 @@ export async function fetchArcadeLeaderboard(gameId, season = 'season_3', curren
         detail: item.detail || '',
         isMe: currentUserId ? item.userId === currentUserId : item.userId === 'guest',
         userId: item.userId,
+        source: 'local',
     }));
 
     let remoteEntries = [];
     if (!USE_MOCK_DATA) {
         try {
+            const cloudSeason = getCloudSeasonKey(gameId, season);
             const { data, error } = await supabase
-                .from('arcade_game_scores')
-                .select('score, detail, user_id, profiles(username, mbti_type)')
-                .eq('game_id', gameId)
-                .eq('season', season)
+                .from('game_2048_scores')
+                .select('score, max_tile, user_id, profiles(username, mbti_type)')
+                .eq('season', cloudSeason)
                 .order('score', { ascending: false })
-                .limit(20);
+                .limit(30);
 
             if (!error && data && data.length > 0) {
                 remoteEntries = data.map((row) => ({
                     name: row.profiles?.username || '익명',
                     mbti: row.profiles?.mbti_type || '?',
                     score: row.score || 0,
-                    detail: row.detail || '',
+                    detail: decodeNumberToDetail(gameId, row.max_tile),
                     isMe: currentUserId ? row.user_id === currentUserId : false,
                     userId: row.user_id,
+                    source: 'remote',
                 }));
             }
         } catch {
-            // 서버 오프라인 시 실제 로컬 기록만 사용
+            // 서버 오프라인 시 로컬 기록 사용
         }
     }
 
-    // 원격 DB에 데이터가 있으면 원격 우선, 없으면 로컬 실제 플레이 기록 표시 (더미 데이터 0개)
-    const sourceList = remoteEntries.length > 0 ? remoteEntries : localEntries;
+    // 클라우드 전체 기록 + 로컬에만 있는 기록을 중복 없이 합산
+    const combined = [...remoteEntries];
+    for (const local of localEntries) {
+        const alreadyInRemote = combined.some(
+            (r) =>
+                r.score === local.score &&
+                (r.userId === local.userId || r.name === local.name)
+        );
+        if (!alreadyInRemote) {
+            combined.push(local);
+        }
+    }
 
-    return sourceList
+    return combined
         .sort((a, b) => b.score - a.score)
         .slice(0, 20)
         .map((entry, idx) => ({

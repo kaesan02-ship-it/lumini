@@ -263,19 +263,33 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     applyMockFallback(targetSeason);
                 }
             } else if (activeTab === 'watermelon') {
-                // 4. 수박게임 랭킹 로드 (watermelon_game_scores 테이블 - 중복 허용)
+                // 4. 수박게임 랭킹 로드 (watermelon_game_scores 테이블 + profiles 별도 매핑으로 FK 스키마 오류 방지)
                 const { data: scores, error } = await supabase
                     .from('watermelon_game_scores')
-                    .select('score, max_fruit_level, user_id, profiles(username, mbti_type)')
+                    .select('score, max_fruit_level, user_id')
                     .eq('season', targetSeason)
                     .order('score', { ascending: false })
                     .limit(20);
 
                 if (!error && scores) {
+                    const userIds = [...new Set(scores.map(s => s.user_id).filter(Boolean))];
+                    let profileMap = {};
+                    if (userIds.length > 0) {
+                        const { data: profilesData } = await supabase
+                            .from('profiles')
+                            .select('id, username, mbti_type')
+                            .in('id', userIds);
+                        if (profilesData) {
+                            profilesData.forEach(p => {
+                                profileMap[p.id] = p;
+                            });
+                        }
+                    }
+
                     const top20 = scores.map((s, i) => ({
                         rank: i + 1,
-                        name: s.profiles?.username || '익명',
-                        mbti: s.profiles?.mbti_type || '?',
+                        name: profileMap[s.user_id]?.username || '익명',
+                        mbti: profileMap[s.user_id]?.mbti_type || '?',
                         score: s.score,
                         max_fruit_level: s.max_fruit_level,
                         badge: i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '',

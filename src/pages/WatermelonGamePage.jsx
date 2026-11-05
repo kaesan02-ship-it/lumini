@@ -82,14 +82,25 @@ const WatermelonGamePage = ({ onBack }) => {
         }
 
         supabase.from('watermelon_game_scores')
-            .select('score, profiles(username)')
+            .select('score, user_id')
             .eq('season', targetSeason)
             .order('score', { ascending: false })
             .limit(10)
-            .then(({ data, error }) => {
+            .then(async ({ data, error }) => {
                 if (data && !error) {
+                    const userIds = [...new Set(data.map(item => item.user_id).filter(Boolean))];
+                    let profileMap = {};
+                    if (userIds.length > 0) {
+                        const { data: profs } = await supabase
+                            .from('profiles')
+                            .select('id, username')
+                            .in('id', userIds);
+                        if (profs) {
+                            profs.forEach(p => { profileMap[p.id] = p.username; });
+                        }
+                    }
                     const mapped = data.map(item => ({
-                        username: item.profiles?.username || '익명',
+                        username: profileMap[item.user_id] || '익명',
                         score: item.score
                     }));
                     setLeaderboard(mapped);
