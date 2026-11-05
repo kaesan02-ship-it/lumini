@@ -379,6 +379,19 @@ const SettingsModal = ({ isOpen, onClose, userName, setUserName, onReset, mbtiTy
                 onClick={() => { onClose(); onNavigate?.('profile-edit'); }}
             />
 
+            {/* 비밀번호 변경 */}
+            <Tooltip text="현재 로그인된 계정의 비밀번호를 새로 변경합니다.">
+                <SettingItem
+                    icon={<Shield size={18} color="#6366F1" />}
+                    label="비밀번호 변경"
+                    sublabel="보안 설정"
+                    onClick={() => {
+                        onClose();
+                        window.dispatchEvent(new CustomEvent('openPasswordRecovery'));
+                    }}
+                />
+            </Tooltip>
+
             <Divider />
 
             {/* 진단 초기화 */}

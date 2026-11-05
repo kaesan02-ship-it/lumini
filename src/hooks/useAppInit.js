@@ -111,11 +111,22 @@ const useAppInit = (setNearbyUsers) => {
 
         initializeAuth();
 
-        // 인증 상태 변경 구독 (로그인 / 로그아웃 / 세션 갱신)
+        // URL 해시에 비밀번호 복구 토큰(type=recovery)이 포함되어 있으면 전역 복구 모달 플래그 활성화
+        if (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')) {
+            sessionStorage.setItem('lumini_password_recovery', 'true');
+            window.dispatchEvent(new CustomEvent('openPasswordRecovery'));
+        }
+
+        // 인증 상태 변경 구독 (로그인 / 로그아웃 / 세션 갱신 / 비밀번호 복구)
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (!mountedRef.current) return;
+
+            if (event === 'PASSWORD_RECOVERY') {
+                sessionStorage.setItem('lumini_password_recovery', 'true');
+                window.dispatchEvent(new CustomEvent('openPasswordRecovery'));
+            }
 
             setSession(session);
 

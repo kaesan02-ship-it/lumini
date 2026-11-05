@@ -271,7 +271,7 @@ const AuthPage = ({ onAuthSuccess, onAdminClick }) => {
 
         setResettingPw(true);
         try {
-            const redirectUrl = `${window.location.origin}${window.location.pathname}`;
+            const redirectUrl = `${window.location.origin}${window.location.pathname}?type=recovery`;
             const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
                 redirectTo: redirectUrl,
             });
