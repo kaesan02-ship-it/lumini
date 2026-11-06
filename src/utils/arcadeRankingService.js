@@ -77,9 +77,17 @@ export const NEW_ARCADE_GAMES = {
         unit: '점',
         actionDesc: '카드의 위치를 기억해 빠르게 짝 맞추기',
         pointsDesc: '스테이지·기억력 경쟁',
-        initialRankings: { season_3: [], season_2: [], season_1: [] },
+        currentSeason: 'season_4',
+        initialRankings: { season_4: [], season_3: [], season_2: [], season_1: [] },
     },
 };
+
+/**
+ * 게임별 현재 기본 시즌 반환 (소울펫 기억력 카드는 시즌 4, 나머지는 시즌 3)
+ */
+export function getDefaultSeasonForGame(gameId) {
+    return NEW_ARCADE_GAMES[gameId]?.currentSeason || 'season_3';
+}
 
 /**
  * 게임별 상세 기록 문자열(detail)을 정수(max_tile 컬럼용)로 변환
@@ -146,10 +154,11 @@ function saveLocalStore(store) {
 }
 
 /**
- * 내 최고 기록 조회 (시즌 3 기준)
+ * 내 최고 기록 조회 (게임별 현재 시즌 기준)
  */
-export function getMyBestScore(gameId, userId = 'guest') {
-    const key = `lumini_real_best_${gameId}_${userId}_season_3`;
+export function getMyBestScore(gameId, userId = 'guest', season = null) {
+    const targetSeason = season || getDefaultSeasonForGame(gameId);
+    const key = `lumini_real_best_${gameId}_${userId}_${targetSeason}`;
     return parseInt(localStorage.getItem(key) || '0', 10);
 }
 

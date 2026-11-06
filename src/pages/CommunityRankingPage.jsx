@@ -33,7 +33,9 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const { userName, activeRankingTab } = useUserStore();
     const { user } = useAuthStore();
     const [activeTab, setActiveTab] = useState(activeRankingTab || 'apple'); // apple, shisen, game2048, watermelon, tikatuka
-    const [activeSeason, setActiveSeason] = useState('season_3'); // 'season_3' (현재), 'season_2', 'season_1'
+    const [activeSeason, setActiveSeason] = useState(() =>
+        activeRankingTab === 'memory-match' ? 'season_4' : 'season_3'
+    ); // 기억력카드는 'season_4' (현재), 나머지는 'season_3' (현재)
     const [showGuide, setShowGuide] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [leaderboard, setLeaderboard] = useState([]);
@@ -400,9 +402,24 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                         </div>
                     </div>
                     
-                    {/* 시즌 필터링용 세그먼트 버튼 */}
+                    {/* 시즌 필터링용 세그먼트 버튼 (소울펫 기억력 카드는 시즌 4 지원) */}
                     <div style={{ display: 'flex', background: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.2)' }}>
-                        <Tooltip text="현재 진행 중인 시즌 3 랭킹입니다">
+                        {activeTab === 'memory-match' && (
+                            <Tooltip text="현재 진행 중인 소울펫 기억력 카드 시즌 4 랭킹입니다">
+                                <button 
+                                    onClick={() => setActiveSeason('season_4')}
+                                    style={{
+                                        padding: '6px 14px', fontSize: '0.8rem', borderRadius: '100px', fontWeight: 900,
+                                        background: activeSeason === 'season_4' ? 'white' : 'transparent',
+                                        color: activeSeason === 'season_4' ? '#ff4d6e' : 'white',
+                                        border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                    }}
+                                >
+                                    시즌 4
+                                </button>
+                            </Tooltip>
+                        )}
+                        <Tooltip text={activeTab === 'memory-match' ? '이전 시즌 3 기록을 확인합니다' : '현재 진행 중인 시즌 3 랭킹입니다'}>
                             <button 
                                 onClick={() => setActiveSeason('season_3')}
                                 style={{
@@ -496,6 +513,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                                 onClick={() => {
                                     setActiveTab(t.id);
                                     useUserStore.getState().setActiveRankingTab(t.id);
+                                    setActiveSeason(t.id === 'memory-match' ? 'season_4' : 'season_3');
                                 }}
                                 style={{
                                     padding: '9px 16px', borderRadius: '100px',

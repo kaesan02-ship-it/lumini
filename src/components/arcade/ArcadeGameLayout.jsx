@@ -4,7 +4,7 @@ import Tooltip from '../Tooltip';
 import useAuthStore from '../../store/authStore';
 import useUserStore from '../../store/userStore';
 import useCrystalStore from '../../store/crystalStore';
-import { fetchArcadeLeaderboard, getMyBestScore } from '../../utils/arcadeRankingService';
+import { fetchArcadeLeaderboard, getMyBestScore, getDefaultSeasonForGame } from '../../utils/arcadeRankingService';
 
 /**
  * ArcadeGameLayout — 신규 아케이드 미니게임 6종 공통 레이아웃 & 실시간 시즌 랭킹 보드
@@ -27,15 +27,16 @@ const ArcadeGameLayout = ({
     const { crystals } = useCrystalStore();
 
     const userId = user?.id || 'guest';
-    const [activeSeason, setActiveSeason] = useState('season_3');
+    const defaultSeason = getDefaultSeasonForGame(gameId);
+    const [activeSeason, setActiveSeason] = useState(defaultSeason);
     const [leaderboard, setLeaderboard] = useState([]);
-    const [bestScore, setBestScore] = useState(() => getMyBestScore(gameId, userId));
+    const [bestScore, setBestScore] = useState(() => getMyBestScore(gameId, userId, defaultSeason));
 
     const loadBoard = useCallback(async () => {
         const list = await fetchArcadeLeaderboard(gameId, activeSeason, user?.id || 'guest');
         setLeaderboard(list);
-        setBestScore(getMyBestScore(gameId, userId));
-    }, [gameId, activeSeason, user?.id, userId]);
+        setBestScore(getMyBestScore(gameId, userId, defaultSeason));
+    }, [gameId, activeSeason, user?.id, userId, defaultSeason]);
 
     useEffect(() => {
         loadBoard();
@@ -97,7 +98,7 @@ const ArcadeGameLayout = ({
                     {/* 우측 로그인 상태 배지 & 크리스탈 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         {user ? (
-                            <Tooltip text="로그인 계정으로 시즌 3 랭킹에 점수가 등록됩니다">
+                            <Tooltip text={`로그인 계정으로 ${defaultSeason === 'season_4' ? '시즌 4' : '시즌 3'} 랭킹에 점수가 등록됩니다`}>
                                 <div
                                     style={{
                                         display: 'flex',
@@ -112,7 +113,7 @@ const ArcadeGameLayout = ({
                                         color: '#059669',
                                     }}
                                 >
-                                    <span>🟢</span> {userName || user.email?.split('@')[0] || '회원'} (시즌 3)
+                                    <span>🟢</span> {userName || user.email?.split('@')[0] || '회원'} ({defaultSeason === 'season_4' ? '시즌 4' : '시즌 3'})
                                 </div>
                             </Tooltip>
                         ) : (
@@ -255,7 +256,7 @@ const ArcadeGameLayout = ({
                                 </h3>
                             </div>
 
-                            {/* 시즌 3 / 시즌 2 / 시즌 1 토글 */}
+                            {/* 시즌 토글 (기억력 카드는 시즌 4 포함) */}
                             <div
                                 style={{
                                     display: 'flex',
@@ -265,11 +266,19 @@ const ArcadeGameLayout = ({
                                     border: '1px solid #e2e8f0',
                                 }}
                             >
-                                {[
-                                    { id: 'season_3', label: '시즌 3', tip: '현재 진행 중인 시즌 3 랭킹입니다' },
-                                    { id: 'season_2', label: '시즌 2', tip: '이전 시즌 2 기록을 확인합니다' },
-                                    { id: 'season_1', label: '시즌 1', tip: '시즌 1 명예의 전당 기록입니다' },
-                                ].map((s) => (
+                                {(defaultSeason === 'season_4'
+                                    ? [
+                                          { id: 'season_4', label: '시즌 4', tip: '현재 진행 중인 시즌 4 랭킹입니다 (오답 시간 차감 적용)' },
+                                          { id: 'season_3', label: '시즌 3', tip: '이전 시즌 3 기록을 확인합니다' },
+                                          { id: 'season_2', label: '시즌 2', tip: '이전 시즌 2 기록을 확인합니다' },
+                                          { id: 'season_1', label: '시즌 1', tip: '시즌 1 명예의 전당 기록입니다' },
+                                      ]
+                                    : [
+                                          { id: 'season_3', label: '시즌 3', tip: '현재 진행 중인 시즌 3 랭킹입니다' },
+                                          { id: 'season_2', label: '시즌 2', tip: '이전 시즌 2 기록을 확인합니다' },
+                                          { id: 'season_1', label: '시즌 1', tip: '시즌 1 명예의 전당 기록입니다' },
+                                      ]
+                                ).map((s) => (
                                     <Tooltip key={s.id} text={s.tip}>
                                         <button
                                             onClick={() => setActiveSeason(s.id)}

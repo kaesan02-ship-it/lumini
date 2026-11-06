@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Play, RotateCcw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, RotateCcw, AlertTriangle } from 'lucide-react';
 import Tooltip from '../components/Tooltip';
 import ArcadeGameLayout from '../components/arcade/ArcadeGameLayout';
 import useAuthStore from '../store/authStore';
@@ -15,6 +15,9 @@ const CARD_POOL = [
     '🐶', '🐣', '🐹', '🦁', '🐯', '🐨',
     '🐸', '🐙', '🦋', '🐬', '🦉', '🐧',
 ];
+
+// 오답 시 차감되는 시간 패널티 (초)
+const WRONG_PENALTY_SEC = 2.0;
 
 // 스테이지별 카드 쌍(Pair) 개수 — 최대 18쌍(36장)까지 대폭 확장!
 const getPairCountForStage = (st) => {
@@ -39,12 +42,16 @@ const MemoryMatchGamePage = ({ onBack }) => {
     const [timeLeft, setTimeLeft] = useState(45.0);
     const [cards, setCards] = useState([]);
     const [flippedIds, setFlippedIds] = useState([]);
+    const [wrongIds, setWrongIds] = useState([]);
+    const [penaltyFlash, setPenaltyFlash] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const scoreRef = useRef(0);
     const stageRef = useRef(1);
+    const finishedRef = useRef(false);
     const previewTimerRef = useRef(null);
+    const penaltyTimerRef = useRef(null);
 
     const setupStage = useCallback((st) => {
         const pairCount = getPairCountForStage(st);
@@ -58,6 +65,7 @@ const MemoryMatchGamePage = ({ onBack }) => {
             }));
 
         setCards(deck);
+        setWrongIds([]);
         setFlippedIds(deck.map((c) => c.id)); // 스테이지 시작 시 앞면 공개
         setGameState('preview');
 
@@ -72,10 +80,15 @@ const MemoryMatchGamePage = ({ onBack }) => {
     }, []);
 
     useEffect(() => {
-        return () => clearTimeout(previewTimerRef.current);
+        return () => {
+            clearTimeout(previewTimerRef.current);
+            clearTimeout(penaltyTimerRef.current);
+        };
     }, []);
 
     const finishGame = useCallback(async () => {
+        if (finishedRef.current) return;
+        finishedRef.current = true;
         setGameState('finished');
         const finalScore = scoreRef.current;
         const finalSt = stageRef.current;
@@ -89,11 +102,11 @@ const MemoryMatchGamePage = ({ onBack }) => {
                 user,
                 userName,
                 mbtiType,
-                season: 'season_3',
+                season: 'season_4',
             });
             const reward = Math.min(40, Math.max(6, Math.floor(finalScore / 90)));
-            earnCrystals(reward, '소울펫 기억력 카드 보상');
-            toast.success(`Stage ${finalSt} 기록 등록! +${reward}💎 획득!`);
+            earnCrystals(reward, '소울펫 기억력 카드 시즌 4 보상');
+            toast.success(`시즌 4 Stage ${finalSt} 기록 등록! +${reward}💎 획득!`);
             setRefreshTrigger((v) => v + 1);
         }
     }, [user, userName, mbtiType, earnCrystals]);
@@ -114,11 +127,13 @@ const MemoryMatchGamePage = ({ onBack }) => {
     }, [gameState, finishGame]);
 
     const startGame = () => {
+        finishedRef.current = false;
         scoreRef.current = 0;
         stageRef.current = 1;
         setScore(0);
         setStage(1);
         setTimeLeft(45.0);
+        setPenaltyFlash(false);
         setupStage(1);
     };
 
@@ -163,10 +178,26 @@ const MemoryMatchGamePage = ({ onBack }) => {
                     setTimeout(() => setupStage(nextSt), 450);
                 }
             } else {
+                // ❌ 짝 맞추기 실패 시 남은 시간 차감 패널티 (-2.0초)
+                setWrongIds([firstId, secondId]);
+                setPenaltyFlash(true);
+                clearTimeout(penaltyTimerRef.current);
+                penaltyTimerRef.current = setTimeout(() => setPenaltyFlash(false), 650);
+
+                setTimeLeft((prev) => {
+                    const nextTime = +(prev - WRONG_PENALTY_SEC).toFixed(1);
+                    if (nextTime <= 0) {
+                        setTimeout(() => finishGame(), 50);
+                        return 0;
+                    }
+                    return nextTime;
+                });
+
                 setTimeout(() => {
                     setFlippedIds([]);
+                    setWrongIds([]);
                     setIsLocked(false);
-                }, 500);
+                }, 480);
             }
         }
     };
@@ -180,8 +211,8 @@ const MemoryMatchGamePage = ({ onBack }) => {
     return (
         <ArcadeGameLayout
             gameId="memory-match"
-            title="🃏 소울펫 기억력 카드"
-            subtitle="스테이지가 올라갈수록 최대 36장(6×6)까지 카드가 늘어납니다!"
+            title="🃏 소울펫 기억력 카드 (시즌 4)"
+            subtitle="최대 36장(6×6) 도전! 틀릴 때마다 남은 시간이 2초씩 차감됩니다!"
             accentColor="#3b82f6"
             accentBg="#eff6ff"
             onBack={onBack}
@@ -193,14 +224,46 @@ const MemoryMatchGamePage = ({ onBack }) => {
             {gameState === 'ready' && (
                 <div style={{ textAlign: 'center', padding: '32px 16px' }}>
                     <div style={{ fontSize: '4rem', marginBottom: '12px' }}>🃏🦊</div>
+                    <div
+                        style={{
+                            display: 'inline-block',
+                            background: '#dbeafe',
+                            color: '#1d4ed8',
+                            fontWeight: 900,
+                            fontSize: '0.76rem',
+                            padding: '4px 12px',
+                            borderRadius: '100px',
+                            marginBottom: '10px',
+                        }}
+                    >
+                        🔥 시즌 4 NEW 규칙 적용!
+                    </div>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', marginBottom: '8px' }}>
                         6장부터 최대 36장(6×6)까지! 극한 기억력 도전
                     </h2>
-                    <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.6, marginBottom: '24px' }}>
+                    <p style={{ fontSize: '0.88rem', color: '#64748b', lineHeight: 1.6, marginBottom: '14px' }}>
                         스테이지를 클리어할 때마다 카드가 <strong>6장 → 8장 → 12장 → 16장 → 20장 → 24장 → 30장 → 36장</strong>으로 대폭 늘어납니다!<br />
-                        처음 공개되는 암기 시간 동안 소울펫 위치를 외워 최고 스테이지를 돌파하세요!
+                        처음 공개되는 암기 시간 동안 소울펫 위치를 정확히 외워 최고 스테이지를 돌파하세요!
                     </p>
-                    <Tooltip text="소울펫 기억력 카드 게임을 시작합니다">
+                    <div
+                        style={{
+                            background: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            color: '#dc2626',
+                            borderRadius: '14px',
+                            padding: '10px 14px',
+                            fontSize: '0.82rem',
+                            fontWeight: 800,
+                            marginBottom: '24px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                        }}
+                    >
+                        <AlertTriangle size={16} /> 주의: 카드 짝이 틀릴 때마다 남은 시간이 <strong>-{WRONG_PENALTY_SEC.toFixed(1)}초</strong>씩 깎입니다!
+                    </div>
+                    <br />
+                    <Tooltip text="소울펫 기억력 카드 시즌 4 게임을 시작합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
@@ -230,16 +293,59 @@ const MemoryMatchGamePage = ({ onBack }) => {
                 <div>
                     <div
                         style={{
-                            textAlign: 'center',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: penaltyFlash ? '#fef2f2' : '#f8fafc',
+                            border: penaltyFlash ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                            borderRadius: '14px',
+                            padding: '10px 14px',
                             marginBottom: '12px',
-                            fontWeight: 900,
-                            fontSize: '0.9rem',
-                            color: gameState === 'preview' ? '#d97706' : '#2563eb',
+                            transition: 'all 0.2s',
                         }}
                     >
-                        {gameState === 'preview'
-                            ? `👀 ${cards.length}장 위치를 외우세요! (곧 카드가 뒤집힙니다)`
-                            : `Stage ${stage} (${cards.length}장 판) — 같은 소울펫 짝을 모두 찾으세요!`}
+                        <span
+                            style={{
+                                fontWeight: 900,
+                                fontSize: '0.86rem',
+                                color: gameState === 'preview' ? '#d97706' : '#2563eb',
+                            }}
+                        >
+                            {gameState === 'preview'
+                                ? `👀 ${cards.length}장 위치를 외우세요! (곧 뒤집힙니다)`
+                                : `Stage ${stage} (${cards.length}장 판) — 틀리면 -${WRONG_PENALTY_SEC}초!`}
+                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <AnimatePresence>
+                                {penaltyFlash && (
+                                    <motion.span
+                                        initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        style={{
+                                            background: '#ef4444',
+                                            color: 'white',
+                                            fontWeight: 900,
+                                            fontSize: '0.75rem',
+                                            padding: '3px 8px',
+                                            borderRadius: '100px',
+                                        }}
+                                    >
+                                        ⚠️ 오답 -{WRONG_PENALTY_SEC.toFixed(1)}초!
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                            <span
+                                style={{
+                                    fontWeight: 900,
+                                    fontSize: '0.95rem',
+                                    color: penaltyFlash || timeLeft <= 10 ? '#ef4444' : '#0f172a',
+                                }}
+                            >
+                                ⏱️ {timeLeft.toFixed(1)}초
+                            </span>
+                        </div>
                     </div>
 
                     <div
@@ -253,22 +359,29 @@ const MemoryMatchGamePage = ({ onBack }) => {
                     >
                         {cards.map((card) => {
                             const isOpen = card.matched || flippedIds.includes(card.id);
+                            const isWrong = wrongIds.includes(card.id);
                             return (
                                 <motion.button
                                     key={card.id}
                                     whileTap={{ scale: 0.92 }}
+                                    animate={isWrong ? { x: [-4, 4, -4, 4, 0] } : { x: 0 }}
+                                    transition={{ duration: 0.25 }}
                                     onClick={() => handleCardClick(card)}
-                                    title="카드를 뒤집어 짝을 확인합니다"
+                                    title="카드를 뒤집어 짝을 확인합니다 (틀리면 -2.0초)"
                                     style={{
                                         aspectRatio: '1 / 1.05',
                                         borderRadius: cols >= 6 ? '10px' : '14px',
                                         border: card.matched
                                             ? '2px solid #10b981'
+                                            : isWrong
+                                            ? '2px solid #ef4444'
                                             : isOpen
                                             ? '2px solid #3b82f6'
                                             : '1.5px solid #cbd5e1',
                                         background: card.matched
                                             ? '#ecfdf5'
+                                            : isWrong
+                                            ? '#fef2f2'
                                             : isOpen
                                             ? '#eff6ff'
                                             : 'linear-gradient(135deg, #1e293b, #334155)',
@@ -293,16 +406,16 @@ const MemoryMatchGamePage = ({ onBack }) => {
                 <div style={{ textAlign: 'center', padding: '28px 16px' }}>
                     <div style={{ fontSize: '3.6rem', marginBottom: '10px' }}>🃏🏆</div>
                     <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: '6px' }}>
-                        Stage {stage} ({getPairCountForStage(stage) * 2}장 판) 도달! ({score.toLocaleString()}점)
+                        시즌 4 · Stage {stage} ({getPairCountForStage(stage) * 2}장 판) 도달! ({score.toLocaleString()}점)
                     </h2>
                     <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '22px' }}>
                         {stage >= 7
-                            ? '30장 이상의 초대형 보드까지 돌파한 초인적인 기억력입니다! 🧠'
+                            ? '오답 패널티를 뚫고 30장 이상의 초대형 보드까지 돌파한 초인적인 기억력입니다! 🧠'
                             : stage >= 4
-                            ? '기억력이 아주 뛰어나시네요! 24장·36장 판에도 도전해 보세요!'
-                            : '처음 공개 시간 동안 같은 동물 위치부터 눈도장을 찍어두면 쉬워요!'}
+                            ? '기억력이 아주 뛰어나시네요! 실수 없이 24장·36장 판에도 도전해 보세요!'
+                            : '처음 공개 시간 동안 같은 동물 위치부터 눈도장을 찍어두면 시간 차감을 피할 수 있어요!'}
                     </p>
-                    <Tooltip text="다시 도전하여 더 많은 카드 스테이지에 오릅니다">
+                    <Tooltip text="다시 도전하여 시즌 4 최고 기록을 경신합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
