@@ -21,6 +21,7 @@ const ArcadeGameLayout = ({
     extraStatLabel = '최고 기록',
     extraStatValue = null,
     refreshTrigger = 0,
+    wideMode = false,
     children,
 }) => {
     const { user } = useAuthStore();
@@ -176,11 +177,11 @@ const ArcadeGameLayout = ({
                     </div>
                 </div>
 
-                {/* 메인 그리드: 좌측 게임 보드 / 우측 실시간 시즌 랭킹 */}
+                {/* 메인 그리드: 일반 모드는 좌우 2단, wideMode(고난도 대형 그림)는 게임 화면을 가로 전체로 확장 */}
                 <div
                     style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                        gridTemplateColumns: wideMode ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
                         gap: '20px',
                         alignItems: 'start',
                     }}

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Eye, Search, FastForward, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Play, RotateCcw, Eye, Search, FastForward, CheckCircle2, AlertCircle, AlertTriangle, Maximize2 } from 'lucide-react';
 import Tooltip from '../components/Tooltip';
 import ArcadeGameLayout from '../components/arcade/ArcadeGameLayout';
-import { VECTOR_PUZZLE_STAGES, VectorIllustrationScene } from '../components/arcade/SpotDiffScenes';
 import useAuthStore from '../store/authStore';
 import useUserStore from '../store/userStore';
 import useCrystalStore from '../store/crystalStore';
@@ -13,16 +12,16 @@ import { toast } from 'react-hot-toast';
 const BASE = import.meta.env.BASE_URL || '/';
 
 /**
- * Stage 1~5: AI 고화질 원화 5종 — 마이크로 디테일(초정밀 부분 변화) 타겟팅!
- * 통째로 색 변경/반전을 지양하고, 구름 1개 사라짐 · 등산화 색 · 솔방울 1개 · 작은 물고기 1마리 등
- * 알아차리기 어려운 섬세한 디테일만 정교하게 바뀝니다!
+ * 100% 고화질 AI 일러스트 원화 8종 (단순 SVG 0개 · 완벽히 통일된 동화풍 화질!)
+ * - Stage 1~3: 표준 크기 · 5군데 마이크로 디테일 찾기
+ * - Stage 4~8: 초대형 와이드 확장 뷰(wideMode) · 6군데(또는 AI 정밀 5군데) 극한 미세 디테일 찾기!
  */
-const RASTER_PUZZLE_STAGES = [
+const AI_PUZZLE_STAGES = [
     {
         id: 'cafe',
-        kind: 'raster',
         title: '☕ 햇살 디저트 카페',
         difficulty: 'Lv.1 입문',
+        wide: false,
         origImage: `${BASE}images/spot-diff/real/stage1_cafe.jpg`,
         diffImage: null,
         memorizeSec: 30,
@@ -31,19 +30,19 @@ const RASTER_PUZZLE_STAGES = [
         diffCount: 5,
         candidates: [
             { id: 'clockHands', label: '시계 바늘 방향 변경', x: 26.5, y: 16.5, rx: 5, ry: 6, mode: 'mirror' },
-            { id: 'tulipPetal', label: '액자 튤립 꽃잎 색만 변경', x: 56.5, y: 19.5, rx: 3.5, ry: 5, mode: 'hue', hue: 215, minSat: 0.30 },
+            { id: 'tulipPetal', label: '액자 튤립 꽃잎 색 변경', x: 56.5, y: 19.5, rx: 3.5, ry: 5, mode: 'hue', hue: 215, minSat: 0.30 },
             { id: 'centerBerry', label: '케이크 위 가운데 딸기 색 변경', x: 40.5, y: 40.5, rx: 2.8, ry: 3.5, mode: 'hue', hue: 140, minSat: 0.35 },
-            { id: 'cactusPot', label: '창턱 선인장 화분 색만 변경', x: 74.5, y: 48, rx: 3.5, ry: 4, mode: 'hue', hue: 185, minSat: 0.25 },
+            { id: 'cactusPot', label: '창턱 선인장 화분 색 변경', x: 74.5, y: 48, rx: 3.5, ry: 4, mode: 'hue', hue: 185, minSat: 0.25 },
             { id: 'rightCloud', label: '창문 오른쪽 구름 사라짐', x: 87.5, y: 28, rx: 4.5, ry: 5.5, mode: 'erase' },
-            { id: 'cupHandle', label: '커피잔 손잡이 방향 변경', x: 19.5, y: 65, rx: 8.5, ry: 7.5, mode: 'mirror' },
+            { id: 'cupHandle', label: '커피잔 손잡이 방향 반전', x: 19.5, y: 65, rx: 8.5, ry: 7.5, mode: 'mirror' },
             { id: 'leftCloud', label: '창문 왼쪽 구름 사라짐', x: 74.5, y: 31, rx: 4.5, ry: 4.5, mode: 'erase' },
         ],
     },
     {
         id: 'camping',
-        kind: 'raster',
         title: '🏕️ 별빛 숲속 캠핑장',
         difficulty: 'Lv.2 초급',
+        wide: false,
         origImage: `${BASE}images/spot-diff/real/stage2_camping.jpg`,
         diffImage: null,
         memorizeSec: 35,
@@ -52,7 +51,7 @@ const RASTER_PUZZLE_STAGES = [
         diffCount: 5,
         candidates: [
             { id: 'boots', label: '텐트 앞 등산화 색 변경', x: 28, y: 73, rx: 3.5, ry: 4, mode: 'hue', hue: 210, minSat: 0.25 },
-            { id: 'pinecone', label: '오른쪽 나뭇가지 솔방울 1개 사라짐', x: 70.5, y: 30, rx: 2.5, ry: 4, mode: 'erase' },
+            { id: 'pinecone', label: '오른쪽 나뭇가지 솔방울 사라짐', x: 70.5, y: 30, rx: 2.5, ry: 4, mode: 'erase' },
             { id: 'bigStar', label: '밤하늘 반짝이는 큰 별 사라짐', x: 56.5, y: 13.5, rx: 2.2, ry: 3, mode: 'erase' },
             { id: 'pocket', label: '배낭 옆 노란 주머니 색 변경', x: 76.5, y: 75.5, rx: 2.8, ry: 4.5, mode: 'hue', hue: 260, minSat: 0.35 },
             { id: 'kettle', label: '모닥불 위 주전자 색 변경', x: 52, y: 61.5, rx: 4.2, ry: 5, mode: 'hue', hue: 250, minSat: 0.35 },
@@ -62,12 +61,12 @@ const RASTER_PUZZLE_STAGES = [
     },
     {
         id: 'wizard',
-        kind: 'raster',
         title: '📚 마법사의 비밀 서재',
         difficulty: 'Lv.3 중급',
+        wide: false,
         origImage: `${BASE}images/spot-diff/real/stage3_wizard.jpg`,
         diffImage: null,
-        memorizeSec: 40,
+        memorizeSec: 35,
         findSec: 70,
         penaltySec: 10,
         diffCount: 5,
@@ -75,42 +74,108 @@ const RASTER_PUZZLE_STAGES = [
             { id: 'candleFlame', label: '왼쪽 촛불 불꽃 꺼짐', x: 33.5, y: 45.5, rx: 2.2, ry: 3.8, mode: 'erase' },
             { id: 'windowMoon', label: '창밖 초승달 사라짐', x: 45.5, y: 18.5, rx: 3.2, ry: 4.2, mode: 'erase' },
             { id: 'hourglass', label: '책장 위 모래시계 색 변경', x: 26.5, y: 38.5, rx: 3.2, ry: 5.5, mode: 'hue', hue: 195, minSat: 0.20 },
-            { id: 'potionLiquid', label: '물약병 속 액체 색만 변경', x: 66.8, y: 68.5, rx: 3.8, ry: 4, mode: 'hue', hue: 220, minSat: 0.32 },
-            { id: 'hatTip', label: '마법 모자 챙 색만 변경', x: 87.5, y: 31, rx: 5.5, ry: 6, mode: 'hue', hue: 155, minSat: 0.28 },
+            { id: 'potionLiquid', label: '물약병 속 액체 색 변경', x: 66.8, y: 68.5, rx: 3.8, ry: 4, mode: 'hue', hue: 220, minSat: 0.32 },
+            { id: 'hatTip', label: '마법 모자 챙 색 변경', x: 87.5, y: 31, rx: 5.5, ry: 6, mode: 'hue', hue: 155, minSat: 0.28 },
             { id: 'redBook', label: '왼쪽 위 빨간 책 1권 색 변경', x: 20, y: 12.5, rx: 2.5, ry: 5.5, mode: 'hue', hue: 180, minSat: 0.30 },
-            { id: 'crystalGlow', label: '수정구슬 빛깔만 변경', x: 50, y: 60.5, rx: 4.8, ry: 6, mode: 'hue', hue: 145, minSat: 0.28 },
+            { id: 'crystalGlow', label: '수정구슬 빛깔 변경', x: 50, y: 60.5, rx: 4.8, ry: 6, mode: 'hue', hue: 145, minSat: 0.28 },
         ],
     },
     {
-        id: 'ocean',
-        kind: 'raster',
-        title: '🐠 산호초 바닷속 세상',
-        difficulty: 'Lv.4 고급',
-        origImage: `${BASE}images/spot-diff/real/stage4_ocean.jpg`,
+        id: 'library',
+        title: '🕯️ 별빛 고대 도서관',
+        difficulty: 'Lv.4 와이드 확대',
+        wide: true,
+        origImage: `${BASE}images/spot-diff/magic.jpg`,
+        diffImage: null,
+        memorizeSec: 40,
+        findSec: 75,
+        penaltySec: 10,
+        diffCount: 6,
+        candidates: [
+            { id: 'moon', label: '창밖 초승달 사라짐', x: 55.5, y: 30, rx: 3.2, ry: 4.2, mode: 'erase' },
+            { id: 'leftTorch', label: '왼쪽 벽 촛불 불꽃 꺼짐', x: 13, y: 27.5, rx: 2.2, ry: 4.2, mode: 'erase' },
+            { id: 'rightTorch', label: '오른쪽 벽 촛불 불꽃 꺼짐', x: 88, y: 27.5, rx: 2.2, ry: 4.2, mode: 'erase' },
+            { id: 'globe', label: '창턱 지구본 색 변경', x: 58.5, y: 55, rx: 4.5, ry: 6, mode: 'hue', hue: 190, minSat: 0.18 },
+            { id: 'leftPlant', label: '창턱 작은 화분 사라짐', x: 42.5, y: 55.5, rx: 4, ry: 6.5, mode: 'erase' },
+            { id: 'orbLeft', label: '왼쪽 책장 빛구슬 사라짐', x: 32, y: 41.5, rx: 2.6, ry: 3.2, mode: 'erase' },
+            { id: 'orbRight', label: '오른쪽 책장 빛구슬 사라짐', x: 71, y: 49.5, rx: 2.6, ry: 3.2, mode: 'erase' },
+            { id: 'topRedBook', label: '왼쪽 위 빨간 책 색 변경', x: 30, y: 14.5, rx: 2.5, ry: 5, mode: 'hue', hue: 185, minSat: 0.28 },
+        ],
+    },
+    {
+        id: 'terrace',
+        title: '🌸 유럽풍 루프탑 테라스',
+        difficulty: 'Lv.5 와이드 확대',
+        wide: true,
+        origImage: `${BASE}images/spot-diff/cafe.jpg`,
         diffImage: null,
         memorizeSec: 40,
         findSec: 75,
         penaltySec: 12,
-        diffCount: 5,
+        diffCount: 6,
+        candidates: [
+            { id: 'skyCloud', label: '오른쪽 창밖 하늘 구름 사라짐', x: 91, y: 23, rx: 6, ry: 6, mode: 'erase' },
+            { id: 'cakeDome', label: '카운터 두 번째 유리돔 사라짐', x: 27, y: 50.5, rx: 3.8, ry: 5, mode: 'erase' },
+            { id: 'vaseFlower', label: '카운터 꽃병의 꽃 사라짐', x: 43, y: 49, rx: 3.8, ry: 6.5, mode: 'erase' },
+            { id: 'lavender', label: '오른쪽 라벤더 화분 색 변경', x: 73, y: 64, rx: 4.5, ry: 6.5, mode: 'hue', hue: 150, minSat: 0.22 },
+            { id: 'pinkPot', label: '왼쪽 창턱 분홍 꽃 색 변경', x: 7.5, y: 46, rx: 3.5, ry: 5, mode: 'hue', hue: 170, minSat: 0.22 },
+            { id: 'geranium', label: '중앙 창턱 빨간 꽃 색 변경', x: 31, y: 35, rx: 3.8, ry: 5.5, mode: 'hue', hue: 195, minSat: 0.28 },
+            { id: 'tableCloth', label: '오른쪽 식탁보 색 변경', x: 76, y: 74, rx: 7, ry: 5, mode: 'hue', hue: 165, minSat: 0.16 },
+            { id: 'lampShade', label: '천장 펜던트 조명 색 변경', x: 27.5, y: 28, rx: 3.5, ry: 4, mode: 'hue', hue: 180, minSat: 0.22 },
+        ],
+    },
+    {
+        id: 'space',
+        title: '🚀 우주 정거장 전망대',
+        difficulty: 'Lv.6 와이드 고난도',
+        wide: true,
+        origImage: `${BASE}images/spot-diff/space.jpg`,
+        diffImage: null,
+        memorizeSec: 45,
+        findSec: 80,
+        penaltySec: 12,
+        diffCount: 6,
+        candidates: [
+            { id: 'leftPlanet', label: '왼쪽 고리 행성 사라짐', x: 21, y: 47, rx: 6.5, ry: 5.5, mode: 'erase' },
+            { id: 'smallPlanet', label: '중앙 작은 고리 행성 사라짐', x: 60.5, y: 46, rx: 4.5, ry: 4.5, mode: 'erase' },
+            { id: 'bigSaturn', label: '오른쪽 위 큰 토성 색 변경', x: 77, y: 25.5, rx: 7, ry: 7.5, mode: 'hue', hue: 160, minSat: 0.16 },
+            { id: 'miniGalaxy', label: '오른쪽 끝 작은 은하 사라짐', x: 91, y: 8.5, rx: 5, ry: 5, mode: 'erase' },
+            { id: 'leftCushion', label: '소파 왼쪽 쿠션 색 변경', x: 33.5, y: 60, rx: 3.5, ry: 3.8, mode: 'hue', hue: 170, minSat: 0.15 },
+            { id: 'deskLamp', label: '오른쪽 스탠드 조명 색 변경', x: 76.5, y: 50.5, rx: 3.5, ry: 3.5, mode: 'hue', hue: 190, minSat: 0.22 },
+            { id: 'plantLeaves', label: '왼쪽 화분 잎사귀 색 변경', x: 25.5, y: 59, rx: 4.5, ry: 7, mode: 'hue', hue: 165, minSat: 0.18 },
+            { id: 'rightCushion', label: '오른쪽 소파 쿠션 사라짐', x: 70, y: 60.5, rx: 3.8, ry: 3.8, mode: 'erase' },
+        ],
+    },
+    {
+        id: 'ocean',
+        title: '🐠 산호초 바닷속 세상',
+        difficulty: 'Lv.7 와이드 극한',
+        wide: true,
+        origImage: `${BASE}images/spot-diff/real/stage4_ocean.jpg`,
+        diffImage: null,
+        memorizeSec: 45,
+        findSec: 80,
+        penaltySec: 12,
+        diffCount: 6,
         candidates: [
             { id: 'orangeFish', label: '왼쪽 위 작은 주황 물고기 사라짐', x: 17.5, y: 34.5, rx: 3.8, ry: 4.5, mode: 'erase' },
             { id: 'subWindow', label: '잠수함 가운데 둥근 창문 색 변경', x: 25, y: 21.5, rx: 3.2, ry: 4.2, mode: 'hue', hue: 175, minSat: 0.15 },
             { id: 'stripeFish', label: '오른쪽 노란 줄무늬 물고기 사라짐', x: 76, y: 42.5, rx: 3.8, ry: 4.8, mode: 'erase' },
             { id: 'bottomShell', label: '바닥 왼쪽 회색 조개 사라짐', x: 4.5, y: 93, rx: 3.2, ry: 3.5, mode: 'erase' },
             { id: 'goldCoins', label: '보물상자 속 금화 색 변경', x: 83.5, y: 81.5, rx: 6.5, ry: 4.5, mode: 'hue', hue: 120, minSat: 0.35 },
-            { id: 'anemone', label: '왼쪽 아래 보라 말미잘 1개 색 변경', x: 23.5, y: 76, rx: 4.8, ry: 7.5, mode: 'hue', hue: 150, minSat: 0.24 },
+            { id: 'anemone', label: '왼쪽 아래 보라 말미잘 색 변경', x: 23.5, y: 76, rx: 4.8, ry: 7.5, mode: 'hue', hue: 150, minSat: 0.24 },
             { id: 'blueFish', label: '가운데 아래 파란 물고기 사라짐', x: 56, y: 72, rx: 3.5, ry: 3.8, mode: 'erase' },
         ],
     },
     {
         id: 'festival',
-        kind: 'raster',
         title: '🎡 야시장 불꽃 축제',
-        difficulty: 'Lv.5 고급',
+        difficulty: 'Lv.8 와이드 마스터',
+        wide: true,
         origImage: `${BASE}images/spot-diff/real/stage5_festival.jpg`,
         diffImage: `${BASE}images/spot-diff/real/stage5_festival_diff.jpg`,
         memorizeSec: 45,
-        findSec: 80,
+        findSec: 85,
         penaltySec: 12,
         diffCount: 5,
         candidates: [
@@ -121,12 +186,6 @@ const RASTER_PUZZLE_STAGES = [
             { id: 'lanterns', label: '상단 줄등불 색상 변경', x: 54, y: 18, rx: 22, ry: 11, mode: 'prebuilt' },
         ],
     },
-];
-
-// 총 10개 스테이지 통합 (Stage 1~5 AI 원화 + Stage 6~10 초정밀 풀-일러스트!)
-const ALL_STAGES = [
-    ...RASTER_PUZZLE_STAGES,
-    ...VECTOR_PUZZLE_STAGES.map((s) => ({ ...s, kind: 'vector' })),
 ];
 
 function rgbToHsl(r, g, b) {
@@ -170,7 +229,7 @@ function hslToRgb(h, s, l) {
 }
 
 /**
- * 실제 일러스트의 미세 영역 5군데 픽셀만 정밀하게 변형
+ * 실제 고화질 일러스트의 미세 영역 픽셀만 정밀하게 변형
  */
 function buildPixelEditedImage(imgEl, selectedSpots) {
     const w = imgEl.naturalWidth || 1024;
@@ -235,7 +294,7 @@ function buildPixelEditedImage(imgEl, selectedSpots) {
                 }
             }
         } else if (spot.mode === 'erase') {
-            // 타원 바깥쪽 경계 픽셀의 행별 평균색(그라데이션 배경 완벽 보존!)으로 내부를 부드럽게 지움
+            // 행별 좌우 경계 보간으로 그라데이션 배경(밤하늘·바닷속·창문 등) 완벽 보존 지우기
             const copy = new Uint8ClampedArray(data);
             for (let y = minY; y <= maxY; y++) {
                 const ny = (y - cy) / ry;
@@ -314,36 +373,17 @@ const SpotMemoryGamePage = ({ onBack }) => {
     }, [user, userName, mbtiType, earnCrystals]);
 
     const prepareStage = useCallback((st) => {
-        const order = stageOrderRef.current.length > 0 ? stageOrderRef.current : ALL_STAGES;
+        const order = stageOrderRef.current.length > 0 ? stageOrderRef.current : AI_PUZZLE_STAGES;
         const config = order[(st - 1) % order.length];
         setGameState('loading');
         setFoundIds([]);
         setWrongTap(null);
         setPenaltyFlash(false);
 
-        // 1. 초정밀 벡터 일러스트 스테이지 (Stage 6~10 — 10개 미세 디테일 중 랜덤 5군데!)
-        if (config.kind === 'vector') {
-            const selectedSpots = [...config.candidates]
-                .sort(() => Math.random() - 0.5)
-                .slice(0, config.diffCount);
-            const reverse = Math.random() < 0.5;
-            setRound({
-                kind: 'vector',
-                config,
-                spots: selectedSpots,
-                memorizeDiffIds: reverse ? selectedSpots.map((s) => s.id) : [],
-                findDiffIds: reverse ? [] : selectedSpots.map((s) => s.id),
-            });
-            setTimeLeft(config.memorizeSec);
-            setGameState('memorize');
-            return;
-        }
-
-        // 2. AI 사전 편집 쌍 스테이지 (야시장 축제)
+        // AI 사전 편집 쌍 스테이지 (야시장 축제)
         if (config.diffImage) {
             const reverse = Math.random() < 0.5;
             setRound({
-                kind: 'raster',
                 config,
                 spots: config.candidates,
                 memorizeUrl: reverse ? config.diffImage : config.origImage,
@@ -354,7 +394,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
             return;
         }
 
-        // 3. AI 원화 마이크로 디테일 픽셀 편집 (7개 미세 후보 중 매판 랜덤 5군데!)
+        // 매판 7~8개 마이크로 디테일 후보 중 무작위 5~6군데 선택!
         const selectedSpots = [...config.candidates]
             .sort(() => Math.random() - 0.5)
             .slice(0, config.diffCount);
@@ -366,7 +406,6 @@ const SpotMemoryGamePage = ({ onBack }) => {
                 const editedDataUrl = buildPixelEditedImage(img, selectedSpots);
                 const reverse = Math.random() < 0.5;
                 setRound({
-                    kind: 'raster',
                     config,
                     spots: selectedSpots,
                     memorizeUrl: reverse ? editedDataUrl : config.origImage,
@@ -391,16 +430,10 @@ const SpotMemoryGamePage = ({ onBack }) => {
         finishedRef.current = false;
         scoreRef.current = 0;
         stageRef.current = 1;
-        // 10개 스테이지를 매판 초반/후반 섞어서 신선하게 출제!
-        const early = [...ALL_STAGES.slice(0, 5)].sort(() => Math.random() - 0.5);
-        const late = [...ALL_STAGES.slice(5)].sort(() => Math.random() - 0.5);
-        // 초반과 후반을 번갈아 섞어 AI 원화와 초정밀 일러스트를 모두 다채롭게 체험
-        const mixed = [];
-        for (let i = 0; i < 5; i++) {
-            if (early[i]) mixed.push(early[i]);
-            if (late[i]) mixed.push(late[i]);
-        }
-        stageOrderRef.current = mixed;
+        // Stage 1~3(표준 크기 3종) 셔플 후 Stage 4~8(초대형 와이드 5종) 셔플 배치!
+        const normalStages = [...AI_PUZZLE_STAGES.slice(0, 3)].sort(() => Math.random() - 0.5);
+        const wideStages = [...AI_PUZZLE_STAGES.slice(3)].sort(() => Math.random() - 0.5);
+        stageOrderRef.current = [...normalStages, ...wideStages];
         setScore(0);
         setStage(1);
         prepareStage(1);
@@ -410,7 +443,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
         if (!round) return;
         setTimeLeft(round.config.findSec);
         setGameState('find');
-        toast(`🔍 그림이 바뀌었습니다! 미세하게 달라진 ${round.spots.length}군데를 찾으세요! (오답 -${round.config.penaltySec}초)`, { icon: '👀' });
+        toast(`🔍 그림이 바뀌었습니다! 달라진 ${round.spots.length}군데를 찾으세요! (오답 -${round.config.penaltySec}초)`, { icon: '👀' });
     }, [round]);
 
     useEffect(() => {
@@ -443,9 +476,8 @@ const SpotMemoryGamePage = ({ onBack }) => {
         let matched = null;
         for (const spot of round.spots) {
             if (foundIds.includes(spot.id)) continue;
-            // 미세 디테일이므로 손가락 터치 편의성을 위해 최소 히트박스 보장
-            const rx = Math.max(spot.rx + 2.5, 5.5);
-            const ry = Math.max(spot.ry + 2.5, 6.5);
+            const rx = Math.max(spot.rx + 2.4, 5.2);
+            const ry = Math.max(spot.ry + 2.4, 6.2);
             const nx = (clickX - spot.x) / rx;
             const ny = (clickY - spot.y) / ry;
             if (nx * nx + ny * ny <= 1.0) {
@@ -467,7 +499,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                 scoreRef.current += timeBonus;
                 setScore(scoreRef.current);
                 setGameState('stageClear');
-                toast.success(`🎉 Stage ${stageRef.current} 5군데 모두 발견! (+${timeBonus}점)`);
+                toast.success(`🎉 Stage ${stageRef.current} ${round.spots.length}군데 모두 발견! (+${timeBonus}점)`);
             }
         } else {
             const penalty = round.config.penaltySec;
@@ -497,19 +529,23 @@ const SpotMemoryGamePage = ({ onBack }) => {
         prepareStage(nextSt);
     };
 
+    // Stage 4 이상(wide: true) 플레이 중에는 화면 가로 전체로 초대형 그림 확대!
+    const isWideActive = Boolean(round?.config?.wide && (gameState === 'memorize' || gameState === 'find'));
+
     return (
         <ArcadeGameLayout
             gameId="spot-memory"
             title="🖼️ 틀린그림찾기"
-            subtitle="총 10개 스테이지! 구름 1개·신발 색·날개 한쪽 등 미세하게 달라진 5군데를 찾으세요!"
+            subtitle="100% 고화질 AI 일러스트 8종! 단계가 오를수록 그림이 화면 가득 확대되고 찾을 곳도 늘어납니다!"
             accentColor="#ec4899"
             accentBg="#fdf2f8"
             onBack={onBack}
             score={score}
+            wideMode={isWideActive}
             extraStatLabel={gameState === 'memorize' ? '암기 남은 시간' : '발견 / 남은 시간'}
             extraStatValue={
                 gameState === 'ready'
-                    ? '10종 초정밀 스테이지'
+                    ? '고화질 원화 8종'
                     : gameState === 'memorize'
                     ? `👀 암기 ${timeLeft}초`
                     : `${foundIds.length}/${round?.spots.length || 5} · ${timeLeft}초`
@@ -531,14 +567,14 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             marginBottom: '10px',
                         }}
                     >
-                        🔥 총 10개 스테이지 · 데블스 플랜급 초정밀 디테일
+                        🎨 100% 고화질 AI 일러스트 8종 · 와이드 확대 난이도
                     </div>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', marginBottom: '10px' }}>
-                        미세하게 달라진 5군데를 찾아라!
+                        그림 속 숨은 미세 디테일을 찾아라!
                     </h2>
                     <p style={{ fontSize: '0.86rem', color: '#64748b', lineHeight: 1.65, marginBottom: '14px' }}>
-                        <strong>배경 구름 중 1개 사라짐 · 새/드래곤 날개 한쪽 색 변경 · 신발 한 짝 색 · 모자 방울 · 촛불 불꽃 · 창문 1칸 불 꺼짐</strong> 등<br />
-                        매판 <strong>10종 그림 × 무작위 5군데 미세 변화</strong>가 새롭게 출제됩니다!
+                        <strong>창문 구름 1개 사라짐 · 등산화 색 · 솔방울 1개 · 촛불 불꽃 꺼짐 · 작은 물고기 1마리 · 빛구슬 사라짐</strong> 등<br />
+                        <strong>Stage 1~3 (표준 크기 · 5군데)</strong>를 돌파하면 <strong>Stage 4~8에서는 그림이 화면 가득 초대형으로 커지며 6군데</strong>의 미세 변화를 찾아야 합니다!
                     </p>
                     <div
                         style={{
@@ -558,7 +594,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                         <AlertTriangle size={16} /> 주의: 찍기 금지! 잘못 터치할 때마다 남은 시간이 <strong>-10초 ~ -12초</strong>씩 확 깎입니다!
                     </div>
                     <br />
-                    <Tooltip text="10단계 초정밀 틀린그림찾기 도전을 시작합니다">
+                    <Tooltip text="고화질 AI 일러스트 8종 틀린그림찾기를 시작합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
@@ -586,7 +622,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
 
             {gameState === 'loading' && (
                 <div style={{ textAlign: 'center', padding: '60px 16px', color: '#64748b', fontWeight: 800 }}>
-                    🎨 초정밀 일러스트를 준비하고 있습니다...
+                    🎨 고화질 AI 일러스트를 준비하고 있습니다...
                 </div>
             )}
 
@@ -631,6 +667,22 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             <span>
                                 Stage {stage} · {round.config.title}
                             </span>
+                            {round.config.wide && (
+                                <span
+                                    style={{
+                                        background: '#7c3aed',
+                                        color: 'white',
+                                        fontSize: '0.7rem',
+                                        padding: '2px 8px',
+                                        borderRadius: '100px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px',
+                                    }}
+                                >
+                                    <Maximize2 size={10} /> 초대형 와이드
+                                </span>
+                            )}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -655,7 +707,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             </AnimatePresence>
 
                             {gameState === 'memorize' ? (
-                                <Tooltip text="충분히 외웠다면 바로 틀린 5군데 찾기로 넘어갑니다">
+                                <Tooltip text="충분히 외웠다면 바로 틀린 곳 찾기로 넘어갑니다">
                                     <button
                                         type="button"
                                         onClick={goToFindPhase}
@@ -705,18 +757,18 @@ const SpotMemoryGamePage = ({ onBack }) => {
                     <div
                         style={{
                             textAlign: 'center',
-                            fontSize: '0.8rem',
+                            fontSize: '0.82rem',
                             fontWeight: 800,
                             color: gameState === 'memorize' ? '#4f46e5' : '#db2777',
                             marginBottom: '8px',
                         }}
                     >
                         {gameState === 'memorize'
-                            ? '👀 구름·신발·모자·창문·소품 등 작은 디테일까지 꼼꼼히 기억하세요!'
+                            ? '👀 구름·꽃·불꽃·물고기·신발 등 구석구석 작은 디테일까지 꼼꼼히 기억하세요!'
                             : `👆 미세하게 달라진 ${round.spots.length}군데를 정확히 터치하세요! (오답 시 -${round.config.penaltySec}초!)`}
                     </div>
 
-                    {/* 일러스트 뷰어 (AI 원화 또는 초정밀 풀-일러스트) */}
+                    {/* 100% 고화질 AI 일러스트 뷰어 (Stage 4+는 화면 가로 전체로 웅장하게 확대!) */}
                     <motion.div
                         animate={penaltyFlash ? { x: [-6, 6, -5, 5, 0] } : { x: 0 }}
                         transition={{ duration: 0.3 }}
@@ -724,6 +776,8 @@ const SpotMemoryGamePage = ({ onBack }) => {
                         style={{
                             position: 'relative',
                             width: '100%',
+                            maxWidth: round.config.wide ? '940px' : '560px',
+                            margin: '0 auto',
                             borderRadius: '18px',
                             overflow: 'hidden',
                             border: penaltyFlash
@@ -735,37 +789,27 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             userSelect: 'none',
                             boxShadow: penaltyFlash
                                 ? '0 0 22px rgba(239, 68, 68, 0.5)'
-                                : '0 10px 24px rgba(15, 23, 42, 0.14)',
+                                : '0 12px 28px rgba(15, 23, 42, 0.16)',
                         }}
                     >
-                        {round.kind === 'vector' ? (
-                            <div style={{ pointerEvents: 'none' }}>
-                                <VectorIllustrationScene
-                                    stageId={round.config.id}
-                                    activeDiffIds={gameState === 'memorize' ? round.memorizeDiffIds : round.findDiffIds}
-                                />
-                            </div>
-                        ) : (
-                            <img
-                                src={gameState === 'memorize' ? round.memorizeUrl : round.findUrl}
-                                alt={round.config.title}
-                                draggable={false}
-                                style={{
-                                    width: '100%',
-                                    height: 'auto',
-                                    display: 'block',
-                                    pointerEvents: 'none',
-                                }}
-                            />
-                        )}
+                        <img
+                            src={gameState === 'memorize' ? round.memorizeUrl : round.findUrl}
+                            alt={round.config.title}
+                            draggable={false}
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                display: 'block',
+                                pointerEvents: 'none',
+                            }}
+                        />
 
-                        {/* 찾은 정답 위치 초록색 동그라미 마킹 */}
                         {gameState === 'find' &&
                             foundIds.map((fid) => {
                                 const spot = round.spots.find((s) => s.id === fid);
                                 if (!spot) return null;
-                                const showRx = Math.max(spot.rx, 4.5);
-                                const showRy = Math.max(spot.ry, 5.5);
+                                const showRx = Math.max(spot.rx, 4.2);
+                                const showRy = Math.max(spot.ry, 5.2);
                                 return (
                                     <div
                                         key={fid}
@@ -785,7 +829,6 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                 );
                             })}
 
-                        {/* 오답 터치 시 -10초! 경고 마크 */}
                         {wrongTap && (
                             <div
                                 style={{
@@ -796,8 +839,8 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                     background: 'rgba(239, 68, 68, 0.92)',
                                     color: 'white',
                                     fontWeight: 900,
-                                    fontSize: '0.85rem',
-                                    padding: '6px 11px',
+                                    fontSize: '0.88rem',
+                                    padding: '6px 12px',
                                     borderRadius: '100px',
                                     border: '2px solid white',
                                     pointerEvents: 'none',
@@ -865,7 +908,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             </span>
                         ))}
                     </div>
-                    <Tooltip text="새로운 그림과 미세 디테일로 다음 스테이지에 도전합니다">
+                    <Tooltip text="다음 고화질 일러스트 스테이지에 도전합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
@@ -908,7 +951,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             }}
                         >
                             <div style={{ fontWeight: 900, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <AlertCircle size={14} /> 이번 그림 정답 5군데 공개:
+                                <AlertCircle size={14} /> 이번 그림 정답 {round.spots.length}군데 공개:
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                 {round.spots.map((sp) => {
@@ -933,7 +976,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             </div>
                         </div>
                     )}
-                    <Tooltip text="새로운 랜덤 스테이지 순서와 미세 변화로 다시 도전합니다">
+                    <Tooltip text="새로운 랜덤 순서와 미세 변화로 다시 도전합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
