@@ -121,6 +121,26 @@ const ArcadePage = ({ onNavigate }) => {
             theme: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
             border: '#93c5fd',
             color: '#1d4ed8'
+        },
+        {
+            id: 'block-count-game',
+            title: '🧊 데블스 블록 카운팅',
+            badge: 'HOT · 데블스플랜 스타일 🧠',
+            desc: '보이지 않는 바닥과 뒤쪽 숨은 블록까지 총 개수를 정확히 추론해 맞히세요! 매판 새로운 3D 입체 블록이 출제됩니다.',
+            tooltip: '단계가 올라갈수록 블록이 커지고 복잡해지는 공간지각 두뇌 랭킹 게임!',
+            theme: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+            border: '#818cf8',
+            color: '#4338ca'
+        },
+        {
+            id: 'spot-memory-game',
+            title: '🖼️ 유배지 틀린그림찾기',
+            badge: 'HOT · 기억력 5군데 🔍',
+            desc: '원본 그림을 30초간 암기한 뒤, 색상 변경·소품 사라짐·모양 변화·이동 등 달라진 5군데를 찾아 터치하세요!',
+            tooltip: '5가지 테마와 매판 달라지는 랜덤 5군데 변형을 기억력으로 맞히는 관찰력 랭킹 게임!',
+            theme: 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)',
+            border: '#f472b6',
+            color: '#be185d'
         }
     ];
 

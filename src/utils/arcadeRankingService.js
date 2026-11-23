@@ -80,6 +80,28 @@ export const NEW_ARCADE_GAMES = {
         currentSeason: 'season_4',
         initialRankings: { season_4: [], season_3: [], season_2: [], season_1: [] },
     },
+    'block-count': {
+        id: 'block-count',
+        route: 'block-count-game',
+        title: '🧊 데블스 블록 카운팅',
+        shortTitle: '블록카운팅',
+        icon: '🧊',
+        unit: '점',
+        actionDesc: '숨은 입체 블록까지 총 개수를 추론해 맞히기',
+        pointsDesc: '공간지각·단계 돌파',
+        initialRankings: { season_3: [], season_2: [], season_1: [] },
+    },
+    'spot-memory': {
+        id: 'spot-memory',
+        route: 'spot-memory-game',
+        title: '🖼️ 유배지 틀린그림찾기',
+        shortTitle: '틀린그림찾기',
+        icon: '🖼️',
+        unit: '점',
+        actionDesc: '그림을 암기한 뒤 달라진 5군데를 찾아 터치',
+        pointsDesc: '기억력·관찰력 경쟁',
+        initialRankings: { season_3: [], season_2: [], season_1: [] },
+    },
 };
 
 /**
@@ -130,6 +152,10 @@ function decodeNumberToDetail(gameId, numVal) {
             const pairs = Math.min(3 + numVal, 18);
             return `${numVal}단계 (${pairs * 2}장)`;
         }
+        case 'block-count':
+            return `Stage ${numVal} 돌파`;
+        case 'spot-memory':
+            return `Stage ${numVal} 클리어`;
         default:
             return '';
     }

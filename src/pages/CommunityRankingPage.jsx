@@ -21,6 +21,8 @@ const SCORE_GUIDE = [
     { action: '소울펫 팬케이크 탑', points: '최고 층수·퍼펙트 경쟁', icon: '🥞' },
     { action: '청개구리 반사신경', points: '연속 콤보·순발력 경쟁', icon: '🧠' },
     { action: '소울펫 기억력 카드', points: '스테이지·기억력 경쟁', icon: '🃏' },
+    { action: '데블스 블록 카운팅', points: '공간지각·단계 돌파', icon: '🧊' },
+    { action: '유배지 틀린그림찾기', points: '기억력·관찰력 경쟁', icon: '🖼️' },
 ];
 
 const FRUIT_EMOJIS = {
@@ -587,7 +589,9 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                         { id: 'blind-timer', label: '⏱️ 7.77초' },
                         { id: 'stack-tower', label: '🥞 팬케이크탑' },
                         { id: 'reflex-battle', label: '🧠 반사신경' },
-                        { id: 'memory-match', label: '🃏 기억력카드' }
+                        { id: 'memory-match', label: '🃏 기억력카드' },
+                        { id: 'block-count', label: '🧊 블록카운팅' },
+                        { id: 'spot-memory', label: '🖼️ 틀린그림찾기' }
                     ].map(t => (
                         <Tooltip key={t.id} text={`${t.label} 랭킹 보드를 확인합니다`}>
                             <button

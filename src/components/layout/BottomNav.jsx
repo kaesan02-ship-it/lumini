@@ -32,7 +32,8 @@ const BottomNav = ({ step, onNavigate }) => {
     // 특정 게임 하위 페이지들의 활성화 상태를 아케이드 탭에 매핑
     const isArcadeActive = [
         'arcade', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game', 'tikatuka-game',
-        'color-eye-game', 'speed-number-game', 'blind-timer-game', 'stack-tower-game', 'reflex-battle-game', 'memory-match-game'
+        'color-eye-game', 'speed-number-game', 'blind-timer-game', 'stack-tower-game', 'reflex-battle-game', 'memory-match-game',
+        'block-count-game', 'spot-memory-game'
     ].includes(step);
 
     return (

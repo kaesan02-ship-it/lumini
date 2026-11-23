@@ -43,6 +43,8 @@ import BlindTimerGamePage from '../pages/BlindTimerGamePage';
 import StackTowerGamePage from '../pages/StackTowerGamePage';
 import ReflexBattleGamePage from '../pages/ReflexBattleGamePage';
 import MemoryMatchGamePage from '../pages/MemoryMatchGamePage';
+import BlockCountGamePage from '../pages/BlockCountGamePage';
+import SpotMemoryGamePage from '../pages/SpotMemoryGamePage';
 import ArcadePage from '../pages/ArcadePage';
 
 // Stores
@@ -69,6 +71,7 @@ export const PUBLIC_ROUTES = new Set([
     'insights', 'ai-insights', 'stats', 'growth',
     'daily-challenges', 'apple-game', 'shisen-sho', 'game-2048', 'watermelon-game', 'tikatuka-game',
     'color-eye-game', 'speed-number-game', 'blind-timer-game', 'stack-tower-game', 'reflex-battle-game', 'memory-match-game',
+    'block-count-game', 'spot-memory-game',
     'arcade',
 ]);
 
@@ -321,6 +324,14 @@ const AppRouter = ({
 
             {step === 'memory-match-game' && (
                 <MemoryMatchGamePage key="memory-match-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'block-count-game' && (
+                <BlockCountGamePage key="block-count-game" onBack={() => navigate('arcade')} />
+            )}
+
+            {step === 'spot-memory-game' && (
+                <SpotMemoryGamePage key="spot-memory-game" onBack={() => navigate('arcade')} />
             )}
 
             {/* ── 보호 페이지 (로그인 필수) ────────────────────── */}
