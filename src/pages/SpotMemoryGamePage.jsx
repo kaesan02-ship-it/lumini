@@ -12,276 +12,245 @@ import { toast } from 'react-hot-toast';
 const BASE = import.meta.env.BASE_URL || '/';
 
 /**
- * 5가지 AI 일러스트 테마 × 각 테마별 28종 고유 소품 풀
- * 난이도가 올라갈수록 화면에 등장하는 소품 수가 10개 → 14개 → 18개 → 22개 → 28개로 대폭 증가합니다!
+ * 5종 진짜 일러스트 틀린그림찾기 스테이지 (이모지/아이콘 0개!)
+ * - Stage 1~4: 실제 일러스트 사물 좌표에 캔버스 픽셀 엔진(외곽선 보존 색상 변환 · 좌우 반전 · 깔끔한 지우기)을 적용
+ *   (매판 6개 후보 중 무작위 5군데를 선택하므로 다시 시작해도 매번 다른 문제 출제!)
+ * - Stage 5: AI로 정밀 편집된 완벽한 쌍(원본 + 변형 그림) + 역방향 출제 지원
  */
-const SCENE_THEMES = [
+const REAL_PUZZLE_STAGES = [
+    {
+        id: 'cafe',
+        title: '☕ 햇살 디저트 카페',
+        difficulty: 'Lv.1 입문',
+        origImage: `${BASE}images/spot-diff/real/stage1_cafe.jpg`,
+        diffImage: null,
+        memorizeSec: 30,
+        findSec: 65,
+        penaltySec: 10,
+        diffCount: 5,
+        candidates: [
+            { id: 'clock', label: '벽시계 바늘 방향 변경', x: 26, y: 17, rx: 8.5, ry: 11.5, mode: 'mirror' },
+            { id: 'tulip', label: '액자 속 튤립 색상 변경', x: 56.5, y: 21, rx: 5.5, ry: 8, mode: 'hue', hue: 210, minSat: 0.24 },
+            { id: 'cake', label: '딸기 케이크 색상 변경', x: 40.5, y: 46, rx: 10.5, ry: 10, mode: 'hue', hue: 175, minSat: 0.16 },
+            { id: 'cactus', label: '창턱 선인장 색상 변경', x: 74.5, y: 42, rx: 5, ry: 7.5, mode: 'hue', hue: 175, minSat: 0.22 },
+            { id: 'cup', label: '커피잔 손잡이 방향 반전', x: 19.5, y: 65, rx: 9, ry: 8.5, mode: 'mirror' },
+            { id: 'cat', label: '의자 위 고양이 방향 반전', x: 79, y: 72, rx: 10.5, ry: 12.5, mode: 'mirror' },
+        ],
+    },
     {
         id: 'camping',
         title: '🏕️ 별빛 숲속 캠핑장',
-        image: `${BASE}images/spot-diff/camping.jpg`,
-        pool: [
-            { icon: '⛺', label: '텐트', swap: '🛖' },
-            { icon: '🔥', label: '모닥불', swap: '💧' },
-            { icon: '🌙', label: '초승달', swap: '☀️' },
-            { icon: '⭐', label: '별', swap: '💖' },
-            { icon: '🦉', label: '부엉이', swap: '🦅' },
-            { icon: '🦊', label: '여우', swap: '🐺' },
-            { icon: '🐰', label: '토끼', swap: '🐿️' },
-            { icon: '🎒', label: '배낭', swap: '🧳' },
-            { icon: '🏮', label: '랜턴', swap: '🕯️' },
-            { icon: '☕', label: '코코아', swap: '🥤' },
-            { icon: '🍄', label: '버섯', swap: '🌷' },
-            { icon: '🌲', label: '소나무', swap: '🌴' },
-            { icon: '🚩', label: '깃발', swap: '🎏' },
-            { icon: '🎸', label: '기타', swap: '🎻' },
-            { icon: '🧭', label: '나침반', swap: '⏱️' },
-            { icon: '🦋', label: '나비', swap: '🐝' },
-            { icon: '🐻', label: '아기곰', swap: '🐼' },
-            { icon: '🍖', label: '바비큐', swap: '🌽' },
-            { icon: '🪵', label: '장작', swap: '🪨' },
-            { icon: '🔭', label: '망원경', swap: '📷' },
-            { icon: '🦔', label: '고슴도치', swap: '🐢' },
-            { icon: '🍂', label: '단풍잎', swap: '🍀' },
-            { icon: '🪁', label: '연', swap: '🎈' },
-            { icon: '🥾', label: '등산화', swap: '👟' },
-            { icon: '🧺', label: '피크닉바구니', swap: '🎁' },
-            { icon: '🦌', label: '사슴', swap: '🦄' },
-            { icon: '🛸', label: 'UFO', swap: '✈️' },
-            { icon: '🍎', label: '사과', swap: '🍊' },
+        difficulty: 'Lv.2 초급',
+        origImage: `${BASE}images/spot-diff/real/stage2_camping.jpg`,
+        diffImage: null,
+        memorizeSec: 35,
+        findSec: 65,
+        penaltySec: 10,
+        diffCount: 5,
+        candidates: [
+            { id: 'moon', label: '초승달 방향 반전', x: 26.5, y: 14, rx: 6, ry: 8, mode: 'mirror' },
+            { id: 'tent', label: '캠핑 텐트 색상 변경', x: 25, y: 58, rx: 16.5, ry: 16, mode: 'hue', hue: 195, minSat: 0.28 },
+            { id: 'kettle', label: '주전자 색상 변경', x: 52, y: 62, rx: 5, ry: 5.5, mode: 'hue', hue: 245, minSat: 0.35 },
+            { id: 'backpack', label: '등산 배낭 색상 변경', x: 73, y: 73, rx: 8, ry: 12, mode: 'hue', hue: 155, minSat: 0.30 },
+            { id: 'owl', label: '나뭇가지 위 부엉이 방향 반전', x: 83, y: 19, rx: 7, ry: 11, mode: 'mirror' },
+            { id: 'fire', label: '모닥불 불꽃 색상 변경', x: 52.5, y: 73, rx: 6.5, ry: 7, mode: 'hue', hue: 190, minSat: 0.35 },
         ],
     },
     {
-        id: 'cafe',
-        title: '☕ 루프탑 디저트 카페',
-        image: `${BASE}images/spot-diff/cafe.jpg`,
-        pool: [
-            { icon: '🍰', label: '딸기케이크', swap: '🍩' },
-            { icon: '☕', label: '라떼', swap: '🧋' },
-            { icon: '🥐', label: '크루아상', swap: '🥨' },
-            { icon: '🧁', label: '컵케이크', swap: '🍮' },
-            { icon: '🫖', label: '찻주전자', swap: '🥛' },
-            { icon: '🐱', label: '고양이', swap: '🐶' },
-            { icon: '🪴', label: '화분', swap: '🌻' },
-            { icon: '🕒', label: '벽시계', swap: '🕘' },
-            { icon: '🔔', label: '호출벨', swap: '🛎️' },
-            { icon: '🍪', label: '쿠키', swap: '🧇' },
-            { icon: '🍓', label: '딸기', swap: '🍒' },
-            { icon: '🍨', label: '아이스크림', swap: '🍧' },
-            { icon: '🎁', label: '선물상자', swap: '🛍️' },
-            { icon: '🖼️', label: '액자', swap: '🪞' },
-            { icon: '💡', label: '전구', swap: '🕯️' },
-            { icon: '📖', label: '메뉴책', swap: '📰' },
-            { icon: '🥐', label: '빵', swap: '🥪' },
-            { icon: '🍋', label: '레몬', swap: '🍑' },
-            { icon: '💐', label: '꽃다발', swap: '🌹' },
-            { icon: '🧸', label: '곰인형', swap: '🐰' },
-            { icon: '🥞', label: '팬케이크', swap: '🥧' },
-            { icon: '🍹', label: '에이드', swap: '🍷' },
-            { icon: '🍰', label: '치즈케이크', swap: '🍫' },
-            { icon: '🐦', label: '참새', swap: '🕊️' },
-            { icon: '👒', label: '밀짚모자', swap: '🎀' },
-            { icon: '🎹', label: '미니피아노', swap: '📻' },
-            { icon: '🎈', label: '풍선', swap: '🪁' },
-            { icon: '🍩', label: '도넛', swap: '🥯' },
-        ],
-    },
-    {
-        id: 'space',
-        title: '🚀 우주 정거장 전망대',
-        image: `${BASE}images/spot-diff/space.jpg`,
-        pool: [
-            { icon: '🚀', label: '로켓', swap: '🛸' },
-            { icon: '🧑‍🚀', label: '우주인', swap: '🤖' },
-            { icon: '🪐', label: '토성', swap: '🌍' },
-            { icon: '👽', label: '외계인', swap: '👾' },
-            { icon: '🛰️', label: '인공위성', swap: '📡' },
-            { icon: '☄️', label: '혜성', swap: '🌠' },
-            { icon: '🌕', label: '보름달', swap: '🌑' },
-            { icon: '💎', label: '우주보석', swap: '🔮' },
-            { icon: '🔋', label: '에너지셀', swap: '⚡' },
-            { icon: '🕹️', label: '조종간', swap: '🎮' },
-            { icon: '🔭', label: '망원경', swap: '🔬' },
-            { icon: '🧭', label: '항법장치', swap: '⏱️' },
-            { icon: '⭐', label: '항성', swap: '✨' },
-            { icon: '🧪', label: '샘플병', swap: '🧬' },
-            { icon: '🖥️', label: '모니터', swap: '📱' },
-            { icon: '🔧', label: '스패너', swap: '🔨' },
-            { icon: '🧲', label: '자석', swap: '⚙️' },
-            { icon: '🚩', label: '탐사깃발', swap: '🏁' },
-            { icon: '🌞', label: '태양', swap: '🌙' },
-            { icon: '🪐', label: '행성', swap: '☄️' },
-            { icon: '🛸', label: '비행접시', swap: '🚀' },
-            { icon: '🤖', label: '드론로봇', swap: '🦾' },
-            { icon: '🔦', label: '손전등', swap: '💡' },
-            { icon: '🧰', label: '공구함', swap: '💼' },
-            { icon: '🪩', label: '미러볼', swap: '🌐' },
-            { icon: '🛰️', label: '탐사선', swap: '🛩️' },
-            { icon: '☄️', label: '운석', swap: '🪨' },
-            { icon: '🧬', label: 'DNA캡슐', swap: '💊' },
+        id: 'wizard',
+        title: '📚 마법사의 비밀 서재',
+        difficulty: 'Lv.3 중급',
+        origImage: `${BASE}images/spot-diff/real/stage3_wizard.jpg`,
+        diffImage: null,
+        memorizeSec: 40,
+        findSec: 70,
+        penaltySec: 10,
+        diffCount: 5,
+        candidates: [
+            { id: 'moon', label: '창밖 초승달 방향 반전', x: 45.5, y: 18.5, rx: 4.5, ry: 6, mode: 'mirror' },
+            { id: 'crystal', label: '수정구슬 색상 변경', x: 50, y: 61, rx: 6.5, ry: 8.5, mode: 'hue', hue: 145, minSat: 0.25 },
+            { id: 'potion', label: '마법 물약병 색상 변경', x: 67, y: 66, rx: 5.5, ry: 8, mode: 'hue', hue: 215, minSat: 0.28 },
+            { id: 'hat', label: '마법 모자 색상 변경', x: 86.5, y: 31, rx: 7, ry: 8.5, mode: 'hue', hue: 160, minSat: 0.25 },
+            { id: 'owl', label: '하얀 부엉이 방향 반전', x: 56.5, y: 42, rx: 6.5, ry: 9.5, mode: 'mirror' },
+            { id: 'flame', label: '왼쪽 촛불 불꽃 사라짐', x: 33.5, y: 45.5, rx: 2.5, ry: 4, mode: 'erase' },
         ],
     },
     {
         id: 'ocean',
-        title: '🐠 깊은 바다 아쿠아리움',
-        image: `${BASE}images/spot-diff/ocean.jpg`,
-        pool: [
-            { icon: '🐳', label: '고래', swap: '🐬' },
-            { icon: '🐙', label: '문어', swap: '🦑' },
-            { icon: '🐠', label: '열대어', swap: '🐡' },
-            { icon: '🐢', label: '바다거북', swap: '🐊' },
-            { icon: '🦈', label: '상어', swap: '🦭' },
-            { icon: '🦀', label: '꽃게', swap: '🦞' },
-            { icon: '🪼', label: '해파리', swap: '🫧' },
-            { icon: '🐚', label: '진주조개', swap: '🦪' },
-            { icon: '🪸', label: '산호초', swap: '🌿' },
-            { icon: '⚓', label: '바다닻', swap: '🪝' },
-            { icon: '⭐', label: '불가사리', swap: '🌸' },
-            { icon: '🐟', label: '파란물고기', swap: '🐠' },
-            { icon: '🦐', label: '새우', swap: '🦀' },
-            { icon: '👑', label: '왕관보물', swap: '💍' },
-            { icon: '💎', label: '바다보석', swap: '🪙' },
-            { icon: '⛵', label: '난파선', swap: '🚤' },
-            { icon: '🧭', label: '나침반', swap: '🗺️' },
-            { icon: '🐧', label: '펭귄', swap: '🦆' },
-            { icon: '🐡', label: '복어', swap: '🐟' },
-            { icon: '🦑', label: '오징어', swap: '🐙' },
-            { icon: '🪙', label: '금화', swap: '💰' },
-            { icon: '🏺', label: '고대항아리', swap: '⚱️' },
-            { icon: '🦭', label: '물개', swap: '🦦' },
-            { icon: '🫧', label: '물방울', swap: '💧' },
-            { icon: '🧜', label: '인어', swap: '🧚' },
-            { icon: '🗝️', label: '보물열쇠', swap: '🔒' },
-            { icon: '🐚', label: '소라껍데기', swap: '🐌' },
-            { icon: '🐬', label: '돌고래', swap: '🐋' },
+        title: '🐠 산호초 바닷속 세상',
+        difficulty: 'Lv.4 고급',
+        origImage: `${BASE}images/spot-diff/real/stage4_ocean.jpg`,
+        diffImage: null,
+        memorizeSec: 40,
+        findSec: 75,
+        penaltySec: 12,
+        diffCount: 5,
+        candidates: [
+            { id: 'sub', label: '잠수함 색상 변경', x: 25.5, y: 19, rx: 14, ry: 13, mode: 'hue', hue: 280, minSat: 0.30 },
+            { id: 'octopus', label: '문어 색상 변경', x: 18.5, y: 54, rx: 12, ry: 14, mode: 'hue', hue: 145, minSat: 0.30 },
+            { id: 'starfish', label: '불가사리 색상 변경', x: 13.5, y: 89, rx: 8.5, ry: 9, mode: 'hue', hue: 210, minSat: 0.32 },
+            { id: 'turtle', label: '바다거북 색상 변경', x: 54.5, y: 49, rx: 14, ry: 12, mode: 'hue', hue: 190, minSat: 0.22 },
+            { id: 'whale', label: '큰 고래 색상 변경', x: 79, y: 21, rx: 17, ry: 13, mode: 'hue', hue: 135, minSat: 0.20 },
+            { id: 'treasure', label: '보물상자 금화 색상 변경', x: 84, y: 81, rx: 9, ry: 6.5, mode: 'hue', hue: 100, minSat: 0.32 },
         ],
     },
     {
-        id: 'magic',
-        title: '📚 마법사의 비밀 서재',
-        image: `${BASE}images/spot-diff/magic.jpg`,
-        pool: [
-            { icon: '🔮', label: '수정구슬', swap: '🌐' },
-            { icon: '🎩', label: '마법모자', swap: '👑' },
-            { icon: '🧪', label: '초록물약', swap: '🍷' },
-            { icon: '🕯️', label: '양초', swap: '🔦' },
-            { icon: '📖', label: '마법책', swap: '📜' },
-            { icon: '🪄', label: '요술봉', swap: '🗡️' },
-            { icon: '⏳', label: '모래시계', swap: '🕰️' },
-            { icon: '🦉', label: '부엉이', swap: '🐈‍⬛' },
-            { icon: '🗝️', label: '황금열쇠', swap: '🔒' },
-            { icon: '🧹', label: '빗자루', swap: '🪓' },
-            { icon: '🪶', label: '깃펜', swap: '✏️' },
-            { icon: '🔭', label: '망원경', swap: '🔍' },
-            { icon: '💍', label: '마법반지', swap: '💎' },
-            { icon: '🧿', label: '수호부적', swap: '🪬' },
-            { icon: '⚱️', label: '마법단지', swap: '🏺' },
-            { icon: '🍄', label: '마법버섯', swap: '🌿' },
-            { icon: '🦋', label: '빛나비', swap: '🪲' },
-            { icon: '🌙', label: '달장식', swap: '☀️' },
-            { icon: '⭐', label: '별장식', swap: '❄️' },
-            { icon: '🎭', label: '가면', swap: '🃏' },
-            { icon: '📜', label: '주문서', swap: '✉️' },
-            { icon: '⚖️', label: '천칭저울', swap: '🧭' },
-            { icon: '🐉', label: '미니드래곤', swap: '🦄' },
-            { icon: '🦇', label: '박쥐', swap: '🕊️' },
-            { icon: '🗝️', label: '은열쇠', swap: '🪙' },
-            { icon: '🔔', label: '마법종', swap: '🎺' },
-            { icon: '🕰️', label: '탁상시계', swap: '⏰' },
-            { icon: '🎁', label: '비밀상자', swap: '💼' },
+        id: 'festival',
+        title: '🎡 야시장 불꽃 축제',
+        difficulty: 'Lv.5 극한',
+        origImage: `${BASE}images/spot-diff/real/stage5_festival.jpg`,
+        diffImage: `${BASE}images/spot-diff/real/stage5_festival_diff.jpg`,
+        memorizeSec: 45,
+        findSec: 80,
+        penaltySec: 12,
+        diffCount: 5,
+        candidates: [
+            { id: 'fireworks', label: '밤하늘 불꽃놀이 유무', x: 22, y: 18, rx: 18, ry: 15, mode: 'prebuilt' },
+            { id: 'chefhat', label: '요리사 모자 색상 변경', x: 22, y: 52, rx: 6, ry: 7.5, mode: 'prebuilt' },
+            { id: 'luckycat', label: '황금 고양이 인형 유무', x: 49, y: 81, rx: 8, ry: 13, mode: 'prebuilt' },
+            { id: 'balloon', label: '큰 별 풍선 색상 변경', x: 85, y: 26, rx: 9, ry: 11, mode: 'prebuilt' },
+            { id: 'lanterns', label: '상단 줄등불 색상 변경', x: 54, y: 18, rx: 22, ry: 11, mode: 'prebuilt' },
         ],
     },
 ];
 
-// 단계별 난이도: 올라갈수록 살펴봐야 할 소품 수와 달라진 곳 개수가 대폭 증가!
-function getStageConfig(stage) {
-    if (stage === 1) return { itemCount: 10, diffCount: 4, memorizeSec: 25, findSec: 60, penaltySec: 10 };
-    if (stage === 2) return { itemCount: 14, diffCount: 5, memorizeSec: 30, findSec: 65, penaltySec: 10 };
-    if (stage === 3) return { itemCount: 18, diffCount: 5, memorizeSec: 35, findSec: 70, penaltySec: 10 };
-    if (stage === 4) return { itemCount: 22, diffCount: 6, memorizeSec: 40, findSec: 75, penaltySec: 12 };
-    return { itemCount: 26, diffCount: 7, memorizeSec: 45, findSec: 80, penaltySec: 12 };
+// RGB <-> HSL 변환 헬퍼 (검은 외곽선과 음영을 100% 보존하면서 사물 색깔만 정교하게 바꾸기 위함)
+function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return [h, s, l];
+}
+
+function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) {
+        r = g = b = l;
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
 /**
- * 겹치지 않는 지터드 그리드(Jittered Grid) 좌표를 생성해 소품들을 일러스트 전역에 자연스럽게 배치
+ * 실제 일러스트 이미지의 선택된 5군데 픽셀만 정교하게 변형하여 DataURL 생성
  */
-function generateNonOverlappingPositions(count) {
-    const cols = count <= 10 ? 5 : count <= 16 ? 5 : count <= 22 ? 6 : 7;
-    const rows = Math.ceil(count / cols);
-    const padX = 36;
-    const padY = 34;
-    const cellW = (400 - padX * 2) / cols;
-    const cellH = (300 - padY * 2) / rows;
+function buildPixelEditedImage(imgEl, selectedSpots) {
+    const w = imgEl.naturalWidth || 1024;
+    const h = imgEl.naturalHeight || 768;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(imgEl, 0, 0, w, h);
 
-    const slots = [];
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            const jitterX = (Math.random() - 0.5) * Math.min(18, cellW * 0.35);
-            const jitterY = (Math.random() - 0.5) * Math.min(16, cellH * 0.35);
-            slots.push({
-                x: Math.round(padX + cellW * (c + 0.5) + jitterX),
-                y: Math.round(padY + cellH * (r + 0.5) + jitterY),
-            });
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    for (const spot of selectedSpots) {
+        const cx = (spot.x / 100) * w;
+        const cy = (spot.y / 100) * h;
+        const rx = (spot.rx / 100) * w;
+        const ry = (spot.ry / 100) * h;
+
+        const minX = Math.max(0, Math.floor(cx - rx));
+        const maxX = Math.min(w - 1, Math.ceil(cx + rx));
+        const minY = Math.max(0, Math.floor(cy - ry));
+        const maxY = Math.min(h - 1, Math.ceil(cy + ry));
+
+        if (spot.mode === 'hue') {
+            const shift = ((spot.hue || 180) / 360) % 1;
+            const minSat = spot.minSat ?? 0.25;
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const nx = (x - cx) / rx;
+                    const ny = (y - cy) / ry;
+                    const dist2 = nx * nx + ny * ny;
+                    if (dist2 > 1) continue;
+
+                    const idx = (y * w + x) * 4;
+                    const [hh, ss, ll] = rgbToHsl(data[idx], data[idx + 1], data[idx + 2]);
+                    // 검은 외곽선(어두운 픽셀)과 무채색 배경은 건드리지 않고, 사물 고유의 유채색만 매끄럽게 변환!
+                    if (ss >= minSat && ll > 0.14 && ll < 0.90) {
+                        const feather = dist2 > 0.72 ? (1 - dist2) / 0.28 : 1;
+                        const newH = (hh + shift) % 1;
+                        const [nr, ng, nb] = hslToRgb(newH, Math.min(1, ss * 1.08), ll);
+                        data[idx] = Math.round(data[idx] * (1 - feather) + nr * feather);
+                        data[idx + 1] = Math.round(data[idx + 1] * (1 - feather) + ng * feather);
+                        data[idx + 2] = Math.round(data[idx + 2] * (1 - feather) + nb * feather);
+                    }
+                }
+            }
+        } else if (spot.mode === 'mirror') {
+            // 타원형 영역 내부를 자연스럽게 좌우 반전
+            const copy = new Uint8ClampedArray(data);
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const nx = (x - cx) / rx;
+                    const ny = (y - cy) / ry;
+                    const dist2 = nx * nx + ny * ny;
+                    if (dist2 > 1) continue;
+                    const mx = Math.min(w - 1, Math.max(0, Math.round(2 * cx - x)));
+                    const dstIdx = (y * w + x) * 4;
+                    const srcIdx = (y * w + mx) * 4;
+                    const feather = dist2 > 0.75 ? (1 - dist2) / 0.25 : 1;
+                    data[dstIdx] = Math.round(copy[dstIdx] * (1 - feather) + copy[srcIdx] * feather);
+                    data[dstIdx + 1] = Math.round(copy[dstIdx + 1] * (1 - feather) + copy[srcIdx + 1] * feather);
+                    data[dstIdx + 2] = Math.round(copy[dstIdx + 2] * (1 - feather) + copy[srcIdx + 2] * feather);
+                }
+            }
+        } else if (spot.mode === 'erase') {
+            // 타원 바깥쪽 경계 픽셀 평균색으로 내부를 부드럽게 채워 불꽃/소품을 감쪽같이 지움
+            let sr = 0, sg = 0, sb = 0, cnt = 0;
+            for (let a = 0; a < 24; a++) {
+                const rad = (a / 24) * Math.PI * 2;
+                const sx = Math.min(w - 1, Math.max(0, Math.round(cx + Math.cos(rad) * rx * 1.15)));
+                const sy = Math.min(h - 1, Math.max(0, Math.round(cy + Math.sin(rad) * ry * 1.15)));
+                const si = (sy * w + sx) * 4;
+                sr += data[si]; sg += data[si + 1]; sb += data[si + 2]; cnt++;
+            }
+            const br = sr / cnt, bg = sg / cnt, bb = sb / cnt;
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const nx = (x - cx) / rx;
+                    const ny = (y - cy) / ry;
+                    const dist2 = nx * nx + ny * ny;
+                    if (dist2 > 1) continue;
+                    const idx = (y * w + x) * 4;
+                    const feather = dist2 > 0.65 ? (1 - dist2) / 0.35 : 1;
+                    data[idx] = Math.round(data[idx] * (1 - feather) + br * feather);
+                    data[idx + 1] = Math.round(data[idx + 1] * (1 - feather) + bg * feather);
+                    data[idx + 2] = Math.round(data[idx + 2] * (1 - feather) + bb * feather);
+                }
+            }
         }
     }
 
-    return slots.sort(() => Math.random() - 0.5).slice(0, count);
-}
-
-/**
- * 매판 완전히 새로운 일러스트 테마 + 고밀도 소품 배치 + 랜덤 변형 생성
- */
-function generateSpotRound(stage, prevThemeId = '') {
-    const cfg = getStageConfig(stage);
-    const candidates = SCENE_THEMES.filter((t) => t.id !== prevThemeId);
-    const theme = candidates[Math.floor(Math.random() * candidates.length)] || SCENE_THEMES[0];
-
-    const pickedPool = [...theme.pool].sort(() => Math.random() - 0.5).slice(0, cfg.itemCount);
-    const positions = generateNonOverlappingPositions(cfg.itemCount);
-    const fontSize = cfg.itemCount >= 22 ? 25 : cfg.itemCount >= 16 ? 28 : 32;
-
-    const items = pickedPool.map((entry, idx) => ({
-        id: `obj-${idx}-${entry.label}`,
-        label: entry.label,
-        icon: entry.icon,
-        swapIcon: entry.swap,
-        x: positions[idx].x,
-        y: positions[idx].y,
-        size: fontSize,
-    }));
-
-    // 변형 대상 인덱스 랜덤 추출 & 5가지 변화 유형 골고루 배정
-    const diffTypes = ['vanish', 'swap', 'color', 'move', 'flip'];
-    const shuffledIndices = items.map((_, i) => i).sort(() => Math.random() - 0.5);
-    const diffMap = {};
-
-    shuffledIndices.slice(0, cfg.diffCount).forEach((itemIdx, order) => {
-        const item = items[itemIdx];
-        const diffType = diffTypes[(order + Math.floor(Math.random() * diffTypes.length)) % diffTypes.length];
-
-        if (diffType === 'vanish') {
-            diffMap[item.id] = { type: 'vanish', desc: `👻 ${item.label} 사라짐` };
-        } else if (diffType === 'swap') {
-            diffMap[item.id] = { type: 'swap', newIcon: item.swapIcon, desc: `🔄 ${item.label} 모양 변경` };
-        } else if (diffType === 'color') {
-            const hue = [120, 180, 240, 290][Math.floor(Math.random() * 4)];
-            diffMap[item.id] = { type: 'color', hue, desc: `🎨 ${item.label} 색상 변경` };
-        } else if (diffType === 'move') {
-            const dx = (item.x > 200 ? -1 : 1) * (16 + Math.floor(Math.random() * 8));
-            const dy = (item.y > 150 ? -1 : 1) * (12 + Math.floor(Math.random() * 6));
-            diffMap[item.id] = { type: 'move', dx, dy, desc: `📐 ${item.label} 위치 이동` };
-        } else {
-            diffMap[item.id] = { type: 'flip', desc: `🔁 ${item.label} 크기·방향 반전` };
-        }
-    });
-
-    return {
-        theme,
-        items,
-        diffMap,
-        diffIds: Object.keys(diffMap),
-        ...cfg,
-    };
+    ctx.putImageData(imgData, 0, 0);
+    return canvas.toDataURL('image/jpeg', 0.92);
 }
 
 const SpotMemoryGamePage = ({ onBack }) => {
@@ -289,19 +258,18 @@ const SpotMemoryGamePage = ({ onBack }) => {
     const { userName, mbtiType } = useUserStore();
     const { earnCrystals } = useCrystalStore();
 
-    const [gameState, setGameState] = useState('ready'); // ready | memorize | find | stageClear | finished
+    const [gameState, setGameState] = useState('ready'); // ready | loading | memorize | find | stageClear | finished
     const [stage, setStage] = useState(1);
     const [score, setScore] = useState(0);
-    const [round, setRound] = useState(null);
-    const [timeLeft, setTimeLeft] = useState(25);
+    const [round, setRound] = useState(null); // { config, spots, memorizeUrl, findUrl }
+    const [timeLeft, setTimeLeft] = useState(30);
     const [foundIds, setFoundIds] = useState([]);
-    const [wrongTap, setWrongTap] = useState(null); // { x, y, penalty }
+    const [wrongTap, setWrongTap] = useState(null);
     const [penaltyFlash, setPenaltyFlash] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const scoreRef = useRef(0);
     const stageRef = useRef(1);
-    const prevThemeRef = useRef('');
     const finishedRef = useRef(false);
 
     const finishGame = useCallback(async () => {
@@ -329,15 +297,66 @@ const SpotMemoryGamePage = ({ onBack }) => {
         }
     }, [user, userName, mbtiType, earnCrystals]);
 
-    const startRound = useCallback((st) => {
-        const nextRound = generateSpotRound(st, prevThemeRef.current);
-        prevThemeRef.current = nextRound.theme.id;
-        setRound(nextRound);
+    // 스테이지 이미지 로드 및 5군데 실제 픽셀 변형 생성
+    const prepareStage = useCallback((st) => {
+        const idx = (st - 1) % REAL_PUZZLE_STAGES.length;
+        const config = REAL_PUZZLE_STAGES[idx];
+        setGameState('loading');
         setFoundIds([]);
         setWrongTap(null);
         setPenaltyFlash(false);
-        setTimeLeft(nextRound.memorizeSec);
-        setGameState('memorize');
+
+        // AI 사전 편집 쌍이 있는 스테이지 (Stage 5 야시장: 정방향/역방향 랜덤 출제!)
+        if (config.diffImage) {
+            const reverse = Math.random() < 0.5;
+            const memorizeUrl = reverse ? config.diffImage : config.origImage;
+            const findUrl = reverse ? config.origImage : config.diffImage;
+            setRound({
+                config,
+                spots: config.candidates,
+                memorizeUrl,
+                findUrl,
+            });
+            setTimeLeft(config.memorizeSec);
+            setGameState('memorize');
+            return;
+        }
+
+        // 매판 6개 사물 후보 중 무작위 5군데 선택 + 색상 각도도 미세 랜덤화!
+        const selectedSpots = [...config.candidates]
+            .sort(() => Math.random() - 0.5)
+            .slice(0, config.diffCount)
+            .map((spot) =>
+                spot.mode === 'hue'
+                    ? { ...spot, hue: (spot.hue + Math.floor(Math.random() * 40 - 20) + 360) % 360 }
+                    : spot
+            );
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            try {
+                const editedDataUrl = buildPixelEditedImage(img, selectedSpots);
+                const reverse = Math.random() < 0.5;
+                setRound({
+                    config,
+                    spots: selectedSpots,
+                    memorizeUrl: reverse ? editedDataUrl : config.origImage,
+                    findUrl: reverse ? config.origImage : editedDataUrl,
+                });
+                setTimeLeft(config.memorizeSec);
+                setGameState('memorize');
+            } catch (err) {
+                console.error('Image edit error:', err);
+                toast.error('그림을 준비하는 중 오류가 발생했습니다.');
+                setGameState('ready');
+            }
+        };
+        img.onerror = () => {
+            toast.error('이미지를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+            setGameState('ready');
+        };
+        img.src = config.origImage;
     }, []);
 
     const startGame = () => {
@@ -346,14 +365,14 @@ const SpotMemoryGamePage = ({ onBack }) => {
         stageRef.current = 1;
         setScore(0);
         setStage(1);
-        startRound(1);
+        prepareStage(1);
     };
 
     const goToFindPhase = useCallback(() => {
         if (!round) return;
-        setTimeLeft(round.findSec);
+        setTimeLeft(round.config.findSec);
         setGameState('find');
-        toast(`🔍 그림이 바뀌었습니다! 달라진 ${round.diffCount}군데를 찾으세요! (오답 -${round.penaltySec}초)`, { icon: '👀' });
+        toast(`🔍 그림이 바뀌었습니다! 달라진 ${round.spots.length}군데를 찾으세요! (오답 -${round.config.penaltySec}초)`, { icon: '👀' });
     }, [round]);
 
     // 타이머
@@ -378,49 +397,45 @@ const SpotMemoryGamePage = ({ onBack }) => {
         return () => clearInterval(timer);
     }, [gameState, goToFindPhase, finishGame]);
 
-    // 그림 클릭/터치 판정
-    const handleCanvasClick = (e) => {
+    // 그림 클릭/터치 판정 (정규화 % 좌표 기준 타원 히트박스)
+    const handleImageClick = (e) => {
         if (gameState !== 'find' || !round) return;
-        const svg = e.currentTarget;
-        const rect = svg.getBoundingClientRect();
-        const clickX = ((e.clientX - rect.left) / rect.width) * 400;
-        const clickY = ((e.clientY - rect.top) / rect.height) * 300;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = ((e.clientX - rect.left) / rect.width) * 100;
+        const clickY = ((e.clientY - rect.top) / rect.height) * 100;
 
-        let matchedItem = null;
-        for (const diffId of round.diffIds) {
-            if (foundIds.includes(diffId)) continue;
-            const item = round.items.find((it) => it.id === diffId);
-            const diff = round.diffMap[diffId];
-            if (!item || !diff) continue;
-
-            const tx = diff.type === 'move' ? item.x + (diff.dx || 0) : item.x;
-            const ty = diff.type === 'move' ? item.y + (diff.dy || 0) : item.y;
-            const hitRadius = round.itemCount >= 22 ? 26 : 31;
-
-            if (Math.hypot(clickX - tx, clickY - ty) <= hitRadius || Math.hypot(clickX - item.x, clickY - item.y) <= hitRadius) {
-                matchedItem = { item, diff };
+        let matched = null;
+        for (const spot of round.spots) {
+            if (foundIds.includes(spot.id)) continue;
+            // 터치 편의성을 위해 타원 반경에 약간 여유(+2.5%) 부여
+            const rx = Math.max(spot.rx + 2.5, 6.5);
+            const ry = Math.max(spot.ry + 2.5, 7.5);
+            const nx = (clickX - spot.x) / rx;
+            const ny = (clickY - spot.y) / ry;
+            if (nx * nx + ny * ny <= 1.0) {
+                matched = spot;
                 break;
             }
         }
 
-        if (matchedItem) {
-            const nextFound = [...foundIds, matchedItem.item.id];
+        if (matched) {
+            const nextFound = [...foundIds, matched.id];
             setFoundIds(nextFound);
-            const gained = 130 + stageRef.current * 35;
+            const gained = 140 + stageRef.current * 40;
             scoreRef.current += gained;
             setScore(scoreRef.current);
-            toast.success(`${matchedItem.diff.desc}! (+${gained}점)`);
+            toast.success(`정답! ${matched.label} (+${gained}점)`);
 
-            if (nextFound.length >= round.diffCount) {
+            if (nextFound.length >= round.spots.length) {
                 const timeBonus = timeLeft * 6;
                 scoreRef.current += timeBonus;
                 setScore(scoreRef.current);
                 setGameState('stageClear');
-                toast.success(`🎉 Stage ${stageRef.current} ${round.diffCount}군데 모두 발견! (+${timeBonus}점)`);
+                toast.success(`🎉 Stage ${stageRef.current} 5군데 모두 발견! (+${timeBonus}점)`);
             }
         } else {
             // 💥 과감한 오답 패널티 (-10초 ~ -12초!)
-            const penalty = round.penaltySec;
+            const penalty = round.config.penaltySec;
             setWrongTap({ x: clickX, y: clickY, penalty });
             setPenaltyFlash(true);
             setTimeout(() => {
@@ -436,7 +451,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                 }
                 return nextT;
             });
-            toast.error(`💥 오답 터치! 시간이 -${penalty}초 대폭 차감되었습니다!`);
+            toast.error(`💥 오답! 시간이 -${penalty}초 대폭 차감되었습니다!`);
         }
     };
 
@@ -444,174 +459,14 @@ const SpotMemoryGamePage = ({ onBack }) => {
         const nextSt = stageRef.current + 1;
         stageRef.current = nextSt;
         setStage(nextSt);
-        startRound(nextSt);
-    };
-
-    // AI 일러스트 배경 + 고밀도 소품 레이어 렌더링
-    const renderSceneCanvas = (isModified) => {
-        if (!round) return null;
-        const { theme, items, diffMap } = round;
-
-        return (
-            <motion.div
-                animate={penaltyFlash ? { x: [-6, 6, -5, 5, 0] } : { x: 0 }}
-                transition={{ duration: 0.3 }}
-                style={{ position: 'relative' }}
-            >
-                <svg
-                    viewBox="0 0 400 300"
-                    onClick={isModified ? handleCanvasClick : undefined}
-                    style={{
-                        width: '100%',
-                        height: 'auto',
-                        display: 'block',
-                        borderRadius: '18px',
-                        border: penaltyFlash
-                            ? '3px solid #ef4444'
-                            : isModified
-                            ? '2.5px solid #ec4899'
-                            : '2.5px solid #6366f1',
-                        cursor: isModified && gameState === 'find' ? 'crosshair' : 'default',
-                        userSelect: 'none',
-                        boxShadow: penaltyFlash
-                            ? '0 0 22px rgba(239, 68, 68, 0.5)'
-                            : '0 10px 24px rgba(15, 23, 42, 0.14)',
-                        background: '#0f172a',
-                    }}
-                >
-                    <defs>
-                        <filter id="obj-shadow" x="-30%" y="-30%" width="160%" height="160%">
-                            <feDropShadow dx="0" dy="2" stdDeviation="2.2" floodColor="#000000" floodOpacity="0.45" />
-                        </filter>
-                    </defs>
-
-                    {/* 실제 AI 생성 고퀄리티 일러스트 원화 배경 */}
-                    <image
-                        href={theme.image}
-                        x="0"
-                        y="0"
-                        width="400"
-                        height="300"
-                        preserveAspectRatio="xMidYMid slice"
-                    />
-
-                    {/* 소품들이 배경에 잘 어우러지면서도 또렷하게 보이도록 미세 비네팅 */}
-                    <rect x="0" y="0" width="400" height="300" fill="rgba(15, 23, 42, 0.08)" pointerEvents="none" />
-
-                    {/* 고밀도 일러스트 소품 레이어 (Stage 1: 10개 → Stage 5+: 26개) */}
-                    {items.map((item) => {
-                        const diff = isModified ? diffMap[item.id] : null;
-                        const isFound = foundIds.includes(item.id);
-
-                        // 사라짐(vanish) 변형
-                        if (diff?.type === 'vanish') {
-                            return isFound ? (
-                                <g key={item.id}>
-                                    <circle
-                                        cx={item.x}
-                                        cy={item.y}
-                                        r="22"
-                                        fill="rgba(16, 185, 129, 0.28)"
-                                        stroke="#10b981"
-                                        strokeWidth="3.2"
-                                        strokeDasharray="4 3"
-                                    />
-                                    <text
-                                        x={item.x}
-                                        y={item.y + 4}
-                                        textAnchor="middle"
-                                        fontSize="11"
-                                        fontWeight="900"
-                                        fill="#ffffff"
-                                        filter="url(#obj-shadow)"
-                                    >
-                                        사라짐!
-                                    </text>
-                                </g>
-                            ) : null;
-                        }
-
-                        const cx = diff?.type === 'move' ? item.x + (diff.dx || 0) : item.x;
-                        const cy = diff?.type === 'move' ? item.y + (diff.dy || 0) : item.y;
-                        const iconChar = diff?.type === 'swap' ? diff.newIcon : item.icon;
-                        const transformStr =
-                            diff?.type === 'flip'
-                                ? `translate(${cx}, ${cy}) scale(-1.22, 1.22) rotate(14) translate(${-cx}, ${-cy})`
-                                : undefined;
-                        const colorStyle =
-                            diff?.type === 'color'
-                                ? { filter: `hue-rotate(${diff.hue}deg) saturate(1.9) brightness(1.08)` }
-                                : undefined;
-
-                        return (
-                            <g key={item.id} transform={transformStr}>
-                                {/* 반투명 소프트 후광으로 배경 일러스트와 자연스럽게 조화 */}
-                                <circle
-                                    cx={cx}
-                                    cy={cy}
-                                    r={item.size * 0.56}
-                                    fill="rgba(255, 255, 255, 0.22)"
-                                />
-                                <text
-                                    x={cx}
-                                    y={cy + 1}
-                                    textAnchor="middle"
-                                    dominantBaseline="central"
-                                    fontSize={item.size}
-                                    filter="url(#obj-shadow)"
-                                    style={colorStyle}
-                                >
-                                    {iconChar}
-                                </text>
-
-                                {isModified && isFound && (
-                                    <circle
-                                        cx={cx}
-                                        cy={cy}
-                                        r={item.size * 0.78}
-                                        fill="none"
-                                        stroke="#10b981"
-                                        strokeWidth="3.8"
-                                    />
-                                )}
-                            </g>
-                        );
-                    })}
-
-                    {/* 오답 터치 시 강렬한 빨간 X & -10초 텍스트 */}
-                    {wrongTap && (
-                        <g>
-                            <circle
-                                cx={wrongTap.x}
-                                cy={wrongTap.y}
-                                r="22"
-                                fill="rgba(239, 68, 68, 0.45)"
-                                stroke="#ef4444"
-                                strokeWidth="3.5"
-                            />
-                            <text
-                                x={wrongTap.x}
-                                y={wrongTap.y + 1}
-                                textAnchor="middle"
-                                dominantBaseline="central"
-                                fontSize="14"
-                                fontWeight="900"
-                                fill="#ffffff"
-                            >
-                                -{wrongTap.penalty}초!
-                            </text>
-                        </g>
-                    )}
-                </svg>
-            </motion.div>
-        );
+        prepareStage(nextSt);
     };
 
     return (
         <ArcadeGameLayout
             gameId="spot-memory"
             title="🖼️ 틀린그림찾기"
-            subtitle="AI 일러스트 속 소품들을 기억하고 달라진 곳을 찾으세요! (오답 시 -10초 대폭 차감!)"
+            subtitle="진짜 일러스트 그림을 암기한 뒤, 실제로 달라진 5군데를 찾아 터치하세요!"
             accentColor="#ec4899"
             accentBg="#fdf2f8"
             onBack={onBack}
@@ -619,10 +474,10 @@ const SpotMemoryGamePage = ({ onBack }) => {
             extraStatLabel={gameState === 'memorize' ? '암기 남은 시간' : '발견 / 남은 시간'}
             extraStatValue={
                 gameState === 'ready'
-                    ? 'AI 일러스트 기억 대결'
+                    ? '진짜 일러스트 5세트'
                     : gameState === 'memorize'
                     ? `👀 암기 ${timeLeft}초`
-                    : `${foundIds.length}/${round?.diffCount || 5} · ${timeLeft}초`
+                    : `${foundIds.length}/${round?.spots.length || 5} · ${timeLeft}초`
             }
             refreshTrigger={refreshTrigger}
         >
@@ -641,14 +496,15 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             marginBottom: '10px',
                         }}
                     >
-                        🎨 AI 일러스트 원화 · 고밀도 기억력 대결
+                        🎨 100% 실제 일러스트 · 디테일 기억력 틀린그림찾기
                     </div>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', marginBottom: '10px' }}>
-                        그림을 통째로 외우고 달라진 곳을 찾아라!
+                        그림 속 달라진 5군데를 찾아라!
                     </h2>
                     <p style={{ fontSize: '0.86rem', color: '#64748b', lineHeight: 1.65, marginBottom: '14px' }}>
-                        고퀄리티 동화풍 일러스트를 제한 시간 동안 암기한 뒤, <strong>색상 변화 · 소품 사라짐 · 모양 변경 · 위치 이동 · 크기/방향 반전</strong>이 일어난 곳을 직접 터치해 찾아내세요!<br />
-                        단계가 올라갈수록 살펴봐야 할 소품이 <strong>10개 → 14개 → 18개 → 22개 → 26개(7군데 변화!)</strong>로 점점 더 빽빽하고 어려워집니다!
+                        먼저 원본 일러스트를 <strong>30~45초 동안</strong> 꼼꼼히 눈에 담아 암기하세요.<br />
+                        암기가 끝나면 그림 속 사물들의 <strong>색상 · 방향 · 소품 유무</strong>가 감쪽같이 바뀐 그림이 등장합니다!<br />
+                        <strong>Lv.1 카페 → Lv.2 캠핑장 → Lv.3 마법 서재 → Lv.4 바닷속 → Lv.5 야시장 축제</strong>로 갈수록 그림이 훨씬 빽빽하고 어려워집니다!
                     </p>
                     <div
                         style={{
@@ -665,10 +521,10 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             gap: '6px',
                         }}
                     >
-                        <AlertTriangle size={16} /> 주의: 찍기 금지! 잘못 터치할 때마다 남은 시간이 <strong>-10초 ~ -12초</strong>씩 확 깎입니다!
+                        <AlertTriangle size={16} /> 주의: 찍기 금지! 잘못 터치할 때마다 남은 시간이 <strong>-10초 ~ -12초</strong>씩 대폭 차감됩니다!
                     </div>
                     <br />
-                    <Tooltip text="AI 일러스트 틀린그림찾기 게임을 시작합니다">
+                    <Tooltip text="진짜 일러스트 틀린그림찾기 게임을 시작합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
@@ -691,6 +547,12 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             <Play size={18} /> 틀린그림찾기 시작
                         </motion.button>
                     </Tooltip>
+                </div>
+            )}
+
+            {gameState === 'loading' && (
+                <div style={{ textAlign: 'center', padding: '60px 16px', color: '#64748b', fontWeight: 800 }}>
+                    🎨 고화질 일러스트를 준비하고 있습니다...
                 </div>
             )}
 
@@ -734,7 +596,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                         >
                             {gameState === 'memorize' ? <Eye size={16} /> : <Search size={16} />}
                             <span>
-                                Stage {stage} ({round.itemCount}개 소품) · {round.theme.title}
+                                {round.config.difficulty} · {round.config.title}
                             </span>
                         </div>
 
@@ -754,13 +616,13 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                             borderRadius: '100px',
                                         }}
                                     >
-                                        💥 오답 -{round.penaltySec}초!
+                                        💥 오답 -{round.config.penaltySec}초!
                                     </motion.span>
                                 )}
                             </AnimatePresence>
 
                             {gameState === 'memorize' ? (
-                                <Tooltip text="충분히 외웠다면 바로 틀린 곳 찾기로 넘어갑니다">
+                                <Tooltip text="충분히 외웠다면 바로 틀린 5군데 찾기로 넘어갑니다">
                                     <button
                                         type="button"
                                         onClick={goToFindPhase}
@@ -792,7 +654,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                         borderRadius: '100px',
                                     }}
                                 >
-                                    발견 {foundIds.length} / {round.diffCount}
+                                    발견 {foundIds.length} / {round.spots.length}
                                 </span>
                             )}
                             <span
@@ -817,33 +679,117 @@ const SpotMemoryGamePage = ({ onBack }) => {
                         }}
                     >
                         {gameState === 'memorize'
-                            ? `👀 ${round.itemCount}개 소품의 위치·색상·모양을 꼼꼼히 기억하세요!`
-                            : `👆 달라진 ${round.diffCount}군데를 정확히 터치하세요! (잘못 누르면 -${round.penaltySec}초!)`}
+                            ? '👀 그림 속 사물들의 색상·방향·위치를 구석구석 꼼꼼히 기억하세요!'
+                            : `👆 달라진 ${round.spots.length}군데를 그림 위에서 직접 터치하세요! (오답 시 -${round.config.penaltySec}초!)`}
                     </div>
 
-                    {renderSceneCanvas(gameState === 'find')}
+                    {/* 진짜 일러스트 이미지 뷰어 (이모지 0개!) */}
+                    <motion.div
+                        animate={penaltyFlash ? { x: [-6, 6, -5, 5, 0] } : { x: 0 }}
+                        transition={{ duration: 0.3 }}
+                        onClick={gameState === 'find' ? handleImageClick : undefined}
+                        style={{
+                            position: 'relative',
+                            width: '100%',
+                            borderRadius: '18px',
+                            overflow: 'hidden',
+                            border: penaltyFlash
+                                ? '3px solid #ef4444'
+                                : gameState === 'find'
+                                ? '2.5px solid #ec4899'
+                                : '2.5px solid #6366f1',
+                            cursor: gameState === 'find' ? 'crosshair' : 'default',
+                            userSelect: 'none',
+                            boxShadow: penaltyFlash
+                                ? '0 0 22px rgba(239, 68, 68, 0.5)'
+                                : '0 10px 24px rgba(15, 23, 42, 0.14)',
+                        }}
+                    >
+                        <img
+                            src={gameState === 'memorize' ? round.memorizeUrl : round.findUrl}
+                            alt={round.config.title}
+                            draggable={false}
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                display: 'block',
+                                pointerEvents: 'none',
+                            }}
+                        />
 
+                        {/* 찾은 정답 위치 초록색 동그라미 마킹 */}
+                        {gameState === 'find' &&
+                            foundIds.map((fid) => {
+                                const spot = round.spots.find((s) => s.id === fid);
+                                if (!spot) return null;
+                                return (
+                                    <div
+                                        key={fid}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${spot.x - spot.rx}%`,
+                                            top: `${spot.y - spot.ry}%`,
+                                            width: `${spot.rx * 2}%`,
+                                            height: `${spot.ry * 2}%`,
+                                            borderRadius: '50%',
+                                            border: '3.5px solid #10b981',
+                                            background: 'rgba(16, 185, 129, 0.18)',
+                                            boxShadow: '0 0 12px rgba(16, 185, 129, 0.7)',
+                                            pointerEvents: 'none',
+                                        }}
+                                    />
+                                );
+                            })}
+
+                        {/* 오답 터치 시 -10초! 경고 마크 */}
+                        {wrongTap && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    left: `${wrongTap.x}%`,
+                                    top: `${wrongTap.y}%`,
+                                    transform: 'translate(-50%, -50%)',
+                                    background: 'rgba(239, 68, 68, 0.92)',
+                                    color: 'white',
+                                    fontWeight: 900,
+                                    fontSize: '0.85rem',
+                                    padding: '6px 11px',
+                                    borderRadius: '100px',
+                                    border: '2px solid white',
+                                    pointerEvents: 'none',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                }}
+                            >
+                                -{wrongTap.penalty}초!
+                            </div>
+                        )}
+                    </motion.div>
+
+                    {/* 발견한 정답 요약 배지 */}
                     {gameState === 'find' && foundIds.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                            {foundIds.map((fid) => (
-                                <span
-                                    key={fid}
-                                    style={{
-                                        background: '#ecfdf5',
-                                        border: '1px solid #a7f3d0',
-                                        color: '#047857',
-                                        padding: '4px 10px',
-                                        borderRadius: '100px',
-                                        fontSize: '0.74rem',
-                                        fontWeight: 800,
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                    }}
-                                >
-                                    <CheckCircle2 size={13} /> {round.diffMap[fid]?.desc}
-                                </span>
-                            ))}
+                            {foundIds.map((fid) => {
+                                const sp = round.spots.find((s) => s.id === fid);
+                                return (
+                                    <span
+                                        key={fid}
+                                        style={{
+                                            background: '#ecfdf5',
+                                            border: '1px solid #a7f3d0',
+                                            color: '#047857',
+                                            padding: '4px 10px',
+                                            borderRadius: '100px',
+                                            fontSize: '0.74rem',
+                                            fontWeight: 800,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                        }}
+                                    >
+                                        <CheckCircle2 size={13} /> {sp?.label}
+                                    </span>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -856,12 +802,12 @@ const SpotMemoryGamePage = ({ onBack }) => {
                         Stage {stage} 완벽 클리어!
                     </h2>
                     <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '14px' }}>
-                        {round.itemCount}개 소품 속에서 달라진 {round.diffCount}군데를 모두 찾아냈습니다!
+                        {round.config.title}에서 달라진 {round.spots.length}군데를 모두 찾아냈습니다!
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px', marginBottom: '22px' }}>
-                        {round.diffIds.map((fid) => (
+                        {round.spots.map((sp) => (
                             <span
-                                key={fid}
+                                key={sp.id}
                                 style={{
                                     background: '#fdf2f8',
                                     border: '1px solid #fbcfe8',
@@ -872,11 +818,11 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                     fontWeight: 800,
                                 }}
                             >
-                                {round.diffMap[fid]?.desc}
+                                ✓ {sp.label}
                             </span>
                         ))}
                     </div>
-                    <Tooltip text="더 많은 소품과 새로운 AI 일러스트로 다음 단계에 도전합니다">
+                    <Tooltip text="더 많은 디테일이 숨겨진 다음 그림에 도전합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
@@ -893,7 +839,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                 boxShadow: '0 8px 20px rgba(236, 72, 153, 0.3)',
                             }}
                         >
-                            Stage {stage + 1} 도전하기 ({getStageConfig(stage + 1).itemCount}개 소품!) 🚀
+                            Stage {stage + 1} 다음 그림 도전 🚀
                         </motion.button>
                     </Tooltip>
                 </div>
@@ -919,14 +865,14 @@ const SpotMemoryGamePage = ({ onBack }) => {
                             }}
                         >
                             <div style={{ fontWeight: 900, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <AlertCircle size={14} /> 이번 판 정답 {round.diffCount}군데 공개:
+                                <AlertCircle size={14} /> 이번 그림 정답 5군데 공개:
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {round.diffIds.map((fid) => {
-                                    const found = foundIds.includes(fid);
+                                {round.spots.map((sp) => {
+                                    const found = foundIds.includes(sp.id);
                                     return (
                                         <span
-                                            key={fid}
+                                            key={sp.id}
                                             style={{
                                                 background: found ? '#dcfce7' : 'white',
                                                 color: found ? '#15803d' : '#be185d',
@@ -937,14 +883,14 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                             }}
                                         >
                                             {found ? '✓ ' : '• '}
-                                            {round.diffMap[fid]?.desc}
+                                            {sp.label}
                                         </span>
                                     );
                                 })}
                             </div>
                         </div>
                     )}
-                    <Tooltip text="새로운 랜덤 AI 일러스트와 배치로 다시 도전합니다">
+                    <Tooltip text="새로운 랜덤 변형으로 다시 도전합니다">
                         <motion.button
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.96 }}
@@ -963,7 +909,7 @@ const SpotMemoryGamePage = ({ onBack }) => {
                                 gap: '8px',
                             }}
                         >
-                            <RotateCcw size={18} /> 새 그림으로 다시 도전
+                            <RotateCcw size={18} /> 다시 도전하기
                         </motion.button>
                     </Tooltip>
                 </div>
