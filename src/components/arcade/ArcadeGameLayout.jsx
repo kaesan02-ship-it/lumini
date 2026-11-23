@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Trophy, Gem, Sparkles, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Trophy, Gem, RefreshCw, ExternalLink } from 'lucide-react';
 import Tooltip from '../Tooltip';
 import useAuthStore from '../../store/authStore';
 import useUserStore from '../../store/userStore';
 import useCrystalStore from '../../store/crystalStore';
-import { fetchArcadeLeaderboard, getMyBestScore, getDefaultSeasonForGame } from '../../utils/arcadeRankingService';
+import { fetchArcadeLeaderboard, getMyBestScore, getDefaultSeasonForGame, getLastCloudStatus } from '../../utils/arcadeRankingService';
+import { toast } from 'react-hot-toast';
 
 /**
  * ArcadeGameLayout — 신규 아케이드 미니게임 6종 공통 레이아웃 & 실시간 시즌 랭킹 보드
@@ -31,11 +32,24 @@ const ArcadeGameLayout = ({
     const [activeSeason, setActiveSeason] = useState(defaultSeason);
     const [leaderboard, setLeaderboard] = useState([]);
     const [bestScore, setBestScore] = useState(() => getMyBestScore(gameId, userId, defaultSeason));
+    const [isCloudOffline, setIsCloudOffline] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const loadBoard = useCallback(async () => {
+    const loadBoard = useCallback(async (showToast = false) => {
+        if (showToast) setIsRefreshing(true);
         const list = await fetchArcadeLeaderboard(gameId, activeSeason, user?.id || 'guest');
+        const status = getLastCloudStatus();
+        setIsCloudOffline(!status.online);
         setLeaderboard(list);
         setBestScore(getMyBestScore(gameId, userId, defaultSeason));
+        if (showToast) {
+            setIsRefreshing(false);
+            if (!status.online) {
+                toast.error('랭킹 서버가 절전 상태입니다. 대시보드에서 서버를 깨워주세요!');
+            } else {
+                toast.success('최신 랭킹을 동기화했습니다! 🔄');
+            }
+        }
     }, [gameId, activeSeason, user?.id, userId, defaultSeason]);
 
     useEffect(() => {
@@ -254,6 +268,27 @@ const ArcadeGameLayout = ({
                                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: '#0f172a' }}>
                                     실시간 최고 랭킹
                                 </h3>
+                                <Tooltip text="최신 랭킹을 다시 불러오고 내 기록을 서버에 동기화합니다">
+                                    <button
+                                        type="button"
+                                        onClick={() => loadBoard(true)}
+                                        disabled={isRefreshing}
+                                        style={{
+                                            background: '#f1f5f9',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '50%',
+                                            width: '28px',
+                                            height: '28px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            color: '#475569',
+                                        }}
+                                    >
+                                        <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
+                                    </button>
+                                </Tooltip>
                             </div>
 
                             {/* 시즌 토글 (기억력 카드는 시즌 4 포함) */}
@@ -300,6 +335,51 @@ const ArcadeGameLayout = ({
                                 ))}
                             </div>
                         </div>
+
+                        {/* 클라우드 서버 절전(오프라인) 안내 배너 */}
+                        {isCloudOffline && (
+                            <div
+                                style={{
+                                    background: '#fffbeb',
+                                    border: '1px solid #fde68a',
+                                    borderRadius: '14px',
+                                    padding: '12px 14px',
+                                    marginBottom: '14px',
+                                    fontSize: '0.78rem',
+                                    color: '#92400e',
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                <div style={{ fontWeight: 900, marginBottom: '4px' }}>
+                                    💤 랭킹 서버(Supabase)가 절전 모드입니다
+                                </div>
+                                <div>
+                                    현재 내 기기 기록만 임시 표시 중입니다. 서버를 깨우면 밀린 기록이 자동 업로드되어 전원의 랭킹이 함께 보입니다!
+                                </div>
+                                <Tooltip text="Supabase 대시보드에서 Restore(깨우기)를 눌러 서버를 재가동합니다">
+                                    <a
+                                        href="https://supabase.com/dashboard/project/uotscostmadmnaypdxus"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            marginTop: '8px',
+                                            padding: '6px 12px',
+                                            borderRadius: '8px',
+                                            background: '#10b981',
+                                            color: 'white',
+                                            textDecoration: 'none',
+                                            fontWeight: 800,
+                                            fontSize: '0.75rem',
+                                        }}
+                                    >
+                                        <ExternalLink size={13} /> 1분 만에 서버 깨우기
+                                    </a>
+                                </Tooltip>
+                            </div>
+                        )}
 
                         {/* 리더보드 리스트 */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

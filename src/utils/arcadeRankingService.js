@@ -89,6 +89,13 @@ export function getDefaultSeasonForGame(gameId) {
     return NEW_ARCADE_GAMES[gameId]?.currentSeason || 'season_3';
 }
 
+// 클라우드 서버 연결 상태 추적 (UI에서 서버 절전 배너를 표시하기 위함)
+let lastCloudStatus = { online: true, errorMsg: '' };
+
+export function getLastCloudStatus() {
+    return lastCloudStatus;
+}
+
 /**
  * 게임별 상세 기록 문자열(detail)을 정수(max_tile 컬럼용)로 변환
  */
@@ -130,7 +137,7 @@ function decodeNumberToDetail(gameId, numVal) {
 
 /**
  * 클라우드 DB(game_2048_scores)에서 게임과 시즌을 구분하기 위한 전용 시즌 키
- * 예: 'color-eye_season_3' (기존 2048 게임의 'season_3'과 절대 충돌하지 않음)
+ * 예: 'color-eye_season_3', 'memory-match_season_4' (기존 2048 게임의 'season_3'과 절대 충돌하지 않음)
  */
 function getCloudSeasonKey(gameId, season = 'season_3') {
     return `${gameId}_${season}`;
@@ -170,7 +177,31 @@ function isValidUuid(id) {
 }
 
 /**
+ * 로그인된 회원의 profiles 행이 누락되어 FK 에러가 나지 않도록 사전 보장
+ */
+async function ensureProfileExists(user, displayName, displayMbti) {
+    if (!isValidUuid(user?.id)) return;
+    try {
+        const { data } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (!data) {
+            await supabase.from('profiles').upsert({
+                id: user.id,
+                username: displayName || user.email?.split('@')[0] || '회원',
+                mbti_type: displayMbti || '?',
+            });
+        }
+    } catch {
+        // ignore
+    }
+}
+
+/**
  * 게임 점수 저장 (로컬 + Supabase 클라우드 전체 공유)
+ * 반환값: { synced: boolean, offline: boolean, error?: string }
  */
 export async function submitArcadeScore({
     gameId,
@@ -179,10 +210,11 @@ export async function submitArcadeScore({
     user,
     userName,
     mbtiType,
-    season = 'season_3',
+    season = null,
 }) {
-    if (!score || score <= 0) return;
+    if (!score || score <= 0) return { synced: false, offline: false };
 
+    const targetSeason = season || getDefaultSeasonForGame(gameId);
     const roundedScore = Math.round(score);
     const userId = user?.id || 'guest';
     const displayName =
@@ -193,18 +225,20 @@ export async function submitArcadeScore({
     const displayMbti = mbtiType && mbtiType !== '?' ? mbtiType : '?';
 
     // 1. 내 최고 점수 갱신
-    const bestKey = `lumini_real_best_${gameId}_${userId}_${season}`;
+    const bestKey = `lumini_real_best_${gameId}_${userId}_${targetSeason}`;
     const prevBest = parseInt(localStorage.getItem(bestKey) || '0', 10);
     if (roundedScore > prevBest) {
         localStorage.setItem(bestKey, String(roundedScore));
     }
 
-    // 2. 로컬 실제 기록 저장소에 추가
+    // 2. 로컬 실제 기록 저장소에 추가 (오프라인이어도 내 점수는 절대 유실되지 않음)
     const store = getLocalStore();
     if (!store[gameId]) store[gameId] = {};
-    if (!store[gameId][season]) store[gameId][season] = [];
+    if (!store[gameId][targetSeason]) store[gameId][targetSeason] = [];
 
-    store[gameId][season].push({
+    const entryId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    store[gameId][targetSeason].push({
+        entryId,
         userId,
         name: displayName,
         mbti: displayMbti,
@@ -214,16 +248,18 @@ export async function submitArcadeScore({
         synced: false,
     });
 
-    store[gameId][season].sort((a, b) => b.score - a.score);
-    store[gameId][season] = store[gameId][season].slice(0, 30);
+    store[gameId][targetSeason].sort((a, b) => b.score - a.score);
+    store[gameId][targetSeason] = store[gameId][targetSeason].slice(0, 30);
     saveLocalStore(store);
 
     // 3. 로그인 유저일 경우 Supabase 클라우드 DB에 즉시 저장 (모든 기기·모든 유저와 랭킹 공유)
     if (isValidUuid(user?.id) && !USE_MOCK_DATA) {
-        const cloudSeason = getCloudSeasonKey(gameId, season);
+        const cloudSeason = getCloudSeasonKey(gameId, targetSeason);
         const encodedDetail = encodeDetailToNumber(gameId, detail);
 
         try {
+            await ensureProfileExists(user, displayName, displayMbti);
+
             const { error } = await supabase.from('game_2048_scores').insert({
                 user_id: user.id,
                 score: roundedScore,
@@ -232,32 +268,51 @@ export async function submitArcadeScore({
             });
 
             if (!error) {
+                lastCloudStatus = { online: true, errorMsg: '' };
                 const updatedStore = getLocalStore();
-                const list = updatedStore[gameId]?.[season] || [];
-                const found = list.find((item) => item.score === roundedScore && !item.synced);
+                const list = updatedStore[gameId]?.[targetSeason] || [];
+                const found = list.find((item) => item.entryId === entryId) ||
+                    list.find((item) => item.score === roundedScore && !item.synced);
                 if (found) {
                     found.synced = true;
                     saveLocalStore(updatedStore);
                 }
+                return { synced: true, offline: false };
             }
+
+            const msg = error.message || '';
+            const isNetworkErr =
+                msg.toLowerCase().includes('fetch') ||
+                msg.toLowerCase().includes('network') ||
+                msg.toLowerCase().includes('failed');
+            lastCloudStatus = { online: !isNetworkErr, errorMsg: msg };
+            console.warn('Cloud score insert error:', msg);
+            return { synced: false, offline: isNetworkErr, error: msg };
         } catch (err) {
-            console.warn('Cloud score sync error:', err?.message);
+            const msg = err?.message || 'network error';
+            lastCloudStatus = { online: false, errorMsg: msg };
+            console.warn('Cloud score sync error:', msg);
+            return { synced: false, offline: true, error: msg };
         }
     }
+
+    return { synced: false, offline: false, reason: 'guest' };
 }
 
 /**
  * 로컬에 저장되어 있던 내 기록 중 아직 클라우드에 올라가지 않은 기록이 있으면 로그인 세션으로 자동 동기화
  */
-async function syncUnsyncedLocalScores(gameId, season, currentUserId) {
-    if (USE_MOCK_DATA || !isValidUuid(currentUserId)) return;
+export async function syncUnsyncedLocalScores(gameId, season, currentUserId) {
+    if (USE_MOCK_DATA || !isValidUuid(currentUserId)) return 0;
     const store = getLocalStore();
     const list = store[gameId]?.[season] || [];
-    const unsynced = list.filter((item) => !item.synced && (item.userId === currentUserId || item.userId === 'guest'));
-    if (unsynced.length === 0) return;
+    const unsynced = list.filter(
+        (item) => !item.synced && (item.userId === currentUserId || item.userId === 'guest')
+    );
+    if (unsynced.length === 0) return 0;
 
     const cloudSeason = getCloudSeasonKey(gameId, season);
-    let changed = false;
+    let syncedCount = 0;
 
     for (const item of unsynced) {
         try {
@@ -270,28 +325,40 @@ async function syncUnsyncedLocalScores(gameId, season, currentUserId) {
             if (!error) {
                 item.synced = true;
                 item.userId = currentUserId;
-                changed = true;
+                syncedCount += 1;
+                lastCloudStatus = { online: true, errorMsg: '' };
+            } else {
+                const msg = (error.message || '').toLowerCase();
+                if (msg.includes('fetch') || msg.includes('network')) {
+                    lastCloudStatus = { online: false, errorMsg: error.message };
+                    break;
+                }
             }
-        } catch {
-            // ignore
+        } catch (err) {
+            lastCloudStatus = { online: false, errorMsg: err?.message || 'offline' };
+            break;
         }
     }
 
-    if (changed) {
+    if (syncedCount > 0) {
         saveLocalStore(store);
     }
+    return syncedCount;
 }
 
 /**
  * 특정 게임 & 시즌의 전체 유저 통합 랭킹 조회 (Supabase 클라우드 + 로컬 병합)
+ * - profiles 조인 실패 시에도 2단계 안전 조회로 100% 모든 회원의 이름을 표시
  */
-export async function fetchArcadeLeaderboard(gameId, season = 'season_3', currentUserId = null) {
+export async function fetchArcadeLeaderboard(gameId, season = null, currentUserId = null) {
+    const targetSeason = season || getDefaultSeasonForGame(gameId);
+
     if (isValidUuid(currentUserId)) {
-        await syncUnsyncedLocalScores(gameId, season, currentUserId);
+        await syncUnsyncedLocalScores(gameId, targetSeason, currentUserId);
     }
 
     const store = getLocalStore();
-    const localEntries = (store[gameId]?.[season] || []).map((item) => ({
+    const localEntries = (store[gameId]?.[targetSeason] || []).map((item) => ({
         name: item.name,
         mbti: item.mbti || '?',
         score: item.score,
@@ -299,12 +366,14 @@ export async function fetchArcadeLeaderboard(gameId, season = 'season_3', curren
         isMe: currentUserId ? item.userId === currentUserId : item.userId === 'guest',
         userId: item.userId,
         source: 'local',
+        synced: !!item.synced,
     }));
 
     let remoteEntries = [];
     if (!USE_MOCK_DATA) {
         try {
-            const cloudSeason = getCloudSeasonKey(gameId, season);
+            const cloudSeason = getCloudSeasonKey(gameId, targetSeason);
+            // 1차: profiles 조인 조회 시도
             const { data, error } = await supabase
                 .from('game_2048_scores')
                 .select('score, max_tile, user_id, profiles(username, mbti_type)')
@@ -312,7 +381,8 @@ export async function fetchArcadeLeaderboard(gameId, season = 'season_3', curren
                 .order('score', { ascending: false })
                 .limit(30);
 
-            if (!error && data && data.length > 0) {
+            if (!error && data) {
+                lastCloudStatus = { online: true, errorMsg: '' };
                 remoteEntries = data.map((row) => ({
                     name: row.profiles?.username || '익명',
                     mbti: row.profiles?.mbti_type || '?',
@@ -321,10 +391,51 @@ export async function fetchArcadeLeaderboard(gameId, season = 'season_3', curren
                     isMe: currentUserId ? row.user_id === currentUserId : false,
                     userId: row.user_id,
                     source: 'remote',
+                    synced: true,
                 }));
+            } else if (error) {
+                const lower = (error.message || '').toLowerCase();
+                if (lower.includes('fetch') || lower.includes('network') || lower.includes('failed')) {
+                    lastCloudStatus = { online: false, errorMsg: error.message };
+                } else {
+                    // 2차: FK/조인 에러일 경우 scores와 profiles를 별도 조회하여 안전 매핑
+                    const { data: rawScores, error: rawErr } = await supabase
+                        .from('game_2048_scores')
+                        .select('score, max_tile, user_id')
+                        .eq('season', cloudSeason)
+                        .order('score', { ascending: false })
+                        .limit(30);
+
+                    if (!rawErr && rawScores) {
+                        lastCloudStatus = { online: true, errorMsg: '' };
+                        const userIds = [...new Set(rawScores.map((r) => r.user_id).filter(Boolean))];
+                        const profileMap = {};
+                        if (userIds.length > 0) {
+                            const { data: profs } = await supabase
+                                .from('profiles')
+                                .select('id, username, mbti_type')
+                                .in('id', userIds);
+                            if (profs) {
+                                profs.forEach((p) => {
+                                    profileMap[p.id] = p;
+                                });
+                            }
+                        }
+                        remoteEntries = rawScores.map((row) => ({
+                            name: profileMap[row.user_id]?.username || '익명',
+                            mbti: profileMap[row.user_id]?.mbti_type || '?',
+                            score: row.score || 0,
+                            detail: decodeNumberToDetail(gameId, row.max_tile),
+                            isMe: currentUserId ? row.user_id === currentUserId : false,
+                            userId: row.user_id,
+                            source: 'remote',
+                            synced: true,
+                        }));
+                    }
+                }
             }
-        } catch {
-            // 서버 오프라인 시 로컬 기록 사용
+        } catch (err) {
+            lastCloudStatus = { online: false, errorMsg: err?.message || 'offline' };
         }
     }
 

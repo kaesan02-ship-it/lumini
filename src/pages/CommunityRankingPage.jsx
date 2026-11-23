@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, TrendingUp, Sparkles, Timer } from 'lucide-react';
+import { Trophy, TrendingUp, RefreshCw, ExternalLink } from 'lucide-react';
 import useCrystalStore from '../store/crystalStore';
 import useUserStore from '../store/userStore';
 import useAuthStore from '../store/authStore';
 import Tooltip from '../components/Tooltip';
 import { supabase } from '../supabase/client';
 import { USE_MOCK_DATA } from '../config';
-import { NEW_ARCADE_GAMES, fetchArcadeLeaderboard } from '../utils/arcadeRankingService';
+import { NEW_ARCADE_GAMES, fetchArcadeLeaderboard, getLastCloudStatus } from '../utils/arcadeRankingService';
 
 const SCORE_GUIDE = [
     { action: '사천성 게임 클리어', points: '타임어택 경쟁', icon: '🐾' },
@@ -41,10 +41,14 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
     const [leaderboard, setLeaderboard] = useState([]);
     const [mbtiStats, setMbtiStats] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isCloudOffline, setIsCloudOffline] = useState(false);
     const [myBestStat, setMyBestStat] = useState({ rank: '-', scoreVal: '0' });
 
     // Mock 랭킹 폴백 생성 헬퍼 (서버 절전/오프라인 시에도 랭킹 보드 유지)
     const applyMockFallback = useCallback((targetSeason) => {
+        if (!USE_MOCK_DATA) {
+            setIsCloudOffline(true);
+        }
         let mockList = [];
         if (activeTab === 'apple') {
             if (targetSeason === 'season_3') {
@@ -153,6 +157,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
             // 신규 6종 아케이드 게임은 하이브리드 랭킹 엔진(원격 + 로컬 실시간 병합) 사용
             if (NEW_ARCADE_GAMES[activeTab]) {
                 const list = await fetchArcadeLeaderboard(activeTab, targetSeason, user?.id || 'guest');
+                setIsCloudOffline(!getLastCloudStatus().online);
                 setLeaderboard(list);
                 const myIdx = list.findIndex(item => item.isMe);
                 if (myIdx !== -1) {
@@ -183,6 +188,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                     .limit(20);
 
                 if (!error && scores) {
+                    setIsCloudOffline(false);
                     const mapped = scores.map((s, i) => ({
                         rank: i + 1,
                         name: s.profiles?.username || '익명',
@@ -342,6 +348,7 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
             }
         } catch (err) {
             console.error('Error fetching rankings:', err);
+            setIsCloudOffline(true);
             applyMockFallback(targetSeason);
         } finally {
             setLoading(false);
@@ -397,7 +404,29 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
                             </button>
                         )}
                         <div>
-                            <h1 style={{ margin: 0, fontWeight: 900, fontSize: '1.5rem' }}>🏆 명예의 전당</h1>
+                            <h1 style={{ margin: 0, fontWeight: 900, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                🏆 명예의 전당
+                                <Tooltip text="최신 클라우드 랭킹을 다시 불러오고 내 기록을 동기화합니다">
+                                    <button
+                                        type="button"
+                                        onClick={() => fetchRankings(activeSeason)}
+                                        style={{
+                                            background: 'rgba(255,255,255,0.22)',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '30px',
+                                            height: '30px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            color: 'white',
+                                        }}
+                                    >
+                                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                                    </button>
+                                </Tooltip>
+                            </h1>
                             <p style={{ margin: 0, opacity: 0.85, fontSize: '0.85rem' }}>실시간으로 랭킹 경쟁에 참여해 보세요!</p>
                         </div>
                     </div>
@@ -493,6 +522,58 @@ const CommunityRankingPage = ({ onBack, mbtiType }) => {
             </div>
 
             <div style={{ padding: '20px 5%' }}>
+                {/* 서버 절전(오프라인) 상태일 때 즉시 원인을 알려주는 안내 배너 */}
+                {isCloudOffline && (
+                    <div
+                        style={{
+                            background: '#fffbeb',
+                            border: '1px solid #fde68a',
+                            borderRadius: '18px',
+                            padding: '16px 18px',
+                            marginBottom: '20px',
+                            color: '#92400e',
+                            fontSize: '0.85rem',
+                            lineHeight: 1.55,
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                        }}
+                    >
+                        <div>
+                            <div style={{ fontWeight: 900, marginBottom: '2px' }}>
+                                💤 현재 공용 랭킹 서버(Supabase)가 절전 모드입니다
+                            </div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                                무료 DB는 7일간 미사용 시 자동 절전되어 점수 반영·조회가 일시 중단됩니다. 서버를 깨우면 기존 기록과 밀린 점수가 모두 정상 반영됩니다!
+                            </div>
+                        </div>
+                        <Tooltip text="Supabase 프로젝트 콘솔에서 Restore project 버튼을 눌러 서버를 깨웁니다">
+                            <a
+                                href="https://supabase.com/dashboard/project/uotscostmadmnaypdxus"
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '10px 16px',
+                                    borderRadius: '12px',
+                                    background: '#10b981',
+                                    color: 'white',
+                                    textDecoration: 'none',
+                                    fontWeight: 800,
+                                    fontSize: '0.82rem',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <ExternalLink size={15} /> 1분 만에 서버 깨우기
+                            </a>
+                        </Tooltip>
+                    </div>
+                )}
+
                 {/* 게임 전환 탭 (기존 5종 + 신규 6종 = 총 11종) */}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
                     {[

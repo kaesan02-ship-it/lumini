@@ -1,0 +1,18 @@
+name: Supabase Keep-Alive (절전 방지 자동 핑)
+
+on:
+  schedule:
+    # 3일마다 한국시간 오전 9시(UTC 0시)에 자동 실행하여 Supabase 무료 DB 7일 절전 방지
+    - cron: '0 0 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          curl -sS -f "https://uotscostmadmnaypdxus.supabase.co/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: sb_publishable_mHGxmjB5owN6nW4yGf6N7g_m4TovL_t" \
+            -H "Authorization: Bearer sb_publishable_mHGxmjB5owN6nW4yGf6N7g_m4TovL_t"
+          echo "Supabase keep-alive ping succeeded!"
