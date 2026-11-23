@@ -94,11 +94,11 @@ export const NEW_ARCADE_GAMES = {
     'spot-memory': {
         id: 'spot-memory',
         route: 'spot-memory-game',
-        title: '🖼️ 유배지 틀린그림찾기',
+        title: '🖼️ 틀린그림찾기',
         shortTitle: '틀린그림찾기',
         icon: '🖼️',
         unit: '점',
-        actionDesc: '그림을 암기한 뒤 달라진 5군데를 찾아 터치',
+        actionDesc: '그림을 암기한 뒤 달라진 곳을 찾아 터치',
         pointsDesc: '기억력·관찰력 경쟁',
         initialRankings: { season_3: [], season_2: [], season_1: [] },
     },

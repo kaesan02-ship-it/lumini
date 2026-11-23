@@ -22,7 +22,7 @@ const SCORE_GUIDE = [
     { action: '청개구리 반사신경', points: '연속 콤보·순발력 경쟁', icon: '🧠' },
     { action: '소울펫 기억력 카드', points: '스테이지·기억력 경쟁', icon: '🃏' },
     { action: '데블스 블록 카운팅', points: '공간지각·단계 돌파', icon: '🧊' },
-    { action: '유배지 틀린그림찾기', points: '기억력·관찰력 경쟁', icon: '🖼️' },
+    { action: '틀린그림찾기', points: '기억력·관찰력 경쟁', icon: '🖼️' },
 ];
 
 const FRUIT_EMOJIS = {
